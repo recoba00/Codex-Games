@@ -25,6 +25,9 @@ var _socket := WebSocketPeer.new()
 var _socket_started = false
 var _action_sequence = 0
 var _queued: Dictionary = {}
+var _intentional_close = false
+var _reconnect_attempt = 0
+var _reconnect_at = 0.0
 
 func _ready() -> void:
 	var file = FileAccess.open(CONFIG_PATH, FileAccess.READ)
@@ -43,10 +46,14 @@ func _ready() -> void:
 	status_changed.emit("온라인 친선전 준비")
 	if authenticated:
 		auth_changed.emit(true)
+	if not room_code.is_empty():
+		_queued = {"kind": "reconnect"}
+		ensure_session.call_deferred()
 
 func ensure_session() -> void:
 	if authenticated and expires_at > int(Time.get_unix_time_from_system()) + 30:
 		auth_changed.emit(true)
+		_run_queued()
 		return
 	if not refresh_token.is_empty():
 		status_changed.emit("온라인 세션 확인 중")
@@ -56,8 +63,8 @@ func ensure_session() -> void:
 		_post("auth_anonymous", "/v1/auth/anonymous", {}, false)
 
 func create_room(character_id: String, skin_id: String, dimensions: Vector2i) -> void:
+	_queued = {"kind": "create", "characterId": character_id, "skinId": skin_id, "dimensions": dimensions}
 	if not authenticated:
-		_queued = {"kind": "create", "characterId": character_id, "skinId": skin_id, "dimensions": dimensions}
 		ensure_session()
 		return
 	_create_room_now(character_id, skin_id, dimensions)
@@ -77,8 +84,8 @@ func join_room(code: String, character_id: String, skin_id: String) -> void:
 	if normalized.length() != 8:
 		_fail("초대 코드는 8자리입니다")
 		return
+	_queued = {"kind": "join", "code": normalized, "characterId": character_id, "skinId": skin_id}
 	if not authenticated:
-		_queued = {"kind": "join", "code": normalized, "characterId": character_id, "skinId": skin_id}
 		ensure_session()
 		return
 	_join_room_now(normalized, character_id, skin_id)
@@ -108,23 +115,32 @@ func forfeit() -> void:
 	_send_action("forfeit")
 
 func leave_room() -> void:
+	_intentional_close = true
 	if _socket_started:
 		_socket.close(1000, "leave")
 	_socket_started = false
 	connected = false
 	room_code = ""
 	room_state.clear()
+	_reconnect_attempt = 0
+	_reconnect_at = 0
+	_save_session()
 	status_changed.emit("온라인 접속 완료")
 	room_changed.emit({})
 
 func _process(_delta: float) -> void:
 	if not _socket_started:
+		if not _intentional_close and not room_code.is_empty() and authenticated and _reconnect_at > 0 and Time.get_unix_time_from_system() >= _reconnect_at and _pending.is_empty():
+			_reconnect_at = 0
+			_request_ticket(true)
 		return
 	_socket.poll()
 	var ready_state = _socket.get_ready_state()
 	if ready_state == WebSocketPeer.STATE_OPEN:
 		if not connected:
 			connected = true
+			_reconnect_attempt = 0
+			_reconnect_at = 0
 			status_changed.emit("상대 연결 대기 중")
 		while _socket.get_available_packet_count() > 0:
 			var message = JSON.parse_string(_socket.get_packet().get_string_from_utf8())
@@ -134,7 +150,11 @@ func _process(_delta: float) -> void:
 		var was_connected = connected
 		connected = false
 		_socket_started = false
-		if was_connected:
+		if _intentional_close:
+			_intentional_close = false
+		elif not room_code.is_empty():
+			_schedule_reconnect()
+		elif was_connected:
 			status_changed.emit("연결이 종료되었습니다")
 
 func _can_request() -> bool:
@@ -162,9 +182,24 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	var payload = JSON.parse_string(body_text) if not body_text.is_empty() else {}
 	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300 or not payload is Dictionary:
 		var error_code = String(payload.get("error", "network_error")) if payload is Dictionary else "network_error"
+		if error_code in ["auth_invalid", "auth_expired"] and kind in ["create", "join", "ticket"]:
+			if kind == "ticket" and not room_code.is_empty():
+				_queued = {"kind": "reconnect"}
+			_invalidate_access()
+			ensure_session()
+			return
 		if kind == "auth_refresh":
+			if not room_code.is_empty():
+				_forget_room()
 			_clear_session()
 			ensure_session()
+			return
+		if kind == "ticket" and error_code in ["room_not_found", "not_participant", "room_unavailable"]:
+			_forget_room()
+			_fail("이전 온라인 대전이 종료되었습니다")
+			return
+		if kind == "ticket" and not room_code.is_empty():
+			_schedule_reconnect()
 			return
 		_fail(_error_text(error_code))
 		return
@@ -172,9 +207,12 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		"auth_anonymous", "auth_refresh":
 			_apply_session(payload)
 		"create", "join":
+			_queued.clear()
 			room_code = String(payload.get("roomCode", ""))
+			_intentional_close = false
+			_save_session()
 			status_changed.emit("방 %s · 소켓 연결 중" % room_code)
-			_post("ticket", "/v1/rooms/%s/ticket" % room_code, {}, true)
+			_request_ticket(false)
 		"ticket":
 			_open_socket(String(payload.get("ticket", "")))
 
@@ -201,12 +239,49 @@ func _run_queued() -> void:
 		_create_room_now(next.characterId, next.skinId, next.dimensions)
 	elif next.kind == "join":
 		_join_room_now(next.code, next.characterId, next.skinId)
+	elif next.kind == "reconnect" and not room_code.is_empty():
+		_request_ticket(true)
+
+func _request_ticket(reconnecting: bool) -> void:
+	if room_code.is_empty():
+		return
+	if not _can_request():
+		if reconnecting:
+			_schedule_reconnect()
+		return
+	status_changed.emit("온라인 대전 재연결 중" if reconnecting else "방 %s · 소켓 연결 중" % room_code)
+	_post("ticket", "/v1/rooms/%s/ticket" % room_code, {}, true)
+
+func _schedule_reconnect() -> void:
+	if room_code.is_empty() or _intentional_close:
+		return
+	_reconnect_attempt += 1
+	var delay = reconnect_delay(_reconnect_attempt)
+	_reconnect_at = Time.get_unix_time_from_system() + delay
+	status_changed.emit("연결 복구 중 · %d초 후 재시도" % ceili(delay))
+
+static func reconnect_delay(attempt: int) -> float:
+	return minf(8.0, pow(2.0, mini(maxi(attempt, 1) - 1, 3)))
+
+func _forget_room() -> void:
+	_intentional_close = true
+	if _socket_started:
+		_socket.close(1000, "forget")
+	room_code = ""
+	room_state.clear()
+	connected = false
+	_socket_started = false
+	_reconnect_attempt = 0
+	_reconnect_at = 0
+	_save_session()
+	room_changed.emit({})
 
 func _open_socket(ticket: String) -> void:
 	if ticket.is_empty() or room_code.is_empty():
 		_fail("대전 연결권을 받지 못했습니다")
 		return
 	_socket = WebSocketPeer.new()
+	_intentional_close = false
 	var socket_url = api_url.replace("https://", "wss://").replace("http://", "ws://")
 	var error = _socket.connect_to_url("%s/v1/rooms/%s/ws?ticket=%s" % [socket_url, room_code, ticket.uri_encode()])
 	if error != OK:
@@ -244,6 +319,7 @@ func _load_session() -> void:
 	refresh_token = String(config.get_value("session", "refresh_token", ""))
 	expires_at = int(config.get_value("session", "expires_at", 0))
 	user_id = String(config.get_value("session", "user_id", ""))
+	room_code = String(config.get_value("session", "room_code", ""))
 	authenticated = not access_token.is_empty() and expires_at > int(Time.get_unix_time_from_system()) + 30
 
 func _save_session() -> void:
@@ -252,6 +328,7 @@ func _save_session() -> void:
 	config.set_value("session", "refresh_token", refresh_token)
 	config.set_value("session", "expires_at", expires_at)
 	config.set_value("session", "user_id", user_id)
+	config.set_value("session", "room_code", room_code)
 	config.save(SESSION_PATH)
 
 func _clear_session() -> void:
@@ -262,6 +339,13 @@ func _clear_session() -> void:
 	authenticated = false
 	var config = ConfigFile.new()
 	config.save(SESSION_PATH)
+	auth_changed.emit(false)
+
+func _invalidate_access() -> void:
+	access_token = ""
+	expires_at = 0
+	authenticated = false
+	_save_session()
 	auth_changed.emit(false)
 
 func _fail(message: String) -> void:

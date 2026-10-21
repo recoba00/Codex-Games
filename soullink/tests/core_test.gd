@@ -7,6 +7,7 @@ const Stats = preload("res://scripts/core/stats.gd")
 const RandomStream = preload("res://scripts/core/random_stream.gd")
 const LiveCatalog = preload("res://scripts/core/live_catalog.gd")
 const RemoteBattle = preload("res://scripts/online/remote_battle.gd")
+const MatchClient = preload("res://scripts/online/match_client.gd")
 var checks = 0
 var failures: Array = []
 var turns = 0
@@ -35,6 +36,7 @@ func _initialize() -> void:
 	_check_stats()
 	_check_live_catalog()
 	_check_remote_battle()
+	_check_online_reconnect()
 	for dimensions in [Vector2i(6, 5), Vector2i(6, 6), Vector2i(8, 6), Vector2i(6, 8)]:
 		for seed_value in range(1, 13):
 			var board = Board.create_board(dimensions, seed_value ^ 0x18f61, seed_value)
@@ -83,6 +85,14 @@ func _check_remote_battle() -> void:
 	compare(remote.actor, 1, "remote opponent actor maps to right side")
 	compare(remote.result, "player", "remote winner maps to local result")
 	compare(remote.can_use("active"), false, "remote finished match blocks skill")
+
+func _check_online_reconnect() -> void:
+	compare(MatchClient.reconnect_delay(0), 1.0, "reconnect delay clamps invalid attempt")
+	compare(MatchClient.reconnect_delay(1), 1.0, "first reconnect waits one second")
+	compare(MatchClient.reconnect_delay(2), 2.0, "second reconnect backs off")
+	compare(MatchClient.reconnect_delay(3), 4.0, "third reconnect backs off")
+	compare(MatchClient.reconnect_delay(4), 8.0, "fourth reconnect reaches cap")
+	compare(MatchClient.reconnect_delay(8), 8.0, "reconnect delay remains capped")
 
 func _check_live_catalog() -> void:
 	var data = Catalog.load_data()

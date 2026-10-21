@@ -123,13 +123,19 @@ damage. The separate one-use spell is explicitly disabled online until it has a
 server rule.
 
 The adapter has seat/result/action regression coverage. Godot core checks now
-pass 14,675 assertions, alongside the 11 Worker and 5 host checks. A live mobile
+pass 14,681 assertions, alongside the 11 Worker and 5 host checks. A live mobile
 Godot Web client and an independent automated socket opponent completed a real
 room flow: ready, server-authoritative puzzle match, 41 MP active skill with a
 40 MP cost, 156 skill damage, strike receipts, opponent turns and an eight-round
 victory result. No browser warnings or errors were observed.
 
-The remaining milestone work is automatic socket reconnection into an active
-room and durable result persistence. Persistence stays disabled until a
-service-role Worker secret is separately approved. The current public Worker
-URL is an API endpoint, not a hosted game page.
+The client persists its room code with the anonymous session, refreshes stale
+access tokens while retaining the original room action, and reconnects dropped
+sockets with a capped 1/2/4/8-second backoff. A live two-player battle was
+reloaded in round 2 and returned to the same room, HP 927/882, local puzzle turn,
+and authoritative state with no browser warnings or errors.
+
+The remaining milestone work is durable result persistence. Persistence stays
+disabled until a service-role Worker secret is separately approved. A public
+game-host URL must also be verified separately; the Worker URL is an API
+endpoint, not the game page.
