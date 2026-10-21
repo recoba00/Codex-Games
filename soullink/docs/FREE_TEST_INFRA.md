@@ -79,8 +79,9 @@ identifier, or connection string belongs in Git.
 Anonymous sign-ins were enabled and saved on 2026-10-21. Anonymous sessions use
 the `authenticated` role, so the same RLS policies continue to restrict profile,
 skin, and match-result access. The Cloudflare email-verification gate was also
-cleared and the Workers creation screen is available. No Worker, Durable Object,
-paid feature, payment method, or server secret has been created yet.
+cleared. Catalog schema version 3, revision 1 was published as the current
+`game_catalog` document. No service-role key, paid feature, payment method, or
+client-side provider credential was added.
 
 ## Authoritative Match Worker
 
@@ -98,6 +99,23 @@ Result persistence is separately disabled until a service-role Worker secret is
 explicitly approved and added. The checked-in localhost origin list is for local
 testing only; production origins belong in Cloudflare configuration.
 
-Local engine contracts and a Wrangler dry-run passed on 2026-10-21. The dry-run
-bundle was 40.14 KiB (10.67 KiB gzip) and exposed only the two Durable Object
-bindings plus the origin variable. No R2 or paid binding is present.
+The Free Worker is live at `https://soullink-match.recoba00.workers.dev` and is
+deployed automatically from `main` with repository root `/soullink/server`.
+Dashboard runtime variables are retained across Wrangler deployments with
+`keep_vars`; only the two SQLite Durable Object bindings and origin/Supabase
+runtime variables are configured. No R2 or paid binding is present.
+
+On 2026-10-21, server tests passed 11/11 and the dry-run bundle was 42.54 KiB
+(11.14 KiB gzip). A live Godot Web client completed anonymous authentication,
+room creation, ticket exchange and the lobby transition from one to two players.
+An independent two-socket check then confirmed both seats received the same
+`battle` phase after readiness. Commit `66db5f5` deployed automatically and is
+the first version with ticket-authenticated WebSocket upgrades routed before
+ordinary bearer authentication.
+
+The remaining milestone work is client integration: render the authoritative
+room snapshot in the existing Godot battle HUD, translate puzzle/skill/commit
+input into server actions, animate receipts, and reconnect into the same match.
+Result persistence also remains disabled until a service-role Worker secret is
+separately approved. The current public Worker URL is an API endpoint, not a
+hosted game page.

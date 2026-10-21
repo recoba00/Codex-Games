@@ -16,6 +16,11 @@ the local admin UI.
 6. Completed results are written only when the optional service-role Worker
    secret is configured. The secret never belongs in Git or the game client.
 
+The live Free test API is `https://soullink-match.recoba00.workers.dev`. Its
+`/health` route is public; game sessions use `/v1/auth/anonymous`, room HTTP
+routes and the ticket-authenticated `/v1/rooms/:code/ws` upgrade. The API URL is
+not a playable game page.
+
 ## Required bindings
 
 - `SUPABASE_URL`: Worker variable, configured in Cloudflare only.
@@ -38,3 +43,5 @@ npm run dev
 
 Do not deploy until `npm test` and the repository checks pass. Cloud deployment
 must use the Free plan and the SQLite storage declarations in `wrangler.jsonc`.
+The connected Cloudflare build deploys `main` automatically and `keep_vars`
+preserves dashboard-only runtime configuration.
