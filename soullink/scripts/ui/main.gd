@@ -10,6 +10,7 @@ const Catalog = preload("res://scripts/core/catalog.gd")
 const LiveContent = preload("res://scripts/ui/live_content.gd")
 const LiveCatalog = preload("res://scripts/core/live_catalog.gd")
 const SkinGallery = preload("res://scripts/ui/skin_gallery.gd")
+const MatchClient = preload("res://scripts/online/match_client.gd")
 const FONT = preload("res://assets/fonts/Pretendard-Regular.otf")
 const ACCENT = Color("ffb43b")
 const TEXT = Color("f3f4f6")
@@ -91,6 +92,14 @@ var skin_choices: Dictionary = {}
 var battle_skins: Array = []
 var gallery: Control
 var gallery_button: Button
+var online_client: Node
+var online_status: Label
+var online_code: LineEdit
+var online_create_button: Button
+var online_join_button: Button
+var online_ready_button: Button
+var online_leave_button: Button
+var online_room_label: Label
 
 func _ready() -> void:
 	print("SOUL_LINK_BOOT: ", OS.get_name())
@@ -110,6 +119,7 @@ func _ready() -> void:
 	_build_sound_options()
 	_build_feedback()
 	_build_gallery()
+	_connect_online()
 	show_preparation()
 	_connect_live_content()
 	_connect_web_host()
@@ -238,7 +248,7 @@ func _build_preparation() -> void:
 	_page(preparation, "Preparation")
 	var title = _hbox()
 	title.add_child(_label("대전 준비", 22))
-	var mode = _label("쉬움 · AI 연습전", 11, MUTED)
+	var mode = _label("AI 연습전 · 온라인 친선전", 11, MUTED)
 	mode.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mode.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	title.add_child(mode)
@@ -324,6 +334,7 @@ func _build_preparation() -> void:
 	board_choice.selected = board_index
 	board_choice.item_selected.connect(func(index): board_index = index)
 	_setting_row(choices, "보드", board_choice)
+	_build_online_controls(choices)
 	var summary = _label("기본 타격 %d · 상성 보너스 %d%%\n퍼즐 %d초 · 행동 %d초 · 최대 %d라운드" % [data.combat.baseStrike, roundi(data.combat.elementBonus * 100), data.practice.turnSeconds, data.combat.actionSeconds, data.game_limits.rounds], 12, MUTED)
 	choices.add_child(summary)
 	var start = _button("대전 시작", "end")
@@ -339,6 +350,107 @@ func _build_preparation() -> void:
 	preparation.add_child(start)
 	_select_character(character)
 	_refresh_preparation_art()
+	if online_client != null:
+		_online_room_changed(online_client.room_state)
+
+func _build_online_controls(parent: Control) -> void:
+	var section = _vbox(8)
+	section.name = "OnlineFriendly"
+	parent.add_child(section)
+	var heading = _hbox(8)
+	heading.add_child(_label("온라인 친선전", 14))
+	online_status = _label("온라인 친선전 준비", 10, MUTED)
+	online_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	online_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	heading.add_child(online_status)
+	section.add_child(heading)
+	online_room_label = _label("", 18, ACCENT)
+	online_room_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	online_room_label.hide()
+	section.add_child(online_room_label)
+	var actions = _hbox(6)
+	online_create_button = _button("방 만들기", "sparkles")
+	online_create_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	online_create_button.pressed.connect(_create_online_room)
+	actions.add_child(online_create_button)
+	online_code = LineEdit.new()
+	online_code.placeholder_text = "초대 코드 8자리"
+	online_code.max_length = 8
+	online_code.custom_minimum_size = Vector2(116, 44)
+	online_code.text_changed.connect(func(value):
+		var normalized = value.to_upper()
+		if normalized != value:
+			online_code.text = normalized
+			online_code.caret_column = online_code.text.length()
+		online_join_button.disabled = online_code.text.length() != 8 or (online_client != null and not online_client.room_code.is_empty()))
+	actions.add_child(online_code)
+	online_join_button = _button("참가", "end")
+	online_join_button.disabled = true
+	online_join_button.pressed.connect(_join_online_room)
+	actions.add_child(online_join_button)
+	section.add_child(actions)
+	var room_actions = _hbox(6)
+	online_ready_button = _button("대전 준비", "swords")
+	online_ready_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	online_ready_button.hide()
+	online_ready_button.pressed.connect(func(): online_client.send_ready())
+	room_actions.add_child(online_ready_button)
+	online_leave_button = _button("나가기", "back")
+	online_leave_button.hide()
+	online_leave_button.pressed.connect(func(): online_client.leave_room())
+	room_actions.add_child(online_leave_button)
+	section.add_child(room_actions)
+
+func _connect_online() -> void:
+	online_client = MatchClient.new()
+	online_client.status_changed.connect(func(value):
+		if online_status != null:
+			online_status.text = value)
+	online_client.auth_changed.connect(func(ready):
+		if online_create_button != null:
+			online_create_button.disabled = not online_client.room_code.is_empty()
+			online_join_button.disabled = online_code.text.length() != 8 or not online_client.room_code.is_empty())
+	online_client.room_changed.connect(_online_room_changed)
+	online_client.request_failed.connect(func(message):
+		if online_status != null:
+			online_status.text = message
+			online_create_button.disabled = not online_client.room_code.is_empty()
+			online_join_button.disabled = online_code.text.length() != 8 or not online_client.room_code.is_empty())
+	add_child(online_client)
+
+func _create_online_room() -> void:
+	var size_value: Dictionary = data.board_sizes[board_index]
+	online_create_button.disabled = true
+	online_join_button.disabled = true
+	online_client.create_room(character, _skin_for(character), Vector2i(size_value.cols, size_value.rows))
+
+func _join_online_room() -> void:
+	online_create_button.disabled = true
+	online_join_button.disabled = true
+	online_client.join_room(online_code.text, character, _skin_for(character))
+
+func _online_room_changed(state: Dictionary) -> void:
+	var active = not state.is_empty()
+	online_room_label.visible = active
+	online_ready_button.visible = active
+	online_leave_button.visible = active
+	online_code.editable = not active
+	online_create_button.disabled = active
+	online_join_button.disabled = active or online_code.text.length() != 8
+	if not active:
+		online_room_label.text = ""
+		online_ready_button.text = "대전 준비"
+		online_ready_button.disabled = false
+		return
+	var players: Array = state.get("players", [])
+	online_room_label.text = "초대 코드  %s" % String(state.get("roomCode", online_client.room_code))
+	var seat = int(state.get("youSeat", -1))
+	var mine_ready = seat >= 0 and seat < players.size() and bool(players[seat].get("ready", false))
+	var phase_name = String(state.get("phase", "lobby"))
+	online_ready_button.text = "상대 준비 대기" if mine_ready else "대전 준비"
+	online_ready_button.disabled = mine_ready or phase_name != "lobby"
+	if phase_name == "battle":
+		online_ready_button.text = "온라인 대전 연결됨"
 
 func _build_gallery() -> void:
 	gallery = SkinGallery.new()

@@ -32,6 +32,16 @@ test("credentials are runtime-only and WebSockets use hibernation", () => {
 
 test("admission guardrails fail closed at bounded test limits", () => {
   assert.match(source, /rooms >= 200/);
+  assert.match(source, /kind === "auth" \? 12/);
   assert.match(source, /kind === "create" \? 6/);
   assert.match(source, /rate_limited/);
+});
+
+test("anonymous sessions are proxied without exposing Supabase configuration", () => {
+  assert.match(source, /url\.pathname === "\/v1\/auth\/anonymous"/);
+  assert.match(source, /url\.pathname === "\/v1\/auth\/refresh"/);
+  assert.match(source, /\/auth\/v1\/signup/);
+  assert.match(source, /grant_type=refresh_token/);
+  assert.match(source, /accessToken: session\.access_token/);
+  assert.doesNotMatch(source, /service_role[^_]/i);
 });

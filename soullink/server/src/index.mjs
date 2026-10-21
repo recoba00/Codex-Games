@@ -65,6 +65,34 @@ async function authenticate(request, env) {
   return { id: user.id, token: authorization.slice(7) };
 }
 
+async function createAuthSession(env, refreshToken = "") {
+  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) throw new Error("auth_not_configured");
+  const base = String(env.SUPABASE_URL).replace(/\/$/, "");
+  const refreshing = Boolean(refreshToken);
+  const endpoint = refreshing ? `${base}/auth/v1/token?grant_type=refresh_token` : `${base}/auth/v1/signup`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      apikey: env.SUPABASE_PUBLISHABLE_KEY,
+      authorization: `Bearer ${env.SUPABASE_PUBLISHABLE_KEY}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(refreshing ? { refresh_token: refreshToken } : {})
+  });
+  if (!response.ok) throw new Error(refreshing ? "auth_refresh_failed" : "auth_session_failed");
+  const session = await response.json();
+  if (!session?.access_token || !session?.refresh_token || !session?.user?.id) throw new Error("auth_session_invalid");
+  const expiresIn = Math.max(30, Number(session.expires_in ?? 3600));
+  return {
+    ok: true,
+    accessToken: session.access_token,
+    refreshToken: session.refresh_token,
+    expiresIn,
+    expiresAt: Math.floor(Date.now() / 1000) + expiresIn,
+    userId: session.user.id
+  };
+}
+
 async function loadCatalog(env, token) {
   const response = await fetch(`${String(env.SUPABASE_URL).replace(/\/$/, "")}/rest/v1/game_catalog?id=eq.published&select=schema_version,revision,document`, {
     headers: { authorization: `Bearer ${token}`, apikey: env.SUPABASE_PUBLISHABLE_KEY, accept: "application/json" }
@@ -108,6 +136,17 @@ export default {
       return json({ ok: true, service: "soullink-match", authConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_PUBLISHABLE_KEY) }, 200, cors(origin));
     }
     try {
+      if (request.method === "POST" && url.pathname === "/v1/auth/anonymous") {
+        await admission(env, request, "auth");
+        return json(await createAuthSession(env), 200, cors(origin));
+      }
+      if (request.method === "POST" && url.pathname === "/v1/auth/refresh") {
+        await admission(env, request, "auth");
+        const input = await readJson(request);
+        const refreshToken = String(input.refreshToken ?? "");
+        if (refreshToken.length < 20 || refreshToken.length > 2048) throw new Error("refresh_token_invalid");
+        return json(await createAuthSession(env, refreshToken), 200, cors(origin));
+      }
       const user = await authenticate(request, env);
       if (request.method === "POST" && url.pathname === "/v1/rooms") {
         await admission(env, request, "create");
@@ -156,11 +195,11 @@ export class AdmissionGate extends DurableObject {
   async fetch(request) {
     if (new URL(request.url).pathname !== "/allow" || request.method !== "POST") return errorResponse("not_found", 404);
     const { key, kind, now } = await readJson(request);
-    if (!/^[a-f0-9]{64}$/.test(key) || !["create", "join", "access"].includes(kind) || !Number.isFinite(now)) return errorResponse("request_invalid");
+    if (!/^[a-f0-9]{64}$/.test(key) || !["auth", "create", "join", "access"].includes(kind) || !Number.isFinite(now)) return errorResponse("request_invalid");
     const windowStart = now - 10 * 60 * 1000;
     this.ctx.storage.sql.exec("DELETE FROM attempts WHERE at < ?", windowStart);
     const count = this.ctx.storage.sql.exec("SELECT COUNT(*) AS count FROM attempts WHERE key = ? AND kind = ? AND at >= ?", key, kind, windowStart).one().count;
-    const limit = kind === "create" ? 6 : kind === "join" ? 20 : 60;
+    const limit = kind === "auth" ? 12 : kind === "create" ? 6 : kind === "join" ? 20 : 60;
     if (count >= limit) return errorResponse("rate_limited", 429);
     if (kind === "create") {
       const day = new Date(now).toISOString().slice(0, 10);
