@@ -10,6 +10,7 @@ const source = fs.readFileSync(path.join(serverRoot, "src/index.mjs"), "utf8");
 
 test("Cloudflare config exposes only free SQLite Durable Object resources", () => {
   assert.equal(config.workers_dev, true);
+  assert.equal(config.keep_vars, true);
   assert.deepEqual(Object.keys(config.exports).sort(), ["AdmissionGate", "MatchRoom"]);
   for (const value of Object.values(config.exports)) {
     assert.equal(value.type, "durable-object");
