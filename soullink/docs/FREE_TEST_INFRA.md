@@ -55,3 +55,23 @@ Before creating resources, verify in each dashboard:
   is part of the flow.
 
 Stop before any screen that requests payment details or confirms a paid plan.
+
+## Supabase Development Project
+
+- Project: `soullink-dev`
+- Plan/compute: Free / Nano
+- Region: Northeast Asia (Tokyo), `ap-northeast-1`
+- Source migration: `supabase/migrations/20261021010000_initial_online_test.sql`
+- Storage bucket: `soullink-content`, public read, server-only write, 8 MiB per image
+
+The migration was applied to the Free project through the SQL Editor on
+2026-10-21 and returned success. The dashboard was then checked for all four
+tables and the public bucket, including its one read policy, MIME allowlist, and
+8 MiB object limit. Because this first application used the SQL Editor, it does
+not appear in Supabase's separate CLI migration history. Future schema changes
+must use versioned migration files and must not replay or reset live data.
+
+The initial schema keeps profile edits scoped to the signed-in user. Catalog
+publication, skin grants, and match result writes are server-only. Match
+participants may read their own results. No project password, secret key, project
+identifier, or connection string belongs in Git.

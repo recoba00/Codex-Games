@@ -34,5 +34,5 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
-      - name: Check Host, Audio, Intro, and Catalog Seed Contracts
-        run: node --test tests/host.test.cjs tests/audio.test.cjs tests/intro.test.cjs tests/catalog-seed.test.cjs
+      - name: Check Host, Audio, Intro, Catalog, and Infrastructure Contracts
+        run: node --test tests/host.test.cjs tests/audio.test.cjs tests/intro.test.cjs tests/catalog-seed.test.cjs tests/infra.test.cjs
