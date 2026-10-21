@@ -147,6 +147,12 @@ export default {
         if (refreshToken.length < 20 || refreshToken.length > 2048) throw new Error("refresh_token_invalid");
         return json(await createAuthSession(env, refreshToken), 200, cors(origin));
       }
+      const match = url.pathname.match(/^\/v1\/rooms\/([^/]+)\/(join|ticket|snapshot|ws)$/);
+      if (match && ROOM_CODE.test(match[1]) && match[2] === "ws") {
+        if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") throw new Error("websocket_required");
+        const ticket = url.searchParams.get("ticket") ?? "";
+        return roomStub(env, match[1]).fetch(`https://room/ws?ticket=${encodeURIComponent(ticket)}`, request);
+      }
       const user = await authenticate(request, env);
       if (request.method === "POST" && url.pathname === "/v1/rooms") {
         await admission(env, request, "create");
@@ -160,15 +166,9 @@ export default {
         }
         throw new Error("room_code_exhausted");
       }
-      const match = url.pathname.match(/^\/v1\/rooms\/([^/]+)\/(join|ticket|snapshot|ws)$/);
       if (!match || !ROOM_CODE.test(match[1])) return errorResponse("not_found", 404);
       const code = match[1];
       const action = match[2];
-      if (action === "ws") {
-        if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") throw new Error("websocket_required");
-        const ticket = url.searchParams.get("ticket") ?? "";
-        return roomStub(env, code).fetch(`https://room/ws?ticket=${encodeURIComponent(ticket)}`, request);
-      }
       await admission(env, request, action === "join" ? "join" : "access");
       const input = action === "join" ? await readJson(request) : {};
       const response = await roomRequest(env, code, `/${action}`, { userId: user.id, input, now: Date.now() });

@@ -104,6 +104,10 @@ var online_room_label: Label
 func _ready() -> void:
 	print("SOUL_LINK_BOOT: ", OS.get_name())
 	web_qa = OS.has_feature("web") and "--web-qa" in OS.get_cmdline_user_args()
+	if OS.has_feature("web") and not web_qa:
+		var qa_host = JavaScriptBridge.get_interface("SoulLinkHost")
+		web_qa = qa_host != null and bool(qa_host.qaEnabled)
+	print("SOUL_LINK_QA: ", web_qa, " ", OS.get_cmdline_user_args())
 	data = Catalog.load_data()
 	character_ids = data.characters.keys().filter(func(id): return data.characters[id].enabled)
 	character = character_ids[0]
@@ -1451,6 +1455,9 @@ func _qa_snapshot() -> void:
 		"player_art": meters[0].portrait, "enemy_art": meters[1].portrait, "result_art": result_art, "rematch": result_rematch, "change": result_change,
 		"sound": sound_button, "mute": mute_switch, "music_volume": music_slider, "sfx_volume": sfx_slider, "gallery": gallery_button,
 		"back": back_button, "leave_confirm": leave_popup.get_ok_button()}
+	if online_create_button != null:
+		controls.merge({"online_create": online_create_button, "online_code": online_code, "online_join": online_join_button,
+			"online_ready": online_ready_button, "online_leave": online_leave_button, "online_room": online_room_label})
 	if gallery.visible:
 		controls["skin_apply"] = gallery.apply_button
 		controls["gallery_art"] = gallery.hero
@@ -1479,6 +1486,12 @@ func _qa_snapshot() -> void:
 		"sound_visible": sound_popup.visible, "result_visible": result_popup.visible, "palette": data.blocks.size(),
 		"result_title": result_title.text,
 		"viewport": {"width": size.x, "height": size.y}}
+	if online_client != null:
+		var online_players: Array = online_client.room_state.get("players", [])
+		snapshot["online"] = {"status": online_status.text if online_status != null else "",
+			"authenticated": online_client.authenticated, "connected": online_client.connected,
+			"room_code": online_client.room_code, "phase": String(online_client.room_state.get("phase", "")),
+			"player_count": online_players.size(), "players": online_players}
 	if in_battle and game != null:
 		snapshot.merge({"round": game.round_number, "actor": game.actor, "records": game.records.size(),
 			"attack_stats": [game.fighters[0].stats.attack, game.fighters[1].stats.attack],

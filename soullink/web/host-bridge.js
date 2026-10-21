@@ -7,6 +7,7 @@
   let closeScreen = null;
   let closing = false;
   let visible = !document.hidden;
+  const qaEnabled = () => new URL(window.location.href).searchParams.get('qa') === '1';
   const disposers = [];
   function emit(message) { if (listener) listener(JSON.stringify(message)); }
   function visibility(next) {
@@ -27,6 +28,7 @@
   listen(window, 'pageshow', () => visibility(!document.hidden));
 
   const host = {
+    get qaEnabled() { return qaEnabled(); },
     setListener(callback) {
       listener = callback;
       emit({ type: 'visibility', visible });
@@ -51,8 +53,9 @@
       Promise.resolve().then(closeScreen).catch(() => emit({ type: 'close-failed' })).finally(() => { closing = false; });
     },
     publishDiagnostics(json) {
-      if (new URL(window.location.href).searchParams.get('qa') !== '1') return;
+      if (!qaEnabled()) return;
       window.__SOUL_LINK_SNAPSHOT__ = JSON.parse(json);
+      if (document.documentElement?.dataset) document.documentElement.dataset.soulLinkSnapshot = json;
     },
     dispose() {
       if (disposePlatform) disposePlatform();

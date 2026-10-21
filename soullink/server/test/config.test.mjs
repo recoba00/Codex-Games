@@ -31,6 +31,14 @@ test("credentials are runtime-only and WebSockets use hibernation", () => {
   assert.match(source, /if \(room\.persisted \|\| !this\.env\.SUPABASE_URL/);
 });
 
+test("one-use WebSocket tickets are checked before bearer authentication", () => {
+  const socketRoute = source.indexOf('match[2] === "ws"');
+  const bearerAuth = source.indexOf("const user = await authenticate(request, env)");
+  assert.notEqual(socketRoute, -1);
+  assert.notEqual(bearerAuth, -1);
+  assert.ok(socketRoute < bearerAuth, "ticket-authenticated socket upgrades must not require an Authorization header");
+});
+
 test("admission guardrails fail closed at bounded test limits", () => {
   assert.match(source, /rooms >= 200/);
   assert.match(source, /kind === "auth" \? 12/);
