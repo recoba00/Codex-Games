@@ -16,6 +16,6 @@
     "AdmissionGate": { "type": "durable-object", "storage": "sqlite" }
   },
   "vars": {
-    "ALLOWED_ORIGINS": "http://localhost:5175,http://127.0.0.1:5175"
+    "ALLOWED_ORIGINS": "http://localhost:5175,http://127.0.0.1:5175,https://recoba00.github.io"
   }
 }
