@@ -178,7 +178,10 @@
   같은 SQL은 버전 관리하고 보안 계약 Node 검사에 포함했다. 최초 적용은 SQL Editor라
   별도 CLI migration history에는 표시되지 않는다. 익명 로그인 활성화·저장을 완료했고,
   Cloudflare 이메일 인증 차단 해제와 Worker 생성 화면 접근도 확인했다. 실제 Worker/DO
-  생성과 비밀키 연결은 아직 진행하지 않았다.
+  서버는 `server/`에 구현했다. 초대방·익명 인증·일회용 소켓 티켓·재접속·준비·서버
+  권위 퍼즐/스킬/타격/시간초과/승패와 IP 제한을 포함하고 Wrangler dry-run 및 Node
+  계약 검사를 통과했다. 실제 Worker/DO 생성과 Supabase 변수·비밀키 연결은 아직
+  진행하지 않았다.
   세부 경계와 확인 항목은 `docs/FREE_TEST_INFRA.md` 참고.
 
 - [ ] HOST-001 (외부 조치 필요): 2026-10-20 09:20 UTC 닷홈 월간 트래픽 소진 확인.

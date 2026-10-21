@@ -36,3 +36,5 @@ jobs:
           package-manager-cache: false
       - name: Check Host, Audio, Intro, Catalog, and Infrastructure Contracts
         run: node --test tests/host.test.cjs tests/audio.test.cjs tests/intro.test.cjs tests/catalog-seed.test.cjs tests/infra.test.cjs
+      - name: Check Authoritative Match Server
+        run: node --test server/test/*.test.mjs

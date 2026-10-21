@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "soullink-match",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-21",
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOMS", "class_name": "MatchRoom" },
+      { "name": "GATE", "class_name": "AdmissionGate" }
+    ]
+  },
+  "exports": {
+    "MatchRoom": { "type": "durable-object", "storage": "sqlite" },
+    "AdmissionGate": { "type": "durable-object", "storage": "sqlite" }
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:5175,http://127.0.0.1:5175"
+  }
+}

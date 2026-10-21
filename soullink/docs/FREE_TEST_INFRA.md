@@ -81,3 +81,23 @@ the `authenticated` role, so the same RLS policies continue to restrict profile,
 skin, and match-result access. The Cloudflare email-verification gate was also
 cleared and the Workers creation screen is available. No Worker, Durable Object,
 paid feature, payment method, or server secret has been created yet.
+
+## Authoritative Match Worker
+
+The first Worker implementation lives in `server/`. It uses two declarative
+SQLite Durable Object exports: one object per invite room and one small global
+admission gate. The room owns readiness, deterministic boards, move validation,
+repeatable MP skills, strikes, HP/MP, turn alarms, reconnect snapshots, forfeits
+and results. WebSockets use the Hibernation API, and clients receive one-use
+45-second tickets instead of placing Supabase access tokens in URLs.
+
+New rooms read and freeze the published Supabase catalog, so admin character and
+skin changes apply without a game rebuild while active rooms remain stable. The
+Worker refuses gameplay until its Supabase URL and publishable key are configured.
+Result persistence is separately disabled until a service-role Worker secret is
+explicitly approved and added. The checked-in localhost origin list is for local
+testing only; production origins belong in Cloudflare configuration.
+
+Local engine contracts and a Wrangler dry-run passed on 2026-10-21. The dry-run
+bundle was 40.14 KiB (10.67 KiB gzip) and exposed only the two Durable Object
+bindings plus the origin variable. No R2 or paid binding is present.
