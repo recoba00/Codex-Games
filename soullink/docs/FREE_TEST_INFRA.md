@@ -135,7 +135,12 @@ sockets with a capped 1/2/4/8-second backoff. A live two-player battle was
 reloaded in round 2 and returned to the same room, HP 927/882, local puzzle turn,
 and authoritative state with no browser warnings or errors.
 
+The Godot 4.7.2 Web export is built from `main` by a pinned GitHub Actions
+workflow and published at `https://recoba00.github.io/Codex-Games/soullink/`.
+The public client loaded its intro and preparation screen, passed the production
+origin preflight, and created a live one-player invite room without browser
+warnings or errors. The export contains the game only, not the admin or server.
+
 The remaining milestone work is durable result persistence. Persistence stays
-disabled until a service-role Worker secret is separately approved. A public
-game-host URL must also be verified separately; the Worker URL is an API
-endpoint, not the game page.
+disabled until a service-role Worker secret is separately approved. The Worker
+URL remains the API endpoint, while GitHub Pages is the playable game URL.

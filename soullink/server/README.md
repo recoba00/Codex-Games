@@ -26,8 +26,9 @@ not a playable game page.
 - `SUPABASE_URL`: Worker variable, configured in Cloudflare only.
 - `SUPABASE_PUBLISHABLE_KEY`: Worker secret/variable, configured in Cloudflare only.
 - `SUPABASE_SERVICE_ROLE_KEY`: optional Worker secret for result persistence.
-- `ALLOWED_ORIGINS`: comma-separated exact origins. Localhost is the checked-in
-  development default; add production origins in Cloudflare, not source.
+- `ALLOWED_ORIGINS`: comma-separated exact origins. Localhost and the verified
+  GitHub Pages game origin are checked in; Cloudflare Production uses the same
+  value.
 
 No R2, paid plan, payment method or usage-based fallback is required. The global
 admission object caps room creation at 200 per UTC day and applies per-IP request

@@ -26,11 +26,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: Restore Godot cache
+        id: godot-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.godot-install-dir/4.7.2-stable
+            ~/.local/share/godot/export_templates/4.7.2.stable
+          key: godot-4.7.2-stable-web-v1
+
       - name: Setup Godot 4.7.2
+        if: steps.godot-cache.outputs.cache-hit != 'true'
         uses: solarlabyrinth/action-setup-godot@d9f6c080367bc8e35dd623433be29e9f59f53a87 # v3
         with:
           version: 4.7.2-stable
           export-templates: true
+
+      - name: Add cached Godot to PATH
+        if: steps.godot-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: echo "$HOME/.godot-install-dir/4.7.2-stable" >> "$GITHUB_PATH"
 
       - name: Export Soul Link
         shell: bash
