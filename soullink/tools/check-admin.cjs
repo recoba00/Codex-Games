@@ -21,6 +21,7 @@ async function main() {
   await fs.copyFile(path.join(project, 'data/stats.json'), path.join(fixture, 'data/stats.json'));
   await fs.cp(path.join(project, 'tools/admin'), path.join(fixture, 'tools/admin'), { recursive: true });
   await fs.cp(path.join(project, 'assets/characters'), path.join(fixture, 'assets/characters'), { recursive: true });
+  await fs.cp(path.join(project, 'assets/catalog'), path.join(fixture, 'assets/catalog'), { recursive: true });
   const valid = { revision: '', characters: source.characters, combat: source.combat };
   check(Object.keys(validate(source, valid).characters).length === 3, 'Default catalog validates');
   const partial = structuredClone(valid);
@@ -116,6 +117,9 @@ async function main() {
     check(JSON.parse(await fs.readFile(configFile, 'utf8')).characters.new_soul.enabled === false, 'Browser registration creates disabled draft');
     check(JSON.parse(await fs.readFile(configFile, 'utf8')).characters.new_soul.stats.crit_chance === 0, 'New character uses neutral stat defaults');
     await page.locator('[data-character="test_guard"]').click();
+    await page.locator('[data-upload="base"]').setInputFiles(path.join(project, 'assets/characters/selene.webp'));
+    await page.waitForFunction(() => /이미지 등록 완료.*\d+ → \d+ KiB/.test(document.querySelector('#message').textContent));
+    check(true, 'Browser artwork upload reports source and encoded bytes');
     await page.screenshot({ path: path.join(project, 'artifacts/admin-desktop.png'), fullPage: true });
     for (const width of [390, 360]) {
       await page.setViewportSize({ width, height: 844 });

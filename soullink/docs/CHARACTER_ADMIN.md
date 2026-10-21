@@ -47,7 +47,9 @@ normal content publishing. It does not upload Dothome or Toss automatically.
   by the public catalog or image route.
 - Images keep their aspect ratio and alpha. The browser re-encodes PNG/JPG/WebP
   to a maximum 1024px long edge; server limits are 3MiB and 64-2048px per axis.
-  Hashed immutable filenames, actual raster headers and SHA-256 are verified.
+  The upload result shows the original and encoded KiB. Hashed immutable filenames,
+  actual raster headers and SHA-256 are verified. This is a fixed-quality WebP pass,
+  not an image-by-image visual quality optimizer.
 - A skin only contains `name`, `image`, `enabled`. Stats, skills and passives in
   a skin are rejected. Selecting a skin never changes combat strength or RNG.
 - The game has a Korean 캐릭터 도감 page separate from battle. Published

@@ -14,7 +14,8 @@
 - 출시 순서: Apps in Toss 우선, 이후 Steam과 Google Play
 - 비용 원칙: Cloudflare/Supabase 무료 범위만 사용. 결제수단, 유료 플랜, 자동 과금 금지
 - 최근 기능 수정: 초대 코드 모바일 키보드 활성화 및 키보드 포커스 자동 확대 방지
-- 최근 검증: Node 38개 통과, GitHub Web export/Pages/Worker 배포 성공, 공개 HTML 설정 확인
+- 최근 검증: Node 40개, Godot 코어 14,681검사, 로컬 어드민 51검사 통과.
+  GitHub Web export/Pages/Worker 자동 배포 구성. 배포 상태는 해당 커밋의 Actions에서 확인.
 
 ## P0 - 다음 작업
 
@@ -47,10 +48,19 @@
 ## P1 - 품질과 운영 기반
 
 - [ ] P1-ASSET-001: 배포 전 이미지 경량화와 용량 예산을 자동화한다.
+  첫 단계로 Web 출력 크기/운영 파일 혼입 CI와 어드민 등록 전후 크기 표시는 완료했다.
+  VFX 무손실 WebP는 실제 PCK 절감이 없어 원본 PNG를 유지했다.
+  현재 깨끗한 Web 파일 기준 약 57.38MiB, WASM 37.68MiB, PCK 13.27MiB다.
+  남은 일은 일반 원화/배경의 품질 비교 자동화와 표시 크기별 배포본 선택이다.
   원본은 보존하고 배포본만 실제 표시 크기로 축소한다. 일반 원화/배경은 육안 차이가
   없는 WebP, 알파가 중요한 UI/VFX는 lossless WebP 또는 최적화 PNG를 사용한다.
   해상도·알파·색상·파일 크기 전후를 검사하고, 캐릭터 원화는 자동 과압축하지 않는다.
   변경된 에셋별 바이트와 전체 Web/PCK 크기를 CI 산출물에 남긴다.
+
+- [ ] P1-ARCH-001: 실기기 로딩/프레임/메모리를 먼저 측정하고 실제 병목만 최적화한다.
+  `scripts/ui/main.gd`는 화면 조립과 온라인/전투 조율이 큰 파일이다. 관련 함수 진입점을
+  `docs/AI_WORKFLOW.md`에 지도화했다. 무작정 분리하지 말고 독립된 책임이 확인될 때
+  테스트와 함께 작은 컨트롤러로 추출한다. UI/전투 동작은 그대로 유지한다.
 
 - [ ] P1-MOBILE-001: 360x800, 390x844, 430x932와 가로 회전에서 UI 실기기 회귀를 한다.
   퍼즐 터치 영역, 키보드, 결과 화면, 노치, 주소창 축소/확장, visual viewport 변화를 본다.
@@ -100,6 +110,7 @@
 - [x] DONE-REPO: `Codex-Games/soullink` 소스 이관, GitHub Actions 검사와 Godot Web export.
 - [x] DONE-PUBLIC-WEB: GitHub Pages 자동 게시, 공개 origin CORS, 실제 방 생성 확인.
 - [x] DONE-MOBILE-INPUT: Godot Web 가상 키보드 활성화, 16px 숨은 입력과 viewport 확대 방지.
+- [x] DONE-SIZE-GUARD: Web 출력의 WASM/PCK/전체 용량과 운영 파일 혼입 CI 검사.
 
 ## 외부 조치 또는 승인 필요
 

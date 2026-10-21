@@ -20,3 +20,6 @@
   hard service failure at a free quota over automatic overage billing.
 - Keep database content and R2 media independent from source deployments. Never
   reset production data as part of deploying application code.
+- Work with the smallest relevant source and test scope first. Use `rg` to locate
+  owners, avoid dumping whole files or histories, and keep handoff notes concise.
+  Optimize for correct, maintainable changes rather than code golf or token count.

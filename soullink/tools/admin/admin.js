@@ -133,7 +133,8 @@ async function uploadImage(character, skin, file) {
     const response = await fetch('/admin/api/upload', { method: 'POST', headers: { 'Content-Type': blob.type, 'X-Soul-Token': token }, body: blob });
     const result = await response.json(); if (!response.ok) throw Error(result.error);
     skin.image = result.id; character.portrait = character.skins[character.default_skin].image;
-    changed(); render(); message(`이미지 등록 완료 · ${result.width} × ${result.height}`);
+    const originalKiB = Math.round(file.size / 1024), uploadedKiB = Math.round(blob.size / 1024);
+    changed(); render(); message(`이미지 등록 완료 · ${result.width} × ${result.height} · ${originalKiB} → ${uploadedKiB} KiB`);
   } catch (error) { message(error.message); }
   finally { working = false; update(); }
 }

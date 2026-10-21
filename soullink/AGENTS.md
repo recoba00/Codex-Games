@@ -22,6 +22,8 @@ battler, not the earlier Norse idle RPG described in ancestor notes.
   production live operation before an actual HTTPS content host is configured.
 - Read TASKS.md before implementation; keep one milestone active and distinguish
   engine tests, real rendered checks, host integration and live deployment.
+- Use `docs/AI_WORKFLOW.md` to route work to the smallest relevant modules/tests.
+  Keep one source of truth per rule and avoid duplicating old verification logs.
 - Never put hosting credentials in this project. Do not overwrite the current
   public game before the Godot export and its host integration are validated.
 - Follow `docs/FREE_TEST_INFRA.md` for all online test resources. The current
