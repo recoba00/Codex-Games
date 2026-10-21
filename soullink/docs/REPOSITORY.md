@@ -62,7 +62,9 @@ the staged diff, commit, and push. Server deployment is not configured yet.
 
 ## Next Hosting Stage
 
-1. Create/link Cloudflare and Supabase resources with the account owner.
+1. Create/link Free-plan-only Cloudflare and Supabase resources with the account
+   owner. Apply `FREE_TEST_INFRA.md`; paid resources require a separate explicit
+   approval and are not a fallback for exhausted free quotas.
 2. Add authenticated admin roles, API access controls, and private server secrets.
 3. Migrate file-backed catalog publication to persistent DB/media storage without
    overwriting live content on code deploys.

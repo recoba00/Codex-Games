@@ -13,5 +13,10 @@
   its checks before committing/pushing the intended files.
 - Cloud hosting credentials belong in protected CI/hosting secrets, never in
   source files, generated clients, workflow literals, logs, or Git history.
+- Soul Link test infrastructure is zero-cost only. Keep Cloudflare Workers and
+  SQLite-backed Durable Objects on the Free plan and Supabase on the Free plan.
+  Do not add a payment method, enable a paid plan/add-on, or create a resource
+  that can incur usage charges without a new explicit user approval. Prefer a
+  hard service failure at a free quota over automatic overage billing.
 - Keep database content and R2 media independent from source deployments. Never
   reset production data as part of deploying application code.

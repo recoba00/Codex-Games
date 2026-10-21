@@ -24,6 +24,10 @@ battler, not the earlier Norse idle RPG described in ancestor notes.
   engine tests, real rendered checks, host integration and live deployment.
 - Never put hosting credentials in this project. Do not overwrite the current
   public game before the Godot export and its host integration are validated.
+- Follow `docs/FREE_TEST_INFRA.md` for all online test resources. The current
+  authorization is Free-plan-only: no billing method, paid subscription,
+  usage-based add-on, R2 subscription, or paid fallback. When a free quota is
+  reached, stop/fail the affected test instead of enabling paid capacity.
 - This game lives in `recoba00/Codex-Games` under `soullink/`; see
   `docs/REPOSITORY.md`. The old `my/soul` copy is not synchronized with this
   checkout. Keep game-specific CI paths scoped to `soullink/**`.
