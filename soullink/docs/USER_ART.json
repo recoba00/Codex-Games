@@ -1,0 +1,31 @@
+{
+  "source": "user attachments, 2026-10-20",
+  "generated": false,
+  "files": [
+    {
+      "source": "붉은 보석 검 문양 엠블럼.png",
+      "sourceSha256": "345379edc9fe6f4c588ced9d9d980ad1f8bcc96125ab1416c8e26d072413d93b",
+      "output": "assets/puzzles/attack.webp"
+    },
+    {
+      "source": "청금석-번개-에너지-엠블럼.png",
+      "sourceSha256": "c42c3d87e3916f94cc7a28835c1f23db7eade79e64ce3021cde97eaf1296e4aa",
+      "output": "assets/puzzles/denial.webp"
+    },
+    {
+      "source": "에메랄드-바람잎-보석-아이콘.png",
+      "sourceSha256": "2fd513aebc8f9cfd59c76a4a3667968ca16b46751b12b97f05dd7e738c21ba3b",
+      "output": "assets/puzzles/boost.webp"
+    },
+    {
+      "source": "보랏빛-초승달과-별의-보석-엠블럼.png",
+      "sourceSha256": "426b8e4147f6a2a9875f02166f5126abca72e971b0fe6b458ceaceefa36989be",
+      "output": "assets/puzzles/mana.webp"
+    },
+    {
+      "source": "찬란한-황금-별빛-엠블럼.png",
+      "sourceSha256": "8096272d60d52f4d1d589e2b3affd76390f2bf6bbbb64f85ac0a636d1ade3b1f",
+      "output": "assets/puzzles/heal.webp"
+    }
+  ]
+}

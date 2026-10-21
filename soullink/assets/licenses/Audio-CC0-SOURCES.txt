@@ -1,0 +1,31 @@
+Soul Link audio sources, verified 2026-10-20
+
+All added BGM and SFX are published by their creators under CC0 1.0 Universal.
+Commercial game use and modification are permitted without mandatory attribution.
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Keep this internal provenance record; no in-game audio credits are required.
+
+BGM: Technovillain / Joth
+https://opengameart.org/content/technovillain-0
+Original: https://opengameart.org/sites/default/files/technovillain.mp3
+Game version: menu-technovillain.mp3, gain -1.5dB, 96kbps MP3.
+
+BGM: Black Diamond / Joth
+https://opengameart.org/content/black-diamond
+Original: https://opengameart.org/sites/default/files/Black%20Diamond.mp3
+Creator explicitly makes credit optional. 143 BPM drum-and-bass.
+Game version: battle-black-diamond.mp3, 64-bar excerpt from bar 17,
+26.853146853s start / 107.412587413s duration, gain -3dB, 112kbps MP3.
+8ms edge fades prevent loop clicks; the composition is not rewritten.
+
+SFX: Kenney Digital Audio / Impact Sounds / Interface Sounds
+https://kenney.nl/assets/digital-audio
+https://kenney.nl/assets/impact-sounds
+https://kenney.nl/assets/interface-sounds
+https://kenney.nl/support
+The original pack CC0 license files are included alongside this record.
+Selected sounds are converted to mono 22050Hz PCM WAV, limited to 0.8s.
+
+No NIKKE soundtrack, voice, sound effect or extracted game audio is included.
+These records document the creators' published grants, not an independent
+forensic ownership audit or a guarantee against third-party Content ID claims.

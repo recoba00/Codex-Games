@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "damage_rules": { "defense_constant": 100 },
+  "definitions": [
+    { "id": "max_hp", "label": "최대 체력", "default": 1000, "min": 100, "max": 10000, "step": 1, "integer": true, "unit": "number" },
+    { "id": "attack", "label": "공격력", "default": 100, "min": 1, "max": 1000, "step": 1, "integer": true, "unit": "number" },
+    { "id": "defense", "label": "방어력", "default": 0, "min": 0, "max": 5000, "step": 1, "integer": true, "unit": "number" },
+    { "id": "crit_chance", "label": "치명타 확률", "default": 0, "min": 0, "max": 1, "step": 0.001, "integer": false, "unit": "percent" },
+    { "id": "crit_damage", "label": "치명타 피해 · 총배율", "default": 1.5, "min": 1, "max": 3, "step": 0.01, "integer": false, "unit": "percent" },
+    { "id": "damage_reduction", "label": "받는 모든 피해 감소", "default": 0, "min": 0, "max": 0.8, "step": 0.001, "integer": false, "unit": "percent" }
+  ]
+}

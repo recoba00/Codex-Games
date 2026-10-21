@@ -1,0 +1,28 @@
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+AddType audio/mpeg .mp3
+AddType audio/wav .wav
+  AddType application/octet-stream .pck
+  AddType text/javascript .js
+  AddEncoding gzip .gz
+</IfModule>
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Accept-Encoding} gzip [NC]
+  RewriteCond %{REQUEST_FILENAME}.gz -f
+  RewriteRule ^(index\.(wasm|pck|js))$ $1.gz [L]
+</IfModule>
+<FilesMatch "\.wasm\.gz$">
+  ForceType application/wasm
+</FilesMatch>
+<FilesMatch "\.pck\.gz$">
+  ForceType application/octet-stream
+</FilesMatch>
+<FilesMatch "\.js\.gz$">
+  ForceType text/javascript
+</FilesMatch>
+<IfModule mod_headers.c>
+  <FilesMatch "\.(wasm|pck|js)(\.gz)?$">
+    Header append Vary Accept-Encoding
+  </FilesMatch>
+</IfModule>

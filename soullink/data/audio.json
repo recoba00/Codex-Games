@@ -1,0 +1,22 @@
+{
+  "music": {
+    "menu": {"file": "music/menu-technovillain.mp3", "title": "Technovillain", "author": "Joth", "source": "https://opengameart.org/content/technovillain-0", "license": "CC0-1.0"},
+    "battle": {"file": "music/battle-black-diamond.mp3", "title": "Black Diamond", "author": "Joth", "source": "https://opengameart.org/content/black-diamond", "license": "CC0-1.0", "bpm": 143, "edit": "64-bar loop from bar 17; gain -3dB"}
+  },
+  "sfx": {
+    "ui": {"file": "sfx/ui.wav", "gain": 0.35, "cooldown": 0.07},
+    "swap": {"file": "sfx/swap.wav", "gain": 0.22, "cooldown": 0.09},
+    "turn": {"file": "sfx/turn.wav", "gain": 0.42, "cooldown": 0.2},
+    "red": {"file": "sfx/red.wav", "gain": 0.5, "cooldown": 0.1},
+    "blue": {"file": "sfx/blue.wav", "gain": 0.42, "cooldown": 0.1},
+    "green": {"file": "sfx/green.wav", "gain": 0.42, "cooldown": 0.1},
+    "mana": {"file": "sfx/mana.wav", "gain": 0.4, "cooldown": 0.1},
+    "hit": {"file": "sfx/hit.wav", "gain": 0.7, "cooldown": 0.09, "duck": true},
+    "shield": {"file": "sfx/shield.wav", "gain": 0.5, "cooldown": 0.1},
+    "cast": {"file": "sfx/cast.wav", "gain": 0.38, "cooldown": 0.1},
+    "drop": {"file": "sfx/drop.wav", "gain": 0.2, "cooldown": 0.08},
+    "victory": {"file": "sfx/victory.wav", "gain": 0.55, "cooldown": 0.5},
+    "defeat": {"file": "sfx/defeat.wav", "gain": 0.4, "cooldown": 0.5}
+  },
+  "effects_source": {"author": "Kenney", "license": "CC0-1.0", "packs": ["https://kenney.nl/assets/digital-audio", "https://kenney.nl/assets/impact-sounds", "https://kenney.nl/assets/interface-sounds"]}
+}

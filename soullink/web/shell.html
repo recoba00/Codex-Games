@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <!-- SOUL_LINK_RELEASE_BASE -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d171c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SOUL LINK">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>SOUL LINK</title>
+  <link rel="manifest" href="/games/soullink/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/games/soullink/icons/icon-32-v2.png">
+  <link rel="apple-touch-icon" href="/games/soullink/icons/apple-touch-icon-v2.png">
+  <link rel="stylesheet" href="intro.css">
+  <link rel="preload" href="intro/logo.webp" as="image">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0d171c; }
+    body { color: #eef1e9; font-family: system-ui, sans-serif; touch-action: none; }
+    #game { position: fixed; inset: 0; padding: max(env(safe-area-inset-top, 0px), var(--host-safe-top, 0px)) max(env(safe-area-inset-right, 0px), var(--host-safe-right, 0px)) max(env(safe-area-inset-bottom, 0px), var(--host-safe-bottom, 0px)) max(env(safe-area-inset-left, 0px), var(--host-safe-left, 0px)); }
+    #viewport { position: relative; width: 100%; height: 100%; }
+    #canvas { display: block; width: 100%; height: 100%; border: 0; outline: none; }
+  </style>
+</head>
+<body>
+  <main id="game"><div id="viewport">
+    <canvas id="canvas" tabindex="0" aria-label="SOUL LINK"></canvas>
+    <section id="intro" data-phase="film" aria-label="SOUL LINK 타이틀">
+      <video id="intro-video" src="intro/cinematic.mp4" poster="intro/poster.jpg" autoplay muted playsinline preload="auto" disablepictureinpicture aria-hidden="true"></video>
+      <div id="intro-shade"></div><div id="intro-vignette"></div>
+      <div class="intro-top">
+        <button id="intro-sound" class="intro-button" aria-label="인트로 배경 음악 재생"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>음악 재생</button>
+        <button id="intro-skip" class="intro-button" aria-label="인트로 건너뛰기">SKIP <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
+      </div>
+      <div id="intro-brand"><img id="intro-logo" src="intro/logo.webp" alt="SOUL LINK" width="897" height="877"><div id="intro-impact"></div></div>
+      <div class="intro-footer">
+        <div class="intro-action">
+          <button id="intro-start" class="intro-button" hidden disabled>터치하여 시작</button>
+          <button id="intro-play" class="intro-button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>영상 재생</button>
+          <button id="intro-retry" class="intro-button" hidden>다시 시도</button>
+        </div>
+        <div class="intro-loading">
+          <div class="intro-loading-label"><span id="intro-label">LOADING</span><span id="intro-percent"></span></div>
+          <progress id="intro-progress" aria-label="게임 로딩 진행률"></progress>
+          <p id="intro-note" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+  </div></main>
+  <noscript>게임을 실행하려면 JavaScript를 켜주세요.</noscript>
+  <script src="host-bridge.js"></script>
+  <script src="audio-bridge.js"></script>
+  <script src="intro.js"></script>
+  <!-- SOUL_LINK_PLATFORM_ENTRY -->
+  <script src="$GODOT_URL"></script>
+  <script>
+    const config = $GODOT_CONFIG;
+    const threaded = $GODOT_THREADS_ENABLED;
+    const canvas = document.getElementById('canvas');
+    const viewport = document.getElementById('viewport');
+    function resizeCanvas() {
+      const rect = viewport.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width * devicePixelRatio));
+      canvas.height = Math.max(1, Math.round(rect.height * devicePixelRatio));
+    }
+    resizeCanvas();
+    new ResizeObserver(resizeCanvas).observe(viewport);
+    function failure(error) {
+      window.SoulLinkIntro.fail(error);
+    }
+    // The HTTP preview uses no secure-only APIs. Keep WebGL/Fetch/thread checks;
+    // do not pretend HTTP is secure or enable service workers on an unsafe origin.
+    const missing = Engine.getMissingFeatures({ threads: threaded }).filter(feature => !(
+      !threaded && location.protocol === 'http:' && feature.startsWith('Secure Context -')
+    ));
+    if (missing.length) {
+      failure(new Error(missing.join('\n')));
+    } else {
+      config.ensureCrossOriginIsolationHeaders = false;
+      config.serviceWorker = '';
+      // Shared browser audio uses ordinary Web Audio after a user gesture, also
+      // on HTTP. The engine mixer stays silent to avoid a second AudioContext.
+      config.args = config.args.concat(['--audio-driver', 'Dummy']);
+      if (new URL(location.href).searchParams.get('qa') === '1') config.args = config.args.concat(['--', '--web-qa']);
+      const engine = new Engine(config);
+      engine.startGame({ canvas, onProgress(current, total) {
+        window.SoulLinkIntro.progress(current, total);
+      }}).then(() => {
+        window.SoulLinkIntro.ready();
+      }).catch(failure);
+    }
+  </script>
+</body>
+</html>

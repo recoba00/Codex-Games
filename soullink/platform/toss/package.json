@@ -1,0 +1,19 @@
+{
+  "name": "soullink-toss-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:game": "node ../../tools/package-toss.cjs",
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "build:web": "vite build",
+    "build": "vite build && ait build && node ../../tools/finalize-toss.cjs"
+  },
+  "dependencies": {
+    "@apps-in-toss/web-framework": "3.8.1"
+  },
+  "devDependencies": {
+    "@apps-in-toss/devtools": "3.8.1",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,234 @@
+{
+  "source_version": "godot-v0.6.1-stats",
+  "schema_version": 3,
+  "combat": {
+    "baseStrike": 70,
+    "elementBonus": 0.05,
+    "actionSeconds": 6
+  },
+  "characters": {
+    "ignis": {
+      "name": "이그니스",
+      "english": "IGNIS",
+      "faction": 0,
+      "color": "#ef6972",
+      "role": "화상 · 공격",
+      "skill": "절멸의 화염",
+      "enabled": true,
+      "portrait": "asset_7a606470da0331f6c05aba484691504efd4225971db967b5d42aff8f6f00727d.webp",
+      "skins": {
+        "base": {
+          "name": "기본",
+          "image": "asset_7a606470da0331f6c05aba484691504efd4225971db967b5d42aff8f6f00727d.webp",
+          "enabled": true
+        },
+        "waefwf": {
+          "name": "교복",
+          "image": "asset_d394a9aa54e4862a5c1b2d1321ae70e28f4255eb8ad7309d341e15db065b5a90.webp",
+          "enabled": true
+        }
+      },
+      "default_skin": "base",
+      "stats": {
+        "max_hp": 1000,
+        "attack": 100,
+        "defense": 0,
+        "crit_chance": 0,
+        "crit_damage": 1.5,
+        "damage_reduction": 0
+      },
+      "active": {
+        "type": "execute",
+        "damage": 170,
+        "cost": 40,
+        "threshold": 0.3,
+        "executeDamage": 220,
+        "boost": 0
+      },
+      "passive_config": {
+        "type": "burn",
+        "value": 8,
+        "threshold": 1,
+        "cap": 3
+      }
+    },
+    "selene": {
+      "name": "셀레네",
+      "english": "SELENE",
+      "faction": 1,
+      "color": "#6bbce0",
+      "role": "침묵 · 수호",
+      "skill": "월식의 침묵",
+      "enabled": true,
+      "portrait": "asset_8a838e9dc64eee5d29d3e7dafc8df0877496ad7466c3982fe73e3edf2a4df8b4.webp",
+      "skins": {
+        "base": {
+          "name": "기본",
+          "image": "asset_8a838e9dc64eee5d29d3e7dafc8df0877496ad7466c3982fe73e3edf2a4df8b4.webp",
+          "enabled": true
+        },
+        "school": {
+          "name": "교복",
+          "image": "asset_10d7a2d26bf61c3d8fed97e08432248318c61db645fbf5c07d0d62dec6c7abd9.webp",
+          "enabled": true
+        }
+      },
+      "default_skin": "base",
+      "stats": {
+        "max_hp": 1000,
+        "attack": 100,
+        "defense": 0,
+        "crit_chance": 0,
+        "crit_damage": 1.5,
+        "damage_reduction": 0
+      },
+      "active": {
+        "type": "silence",
+        "damage": 130,
+        "cost": 40,
+        "threshold": 0.3,
+        "executeDamage": 130,
+        "boost": 0
+      },
+      "passive_config": {
+        "type": "guard",
+        "value": 0.08,
+        "threshold": 1,
+        "cap": 1
+      }
+    },
+    "sylphi": {
+      "name": "실피",
+      "english": "SYLPHI",
+      "faction": 2,
+      "color": "#77d0a5",
+      "role": "콤보 · 강화",
+      "skill": "질풍노도",
+      "enabled": true,
+      "portrait": "asset_4b4694a0ed71f17f9be56241b363b63d84197c060eb00555ec6fae5344c0f120.webp",
+      "skins": {
+        "base": {
+          "name": "기본",
+          "image": "asset_4b4694a0ed71f17f9be56241b363b63d84197c060eb00555ec6fae5344c0f120.webp",
+          "enabled": true
+        },
+        "school": {
+          "name": "교복",
+          "image": "asset_c0918b49beb988889edbad7837c834387576bf2801aab36632a32697724659f2.webp",
+          "enabled": true
+        }
+      },
+      "default_skin": "base",
+      "stats": {
+        "max_hp": 1000,
+        "attack": 100,
+        "defense": 0,
+        "crit_chance": 0,
+        "crit_damage": 1.5,
+        "damage_reduction": 0
+      },
+      "active": {
+        "type": "boost",
+        "damage": 150,
+        "cost": 40,
+        "threshold": 0.3,
+        "executeDamage": 150,
+        "boost": 0.2
+      },
+      "passive_config": {
+        "type": "combo",
+        "value": 0.25,
+        "threshold": 3,
+        "cap": 1
+      }
+    }
+  },
+  "practice": {
+    "matchMana": 8,
+    "openingMana": 0,
+    "secondMana": 10,
+    "activeCost": 40,
+    "turnSeconds": 15
+  },
+  "blocks": [
+    {
+      "id": 0,
+      "name": "타격",
+      "icon": "swords",
+      "color": "#de5c6b",
+      "target": "상대 HP",
+      "timing": "마지막 타격",
+      "description": "3매치 · 마지막 기본 타격에 +50 · 빨강이 없어도 기본 70 타격"
+    },
+    {
+      "id": 1,
+      "name": "번개",
+      "icon": "zap",
+      "color": "#5aafd0",
+      "target": "상대 MP",
+      "timing": "지금",
+      "description": "3매치 · 상대 MP −10 · 턴당 최대 −15"
+    },
+    {
+      "id": 2,
+      "name": "질풍",
+      "icon": "wind",
+      "color": "#62bd96",
+      "target": "다음 내 공격",
+      "timing": "다음 내 턴",
+      "description": "3매치 · 다음 내 턴 마지막 타격 +10% · 최대 +30%"
+    },
+    {
+      "id": 3,
+      "name": "마나",
+      "icon": "sparkles",
+      "color": "#ad8bd1",
+      "target": "내 MP",
+      "timing": "지금",
+      "description": "3매치 · 내 MP 추가 +25 · 매칭 후 MP가 남으면 스킬 반복 사용"
+    },
+    {
+      "id": 4,
+      "name": "회복",
+      "icon": "heart",
+      "color": "#ffd86b",
+      "target": "내 HP",
+      "timing": "지금",
+      "description": "황금 치유 3매치 · 내 HP +40 · 턴당 최대 +80 · 최대 HP 초과 불가"
+    }
+  ],
+  "block_rules": {
+    "matchMana": 8,
+    "manaCap": 40,
+    "attack": 50,
+    "denial": 10,
+    "denialCap": 15,
+    "green": 0.1,
+    "greenCap": 0.3,
+    "mana": 25,
+    "heal": 40,
+    "healCap": 80
+  },
+  "board_sizes": [
+    {
+      "cols": 6,
+      "rows": 5
+    },
+    {
+      "cols": 6,
+      "rows": 6
+    },
+    {
+      "cols": 8,
+      "rows": 6
+    },
+    {
+      "cols": 6,
+      "rows": 8
+    }
+  ],
+  "game_limits": {
+    "rounds": 8,
+    "direct_hp_cap": 500
+  }
+}

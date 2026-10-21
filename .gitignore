@@ -1,0 +1,28 @@
+# Generated files, dependencies, and local state for every game.
+**/.godot/
+**/node_modules/
+**/build/
+**/dist/
+**/artifacts/
+**/__pycache__/
+**/*.pyc
+**/*.ait
+**/android/build/
+.DS_Store
+Thumbs.db
+
+# Secrets belong in local configuration or the hosting secret store.
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.keystore
+**/export_credentials.cfg
+
+# Recreated by soullink/tools/package-toss.cjs.
+/soullink/platform/toss/public/
+/soullink/platform/toss/index.html

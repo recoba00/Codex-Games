@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Soul Link 캐릭터 관리</title><link rel="stylesheet" href="/admin/admin.css"><link rel="stylesheet" href="/admin/skins.css"><script src="/admin/admin.js" defer></script></head>
+<body>
+  <header><strong>SOUL LINK <span>캐릭터 관리</span></strong><a href="/games/soullink/" target="_blank" rel="noopener">게임 열기 ↗</a></header>
+  <nav class="commands" aria-label="저장 및 공개"><span id="state" role="status">불러오는 중</span><button id="reload">다시 불러오기</button><button id="save">초안 저장</button><button id="publish" class="primary">인게임 공개</button></nav>
+  <div id="message" role="alert"></div>
+  <div class="workspace">
+    <aside><div class="section-title"><h1>캐릭터</h1><button id="register">신규 등록</button></div><div id="roster"></div><section class="global"><h2>공통 전투</h2><div id="global-fields"></div></section></aside>
+    <main id="editor" aria-label="캐릭터 설정"></main>
+  </div>
+  <details class="build-tools"><summary>클라이언트 빌드</summary><button id="build">미리보기 빌드</button><section id="build-status" hidden><h2>로컬 빌드</h2><pre id="build-log"></pre></section></details>
+  <dialog id="new-character"><form id="register-form"><h2>캐릭터 등록</h2><label>영문 ID<input name="id" pattern="[a-z][a-z0-9_]{1,31}" maxlength="32" required autocomplete="off"></label><label>이름<input name="name" maxlength="12" required></label><label>원화<select name="portrait"><option value="ignis">이그니스</option><option value="selene">셀레네</option><option value="sylphi">실피</option></select></label><div class="dialog-actions"><button type="button" id="cancel-register">취소</button><button class="primary">등록</button></div></form></dialog>
+  <dialog id="new-skin"><form id="skin-form"><h2>스킨 등록</h2><label>영문 ID<input name="id" pattern="[a-z][a-z0-9_]{1,31}" maxlength="32" required autocomplete="off" placeholder="school_uniform"></label><label>스킨 이름<input name="name" maxlength="24" required placeholder="교복"></label><div class="dialog-actions"><button type="button" id="cancel-skin">취소</button><button class="primary">등록</button></div></form></dialog>
+</body></html>
