@@ -13,6 +13,11 @@ const migrationPath = path.join(
   '20261021010000_initial_online_test.sql'
 );
 const sql = fs.readFileSync(migrationPath, 'utf8');
+const exportPreset = fs.readFileSync(path.join(__dirname, '..', 'export_presets.cfg'), 'utf8');
+
+test('mobile virtual keyboard is enabled for Godot web exports', () => {
+  assert.match(exportPreset, /^html\/experimental_virtual_keyboard=true$/m);
+});
 
 test('initial online schema includes the required persistent records', () => {
   for (const table of ['profiles', 'game_catalog', 'user_skins', 'match_results']) {
