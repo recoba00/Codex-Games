@@ -52,6 +52,11 @@ intro, and catalog seed Node contract tests on Soul Link changes. Other games do
 Manual workflow dispatch is also available. This does not claim engine, rendered
 browser, PvP, database, or live-host verification.
 
+Initial source commit `d62413c` was pushed to `main`. Its actual GitHub run passed:
+https://github.com/recoba00/Codex-Games/actions/runs/39518756776
+Local Godot import and core checks also passed (14,666 assertions / 1,338 turns).
+The hosted workflow runs 19 Node checks, not the Godot or rendered suites.
+
 Saving files is not an automatic commit or push. Finish scoped work, test, inspect
 the staged diff, commit, and push. Server deployment is not configured yet.
 
