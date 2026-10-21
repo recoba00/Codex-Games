@@ -11,6 +11,7 @@ const LiveContent = preload("res://scripts/ui/live_content.gd")
 const LiveCatalog = preload("res://scripts/core/live_catalog.gd")
 const SkinGallery = preload("res://scripts/ui/skin_gallery.gd")
 const MatchClient = preload("res://scripts/online/match_client.gd")
+const RemoteBattle = preload("res://scripts/online/remote_battle.gd")
 const FONT = preload("res://assets/fonts/Pretendard-Regular.otf")
 const ACCENT = Color("ffb43b")
 const TEXT = Color("f3f4f6")
@@ -100,6 +101,9 @@ var online_join_button: Button
 var online_ready_button: Button
 var online_leave_button: Button
 var online_room_label: Label
+var online_battle = false
+var online_event: Dictionary = {}
+var online_waiting = false
 
 func _ready() -> void:
 	print("SOUL_LINK_BOOT: ", OS.get_name())
@@ -415,6 +419,7 @@ func _connect_online() -> void:
 			online_create_button.disabled = not online_client.room_code.is_empty()
 			online_join_button.disabled = online_code.text.length() != 8 or not online_client.room_code.is_empty())
 	online_client.room_changed.connect(_online_room_changed)
+	online_client.event_received.connect(_online_event_received)
 	online_client.request_failed.connect(func(message):
 		if online_status != null:
 			online_status.text = message
@@ -445,6 +450,8 @@ func _online_room_changed(state: Dictionary) -> void:
 		online_room_label.text = ""
 		online_ready_button.text = "대전 준비"
 		online_ready_button.disabled = false
+		if online_battle:
+			show_preparation()
 		return
 	var players: Array = state.get("players", [])
 	online_room_label.text = "초대 코드  %s" % String(state.get("roomCode", online_client.room_code))
@@ -455,6 +462,162 @@ func _online_room_changed(state: Dictionary) -> void:
 	online_ready_button.disabled = mine_ready or phase_name != "lobby"
 	if phase_name == "battle":
 		online_ready_button.text = "온라인 대전 연결됨"
+		if not online_battle:
+			_start_online_battle(state)
+		else:
+			_sync_online_battle(state)
+	elif phase_name == "finished" and online_battle:
+		_sync_online_battle(state)
+
+func _online_event_received(event: Dictionary) -> void:
+	var kind = String(event.get("type", ""))
+	if kind in ["receipt", "timeout"]:
+		online_event = event.duplicate(true)
+	elif kind == "presence" and online_battle:
+		var connected = bool(event.get("connected", false))
+		feedback.text = "상대가 다시 연결되었습니다" if connected else "상대 연결이 끊겼습니다 · 복귀 대기 중"
+		_refresh()
+
+func _start_online_battle(state: Dictionary) -> void:
+	var match_data: Dictionary = state.get("match", {})
+	if match_data.is_empty():
+		return
+	var players: Array = state.get("players", [])
+	var seat = int(state.get("youSeat", 0))
+	if players.size() < 2 or seat < 0 or seat > 1:
+		return
+	character = String(players[seat].get("characterId", character))
+	opponent = String(players[1 - seat].get("characterId", opponent))
+	battle_skins = [String(players[seat].get("skinId", "base")), String(players[1 - seat].get("skinId", "base"))]
+	game = RemoteBattle.new(state)
+	online_battle = true
+	online_waiting = false
+	online_event.clear()
+	result_popup.hide()
+	presentation.cancel()
+	audio.music("battle")
+	after_presentation = Callable()
+	shown_fighters.clear()
+	presentation_trace.clear()
+	in_battle = true
+	paused = false
+	preparation.hide()
+	arena.show()
+	back_button.show()
+	feedback.text = "서버 동기화 완료 · 모든 판정은 온라인 서버에서 처리됩니다"
+	_begin_online_turn()
+
+func _sync_online_battle(state: Dictionary) -> void:
+	if game == null or not online_battle:
+		_start_online_battle(state)
+		return
+	var previous_fighters = game.fighters.duplicate(true)
+	var previous_stage = game.stage
+	var previous_actor = game.actor
+	var previous_round = game.round_number
+	var receipt: Dictionary = online_event.get("receipt", {})
+	online_event.clear()
+	game.apply_state(state)
+	online_waiting = false
+	display_actor = game.actor
+	puzzle.present(game.boards[game.actor], game.dimensions, false, floori((game.turn_seconds - 0.5) * 8))
+	if game.result != null:
+		if not receipt.is_empty():
+			_play_online_receipt(receipt, previous_fighters, _show_result)
+		else:
+			_refresh()
+			_show_result()
+		return
+	if not receipt.is_empty():
+		game.record_receipt(receipt)
+		_play_online_receipt(receipt, previous_fighters, _online_after_receipt)
+	elif previous_stage == "puzzle" and game.stage == "action":
+		_play_online_match(previous_fighters)
+	elif previous_stage == "action" and game.stage == "puzzle" or previous_actor != game.actor or previous_round != game.round_number:
+		_begin_online_turn()
+	else:
+		_online_state_ready()
+
+func _begin_online_turn() -> void:
+	_cancel_reshape()
+	display_actor = game.actor
+	shown_fighters.clear()
+	phase = "turn_intro"
+	puzzle.present(game.boards[game.actor], game.dimensions, false, floori((game.turn_seconds - 0.5) * 8))
+	var actor_name = data.characters[game.fighters[game.actor].character].name
+	preview.text = "기본 타격 %d · 빨강 매치로 추가 피해\n%s" % [data.combat.baseStrike, Catalog.passive_text(data.characters[game.fighters[game.actor].character])]
+	after_presentation = _online_state_ready
+	presentation.play([{"kind": "turn", "actor": game.actor, "duration": TIMING.turn,
+		"title": "나의 턴" if game.actor == 0 else "상대 턴", "subtitle": "%02d ROUND · %s" % [game.round_number, actor_name]}])
+	_refresh()
+
+func _online_state_ready() -> void:
+	shown_fighters.clear()
+	if game.result != null:
+		_show_result()
+		return
+	phase = "player_input" if game.actor == 0 and game.stage == "puzzle" else "player_action" if game.actor == 0 else "opponent_wait"
+	display_actor = game.actor
+	if game.stage == "action" and game.actor == 0:
+		_action_preview()
+	elif game.actor == 1:
+		preview.text = "상대가 퍼즐과 행동을 선택하고 있습니다\n서버 제한시간 종료 시 자동으로 진행됩니다"
+	_refresh()
+
+func _online_after_receipt() -> void:
+	shown_fighters.clear()
+	if game.result != null:
+		_show_result()
+	elif game.stage == "puzzle":
+		_begin_online_turn()
+	else:
+		_online_state_ready()
+
+func _play_online_match(before: Array) -> void:
+	var groups: Array = game.pending.get("groups", [])
+	var effects: Array = []
+	for raw in game.pending.get("effects", []):
+		var effect: Dictionary = raw.duplicate(true)
+		effect["actor"] = game.actor
+		effect["damage"] = 0
+		effect["shield"] = 0
+		effect["burn"] = 0
+		effects.append(effect)
+	feedback.text = "%s 직접 %d콤보 / 전체 %d · HP +%d · MP +%d%s" % ["나" if game.actor == 0 else "상대", game.pending.manualCombo, groups.size(),
+		game.pending.healing, game.pending.manaGain, " · 자동 보정" if game.pending.get("assisted", false) else ""]
+	phase = "resolving"
+	shown_fighters = before
+	var subtitle = _effect_caption(effects) if not effects.is_empty() else "기본 타격 준비"
+	after_presentation = _online_state_ready
+	presentation.play([{"kind": "notice", "title": "퍼즐 매치 · %d콤보" % groups.size(), "subtitle": subtitle, "duration": 0.42}])
+	_refresh()
+
+func _play_online_receipt(receipt: Dictionary, before: Array, next: Callable) -> void:
+	var receipt_type = String(receipt.get("type", ""))
+	var server_seat = int(receipt.get("seat", state_seat())) if receipt_type == "turn" else _server_actor_from_visual(game.actor)
+	var visual_actor = 0 if server_seat == state_seat() else 1
+	var damage = int(receipt.get("damage", receipt.get("strike", {}).get("damage", 0)))
+	var absorbed = int(receipt.get("shield", receipt.get("strike", {}).get("shield", 0)))
+	var critical = bool(receipt.get("critical", receipt.get("strike", {}).get("critical", false)))
+	var title = String(receipt.get("skill", "스킬 발동")) if receipt_type == "skill" else "기본 타격"
+	if critical:
+		title += " · 치명타"
+	var caption = "HP −%d" % damage if damage > 0 else "보호막 −%d" % absorbed if absorbed > 0 else "공격 무효"
+	phase = "special" if receipt_type == "skill" else "resolving"
+	display_actor = visual_actor
+	shown_fighters = before
+	after_presentation = next
+	presentation.play([{"kind": "impact", "duration": TIMING.special if receipt_type == "skill" else TIMING.impact, "apply_at": 0.38,
+		"actor": visual_actor, "title": title, "caption": caption, "after": game.fighters.duplicate(true), "damage": damage,
+		"vfx_color": Color(data.characters[game.fighters[visual_actor].character].color), "shield_only": damage == 0,
+		"shield_gain": 0, "absorbed": absorbed}])
+	_refresh()
+
+func state_seat() -> int:
+	return game.seat if online_battle and game != null else 0
+
+func _server_actor_from_visual(visual_side: int) -> int:
+	return state_seat() if visual_side == 0 else 1 - state_seat()
 
 func _build_gallery() -> void:
 	gallery = SkinGallery.new()
@@ -729,7 +892,7 @@ func _build_popups() -> void:
 	leave_popup.get_ok_button().text = "준비로"
 	leave_popup.get_cancel_button().text = "계속 대전"
 	add_child(leave_popup)
-	leave_popup.confirmed.connect(show_preparation)
+	leave_popup.confirmed.connect(_leave_current_battle)
 	leave_popup.canceled.connect(func():
 		paused = popup_paused
 		_refresh())
@@ -940,6 +1103,12 @@ func _show_help(block_index: int = -1) -> void:
 	_refresh()
 
 func show_preparation() -> void:
+	var was_online = online_battle
+	online_battle = false
+	online_waiting = false
+	online_event.clear()
+	if was_online and online_client != null and not online_client.room_code.is_empty():
+		online_client.leave_room()
 	_cancel_reshape()
 	result_popup.hide()
 	presentation.cancel()
@@ -968,6 +1137,7 @@ func start_match() -> void:
 	_refresh_preparation_art()
 	if preparation.get_node("Start").disabled:
 		return
+	online_battle = false
 	battle_skins = [_skin_for(character), Catalog.skin_id(data.characters[opponent])]
 	gallery.hide()
 	result_popup.hide()
@@ -1001,6 +1171,12 @@ func _begin_turn() -> void:
 		"title": "나의 턴" if game.actor == 0 else "AI의 턴", "subtitle": "%02d ROUND · %s" % [game.round_number, data.characters[game.fighters[game.actor].character].name]}])
 	_refresh()
 
+func _leave_current_battle() -> void:
+	if online_battle and online_client != null:
+		online_client.forfeit()
+		await get_tree().create_timer(0.2).timeout
+	show_preparation()
+
 func _open_turn() -> void:
 	phase = "player_input" if game.actor == 0 else "ai_think"
 	ai_delay = TIMING.ai_think
@@ -1024,6 +1200,13 @@ func _damage_preview(groups: Array) -> String:
 
 func _use_special(kind: String) -> void:
 	if not (_player_input_allowed() or _player_action_allowed()) or puzzle.dragging:
+		return
+	if online_battle:
+		if kind == "active" and game.can_use("active"):
+			online_waiting = true
+			phase = "online_wait"
+			online_client.send_skill()
+			_refresh()
 		return
 	if kind == "spell" and spell == "reshape":
 		if reshape_color >= 0:
@@ -1106,6 +1289,8 @@ func _reshape_target(cell: int) -> void:
 		_apply_reshape()
 
 func _apply_reshape() -> void:
+	if online_battle:
+		return
 	if game.reshape(reshape_cells, reshape_color):
 		audio.cue("cast")
 		puzzle.present(game.boards[0], game.dimensions, true, floori((game.turn_seconds - 0.5) * 8))
@@ -1123,6 +1308,17 @@ func _confirm_turn() -> void:
 			finish_turn(puzzle.route.duplicate())
 
 func finish_turn(path: Array, timed_out: bool = false) -> void:
+	if online_battle:
+		if not _player_input_allowed() or online_waiting:
+			return
+		puzzle.set_interactive(false)
+		_cancel_reshape()
+		online_waiting = true
+		phase = "online_wait"
+		online_client.send_move(path)
+		feedback.text = "서버에서 퍼즐 결과를 계산하고 있습니다"
+		_refresh()
+		return
 	if not in_battle or game.result != null or paused or presentation.busy or phase not in ["player_input", "ai_think", "ai_move"]:
 		return
 	puzzle.set_interactive(false)
@@ -1205,6 +1401,15 @@ func _ai_action() -> void:
 
 func _commit_turn() -> void:
 	if game == null or game.stage != "action" or presentation.busy:
+		return
+	if online_battle:
+		if game.actor != 0 or online_waiting:
+			return
+		online_waiting = true
+		phase = "online_wait"
+		online_client.send_commit()
+		feedback.text = "서버에서 타격 판정을 처리하고 있습니다"
+		_refresh()
 		return
 	shown_fighters = game.fighters.duplicate(true)
 	var already_over: bool = game.result != null
@@ -1386,7 +1591,7 @@ func _refresh() -> void:
 		var meter: Dictionary = meters[side]
 		meter.portrait.texture = Catalog.portrait(info, battle_skins[side])
 		meter.portrait.tooltip_text = Catalog.stats_text(info, unit.stats) + "\n" + Catalog.passive_text(info) + "\n" + Catalog.active_text(info, unit.stats)
-		meter.name.text = ("나\n" if side == 0 else "AI\n") + info.name
+		meter.name.text = ("나\n" if side == 0 else ("상대\n" if online_battle else "AI\n")) + info.name
 		meter.hpLabel.text = "%d" % unit.hp
 		meter.hp.max_value = unit.maxHp
 		meter.hp.value = unit.hp
@@ -1408,25 +1613,25 @@ func _refresh() -> void:
 		meter.statuses.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for index in range(legend_buttons.size()):
 		legend_buttons[index].modulate = Color.WHITE if presentation.current.get("color", -1) == index or not presentation.busy else Color("a5aab3")
-	phase_label.text = "일시 정지" if paused else ("효과 적용 중" if phase in ["resolving", "special"] else ("AI 조작 중" if phase in ["ai_think", "ai_move"] else ("나의 턴" if display_actor == 0 else "AI의 턴")))
+	phase_label.text = "일시 정지" if paused else ("서버 판정 중" if phase == "online_wait" else ("효과 적용 중" if phase in ["resolving", "special"] else ("상대 조작 중" if online_battle and display_actor == 1 else ("AI 조작 중" if phase in ["ai_think", "ai_move"] else ("나의 턴" if display_actor == 0 else "AI의 턴")))))
 	if phase == "player_action" and not paused:
 		phase_label.text = "스킬 선택 · 타격 대기"
 	if not paused and phase == "resolving" and presentation.current.has("effects"):
 		phase_label.text = "%d콤보 · 효과 적용" % presentation.current.effects.size()
 	phase_label.add_theme_color_override("font_color", Color("ff7a70") if display_actor == 1 else TEXT)
-	timer_label.text = "AI" if display_actor == 1 else "%0.1f" % (action_seconds if game.stage == "action" else seconds)
+	timer_label.text = "%0.1f" % (action_seconds if game.stage == "action" else seconds) if online_battle else ("AI" if display_actor == 1 else "%0.1f" % (action_seconds if game.stage == "action" else seconds))
 	clock.value = action_seconds / data.combat.actionSeconds * 100.0 if game.stage == "action" else seconds / game.turn_seconds * 100.0
 	var enemy: Dictionary = game.fighters[1]
 	var enemy_skill: Dictionary = data.characters[enemy.character].active
-	var intent_text = "스킬 준비" if game.ai_intent.active else "기본 타격 · MP 보유"
+	var intent_text = "행동 선택 중" if online_battle else ("스킬 준비" if game.ai_intent.active else "기본 타격 · MP 보유")
 	if game.ai_intent.active and (enemy.mana < enemy_skill.cost or enemy.silenceTurns > 0):
 		intent_text = "스킬 차단 · 기본 타격"
 	if display_actor == 1 and ai_skill_done:
 		intent_text = "스킬 사용 · 타격 준비"
-	enemy_intent.text = "AI 예고  %s  |  MP %d / %d" % [intent_text, enemy.mana, enemy_skill.cost]
+	enemy_intent.text = "%s  %s  |  MP %d / %d" % ["상대 상태" if online_battle else "AI 예고", intent_text, enemy.mana, enemy_skill.cost]
 	enemy_intent.tooltip_text = Catalog.active_text(data.characters[enemy.character], enemy.stats)
 	round_label.text = "%02d / %02d R" % [game.round_number, data.game_limits.rounds]
-	pause_button.disabled = game.result != null and not presentation.busy
+	pause_button.disabled = online_battle or (game.result != null and not presentation.busy)
 	pause_button.icon = load("res://assets/icons/" + ("play" if paused else "pause") + ".svg")
 	var own_info: Dictionary = data.characters[character]
 	var skill_state = "매칭 후"
@@ -1434,13 +1639,13 @@ func _refresh() -> void:
 		skill_state = "사용 가능" if game.can_use("active") else "침묵" if game.fighters[0].silenceTurns > 0 else "MP 부족"
 	active_button.text = "%s\nMP %d · %s" % [own_info.skill, own_info.active.cost, skill_state]
 	active_button.tooltip_text = Catalog.active_text(own_info, game.fighters[0].stats) + (" · 침묵" if game.fighters[0].silenceTurns > 0 else "")
-	spell_button.text = "취소" if reshape_color >= 0 else {"smite": "강타", "barrier": "방어막", "reshape": "재편"}[spell]
+	spell_button.text = "온라인 스펠 준비 중" if online_battle else ("취소" if reshape_color >= 0 else {"smite": "강타", "barrier": "방어막", "reshape": "재편"}[spell])
 	spell_button.icon = load("res://assets/icons/" + {"smite": "swords", "barrier": "shield", "reshape": "sparkles"}[spell] + ".svg")
-	spell_button.tooltip_text = "경기당 1회 · " + ("사용 완료" if game.fighters[0].spellUsed else "준비 완료")
+	spell_button.tooltip_text = "온라인 규칙에는 다음 버전에서 적용됩니다" if online_battle else "경기당 1회 · " + ("사용 완료" if game.fighters[0].spellUsed else "준비 완료")
 	var allowed = _player_input_allowed()
 	var action_allowed = _player_action_allowed()
 	active_button.disabled = not action_allowed or not game.can_use("active")
-	spell_button.disabled = not (allowed or action_allowed) or puzzle.dragging or not game.can_use("spell")
+	spell_button.disabled = online_battle or not (allowed or action_allowed) or puzzle.dragging or not game.can_use("spell")
 	end_button.disabled = not (allowed or action_allowed)
 	end_button.tooltip_text = "타격 확정 · MP 보유" if action_allowed else "매칭 확정"
 	puzzle.set_interactive(allowed)
@@ -1551,6 +1756,17 @@ func _process(delta: float) -> void:
 	if presentation.busy and presentation.current.kind in ["match", "drop", "ai_move"]:
 		puzzle.visual_progress = clampf(presentation.elapsed / presentation.current.duration, 0, 1)
 		puzzle.queue_redraw()
+	if online_battle:
+		var remaining = maxf(0.0, float(game.turn_deadline) / 1000.0 - Time.get_unix_time_from_system())
+		if game.stage == "action":
+			action_seconds = remaining
+			timer_label.text = "%0.1f" % action_seconds
+			clock.value = action_seconds / maxf(0.1, float(data.combat.actionSeconds)) * 100.0
+		else:
+			seconds = remaining
+			timer_label.text = "%0.1f" % seconds
+			clock.value = seconds / maxf(0.1, game.turn_seconds) * 100.0
+		return
 	if was_busy or game.result != null:
 		return
 	if phase == "ai_think":

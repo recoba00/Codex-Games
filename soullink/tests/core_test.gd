@@ -6,6 +6,7 @@ const Catalog = preload("res://scripts/core/catalog.gd")
 const Stats = preload("res://scripts/core/stats.gd")
 const RandomStream = preload("res://scripts/core/random_stream.gd")
 const LiveCatalog = preload("res://scripts/core/live_catalog.gd")
+const RemoteBattle = preload("res://scripts/online/remote_battle.gd")
 var checks = 0
 var failures: Array = []
 var turns = 0
@@ -33,6 +34,7 @@ func _initialize() -> void:
 	_check_registration()
 	_check_stats()
 	_check_live_catalog()
+	_check_remote_battle()
 	for dimensions in [Vector2i(6, 5), Vector2i(6, 6), Vector2i(8, 6), Vector2i(6, 8)]:
 		for seed_value in range(1, 13):
 			var board = Board.create_board(dimensions, seed_value ^ 0x18f61, seed_value)
@@ -48,6 +50,39 @@ func _initialize() -> void:
 	file.store_string(JSON.stringify(report, "\t"))
 	print(JSON.stringify(report))
 	quit(0 if failures.is_empty() else 1)
+
+func _check_remote_battle() -> void:
+	var catalog = Catalog.load_data()
+	var state = {
+		"version": 9,
+		"youSeat": 1,
+		"match": {
+			"seed": 777, "catalog": catalog, "dimensions": {"cols": 6, "rows": 5},
+			"fighters": [
+				{"characterId": "ignis", "stats": catalog.characters.ignis.stats, "hp": 720, "maxHp": 1000, "mana": 12, "shield": 0, "burn": 0, "silenceTurns": 0},
+				{"characterId": "selene", "stats": catalog.characters.selene.stats, "hp": 910, "maxHp": 1000, "mana": 100, "shield": 20, "burn": 1, "silenceTurns": 0}
+			],
+			"boards": [range(30), range(30, 60)], "round": 3, "first": 0, "actor": 1, "actionsThisRound": 1,
+			"stage": "action", "turnDeadline": 123456789,
+			"pending": {"groups": [{"color": 0, "cells": [0, 1, 2], "wave": 0}], "effects": [], "manualCombo": 1, "manaGain": 8, "manaDenied": 0, "healing": 0, "green": 0, "boost": 0},
+			"result": null
+		}
+	}
+	var remote = RemoteBattle.new(state)
+	compare(remote.fighters[0].character, "selene", "remote local seat renders on the left")
+	compare(remote.fighters[1].character, "ignis", "remote opponent renders on the right")
+	compare(remote.actor, 0, "remote actor maps to local visual side")
+	compare(remote.first, 1, "remote first seat maps to opponent visual side")
+	compare(remote.boards[0][0], 30, "remote board follows local seat")
+	compare(remote.can_use("active"), true, "remote active skill follows authoritative MP and stage")
+	state.match.actor = 0
+	state.match.stage = "puzzle"
+	state.match.pending = null
+	state.match.result = {"winnerSeat": 1, "finishReason": "completed"}
+	remote.apply_state(state)
+	compare(remote.actor, 1, "remote opponent actor maps to right side")
+	compare(remote.result, "player", "remote winner maps to local result")
+	compare(remote.can_use("active"), false, "remote finished match blocks skill")
 
 func _check_live_catalog() -> void:
 	var data = Catalog.load_data()

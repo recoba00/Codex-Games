@@ -113,9 +113,23 @@ An independent two-socket check then confirmed both seats received the same
 the first version with ticket-authenticated WebSocket upgrades routed before
 ordinary bearer authentication.
 
-The remaining milestone work is client integration: render the authoritative
-room snapshot in the existing Godot battle HUD, translate puzzle/skill/commit
-input into server actions, animate receipts, and reconnect into the same match.
-Result persistence also remains disabled until a service-role Worker secret is
-separately approved. The current public Worker URL is an API endpoint, not a
-hosted game page.
+Godot now renders the authoritative room snapshot through a remote-battle
+adapter. Regardless of server seat, the local player is visual side 0 and the
+opponent is visual side 1. The existing HUD receives server HP, MP, boards,
+rounds, deadlines and results. Puzzle paths, repeatable MP skills, turn commits
+and forfeits are sent as WebSocket actions; skill and strike receipts drive the
+existing impact presentation. The client does not calculate or submit final
+damage. The separate one-use spell is explicitly disabled online until it has a
+server rule.
+
+The adapter has seat/result/action regression coverage. Godot core checks now
+pass 14,675 assertions, alongside the 11 Worker and 5 host checks. A live mobile
+Godot Web client and an independent automated socket opponent completed a real
+room flow: ready, server-authoritative puzzle match, 41 MP active skill with a
+40 MP cost, 156 skill damage, strike receipts, opponent turns and an eight-round
+victory result. No browser warnings or errors were observed.
+
+The remaining milestone work is automatic socket reconnection into an active
+room and durable result persistence. Persistence stays disabled until a
+service-role Worker secret is separately approved. The current public Worker
+URL is an API endpoint, not a hosted game page.
