@@ -12,6 +12,14 @@ func _run() -> void:
 	app = Main.instantiate()
 	root.add_child(app)
 	await frames()
+	assert(app.lobby.visible and not app.preparation.visible)
+	await shot("native-lobby")
+	app.show_preparation("private")
+	await frames()
+	assert(app.online_section.visible and not app.preparation.get_node("Start").visible)
+	await shot("native-private")
+	app.show_preparation("practice")
+	await frames()
 	report.renderer = RenderingServer.get_current_rendering_method()
 	check_frame("prepare")
 	await shot("native-prepare")
@@ -20,6 +28,7 @@ func _run() -> void:
 	await click(app.card_buttons.ignis)
 	assert(app.character == "ignis")
 	await click(app.preparation.get_node("Start"))
+	await create_timer(0.45).timeout
 	assert(app.in_battle and app.arena.visible)
 	await wait_input()
 	report.engineInput.append({"characterButtons": ["sylphi", "ignis"], "startButton": true})
@@ -82,6 +91,7 @@ func _run() -> void:
 	while app.game.result == null:
 		app.finish_turn(Board.simple_match(app.game.boards[app.game.actor], app.game.dimensions))
 		app._smoke_settle()
+	await create_timer(0.5).timeout
 	await frames()
 	assert(app.result_popup.visible)
 	assert(app.result_popup.size.y > root.size.y * 0.7)
@@ -89,14 +99,17 @@ func _run() -> void:
 	await shot("native-result")
 	var previous_seed: int = app.match_seed
 	await click(app.result_rematch)
+	await create_timer(0.45).timeout
 	app._smoke_settle()
 	assert(app.in_battle and not app.result_popup.visible and app.match_seed == previous_seed + 1)
 	while app.game.result == null:
 		app.finish_turn(Board.simple_match(app.game.boards[app.game.actor], app.game.dimensions))
 		app._smoke_settle()
+	await create_timer(0.5).timeout
 	await frames()
 	await click(app.result_change)
-	assert(app.preparation.visible and not app.result_popup.visible)
+	await create_timer(0.45).timeout
+	assert(app.lobby.visible and not app.result_popup.visible)
 	app.show_preparation()
 	for board_index in range(app.data.board_sizes.size()):
 		app.board_index = board_index

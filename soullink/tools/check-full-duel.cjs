@@ -86,7 +86,7 @@ module.exports = async function fullDuel(page, tap, prefix) {
   assert.ok(pixels.channels.some(c => c.stdev > 25));
   await page.screenshot({ path: prefix + '-result.png' });
   await tap('change');
-  await page.waitForFunction(() => window.__SOUL_LINK_SNAPSHOT__?.screen === 'prepare');
+  await page.waitForFunction(() => window.__SOUL_LINK_SNAPSHOT__?.screen === 'lobby');
   return { actualGoldenHealing: healed, actualSkillUses: used, actualRepeatedSkills: used, deliberateMPHold: held, matchThenSkill: postMatchSkill,
     palette: 5, matchedColors: [...seen], actualResultScreen: true, returnToSelection: true, stateInjection: false };
 };

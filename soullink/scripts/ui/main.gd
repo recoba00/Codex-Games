@@ -24,7 +24,16 @@ var spell = "smite"
 var board_index = 0
 var match_seed = 1001
 var game: RefCounted
+var lobby: VBoxContainer
+var lobby_art: TextureRect
 var preparation: VBoxContainer
+var preparation_mode = "practice"
+var preparation_mode_label: Label
+var practice_settings: Array[Control] = []
+var online_section: VBoxContainer
+var gallery_origin = "preparation"
+var transition_overlay: ColorRect
+var transitioning = false
 var arena: VBoxContainer
 var puzzle: Control
 var card_buttons: Dictionary = {}
@@ -121,14 +130,19 @@ func _ready() -> void:
 	add_child(audio)
 	_apply_theme()
 	_build_header()
+	_build_lobby()
 	_build_preparation()
 	_build_battle()
 	_build_popups()
 	_build_sound_options()
 	_build_feedback()
 	_build_gallery()
+	_build_transition()
 	_connect_online()
-	show_preparation()
+	if web_qa or "--ui-smoke" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_user_args():
+		show_preparation()
+	else:
+		show_lobby()
 	_connect_live_content()
 	_connect_web_host()
 	get_viewport().size_changed.connect(_safe_area)
@@ -225,7 +239,7 @@ func _build_header() -> void:
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var header = $SafeArea/Layout/Header/Items
 	back_button = _button("", "back")
-	back_button.tooltip_text = "대전 준비로"
+	back_button.tooltip_text = "이전 화면"
 	back_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	header.add_child(back_button)
 	back_button.pressed.connect(_request_back)
@@ -250,13 +264,90 @@ func _build_header() -> void:
 		paused = true
 		sound_popup.popup_centered(Vector2i(330, 275))
 		_refresh())
+func _build_lobby() -> void:
+	lobby = _vbox(12)
+	_page(lobby, "Lobby")
+	var profile = _hbox(8)
+	var identity = _vbox(3)
+	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	identity.add_child(_label("플레이어", 20))
+	identity.add_child(_label("프로필 · 전적 · 티어 준비 중", 11, MUTED))
+	profile.add_child(identity)
+	lobby.add_child(profile)
+	lobby_art = Portrait.new()
+	lobby_art.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lobby_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lobby_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	lobby.add_child(lobby_art)
+	var title = _label("출전 모드", 14, MUTED)
+	lobby.add_child(title)
+	var practice = _button("AI 연습전", "swords")
+	practice.name = "Practice"
+	practice.pressed.connect(func(): _transition_to(show_preparation.bind("practice")))
+	lobby.add_child(practice)
+	var friendly = _button("초대 코드 대전", "sparkles")
+	friendly.name = "Friendly"
+	friendly.pressed.connect(func(): _transition_to(show_preparation.bind("private")))
+	lobby.add_child(friendly)
+	var queue = _button("공개 매칭 · 준비 중", "end")
+	queue.disabled = true
+	queue.tooltip_text = "공개 매칭 서버와 결과 저장이 준비되면 열립니다"
+	lobby.add_child(queue)
+	var navigation = _hbox(6)
+	navigation.name = "Navigation"
+	lobby.add_child(navigation)
+	var collection = _button("도감", "sparkles")
+	collection.name = "Collection"
+	collection.pressed.connect(func(): _transition_to(_open_gallery))
+	collection.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	navigation.add_child(collection)
+	for entry in [["상점", "캐릭터 스킨 상점 준비 중"], ["랭킹", "시즌·티어·전적 준비 중"]]:
+		var placeholder = _button(entry[0])
+		placeholder.disabled = true
+		placeholder.tooltip_text = entry[1]
+		placeholder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		navigation.add_child(placeholder)
+	_refresh_lobby_art()
+
+func _refresh_lobby_art() -> void:
+	if lobby_art != null and data.characters.has(character):
+		lobby_art.texture = Catalog.portrait(data.characters[character], _skin_for(character))
+
+func _build_transition() -> void:
+	transition_overlay = ColorRect.new()
+	transition_overlay.name = "ScreenFade"
+	transition_overlay.color = Color.BLACK
+	transition_overlay.modulate.a = 0.0
+	transition_overlay.z_index = 100
+	transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(transition_overlay)
+	transition_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	transition_overlay.hide()
+
+func _transition_to(action: Callable) -> void:
+	if transitioning:
+		return
+	transitioning = true
+	transition_overlay.show()
+	var fade_out = create_tween()
+	fade_out.tween_property(transition_overlay, "modulate:a", 1.0, 0.16)
+	await fade_out.finished
+	action.call()
+	var fade_in = create_tween()
+	fade_in.tween_property(transition_overlay, "modulate:a", 0.0, 0.2)
+	await fade_in.finished
+	transition_overlay.hide()
+	transitioning = false
+	_qa_snapshot.call_deferred()
 
 func _build_preparation() -> void:
+	practice_settings.clear()
 	preparation = _vbox(16)
 	_page(preparation, "Preparation")
 	var title = _hbox()
 	title.add_child(_label("대전 준비", 22))
-	var mode = _label("AI 연습전 · 온라인 친선전", 11, MUTED)
+	preparation_mode_label = _label("AI 연습전", 11, MUTED)
+	var mode = preparation_mode_label
 	mode.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mode.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	title.add_child(mode)
@@ -328,14 +419,14 @@ func _build_preparation() -> void:
 	opponent_choice.item_selected.connect(func(index):
 		opponent = character_ids[index]
 		_refresh_preparation_art())
-	_setting_row(choices, "상대 AI", opponent_choice)
+	practice_settings.append(_setting_row(choices, "상대 AI", opponent_choice))
 	var spell_choice = OptionButton.new()
 	spell_choice.add_item("강타 · 직접 피해 100")
 	spell_choice.add_item("방어막 · 보호막 +150")
 	spell_choice.add_item("재편 · 퍼즐 2칸 색 변경")
 	spell_choice.selected = ["smite", "barrier", "reshape"].find(spell)
 	spell_choice.item_selected.connect(func(index): spell = ["smite", "barrier", "reshape"][index])
-	_setting_row(choices, "스펠 · 경기당 1회", spell_choice)
+	practice_settings.append(_setting_row(choices, "스펠 · 경기당 1회", spell_choice))
 	var board_choice = OptionButton.new()
 	for size_value in data.board_sizes:
 		board_choice.add_item("%d × %d · %d칸" % [size_value.cols, size_value.rows, size_value.cols * size_value.rows])
@@ -345,6 +436,7 @@ func _build_preparation() -> void:
 	_build_online_controls(choices)
 	var summary = _label("기본 타격 %d · 상성 보너스 %d%%\n퍼즐 %d초 · 행동 %d초 · 최대 %d라운드" % [data.combat.baseStrike, roundi(data.combat.elementBonus * 100), data.practice.turnSeconds, data.combat.actionSeconds, data.game_limits.rounds], 12, MUTED)
 	choices.add_child(summary)
+	practice_settings.append(summary)
 	var start = _button("대전 시작", "end")
 	start.name = "Start"
 	start.custom_minimum_size.y = 48
@@ -354,15 +446,17 @@ func _build_preparation() -> void:
 	start.add_theme_color_override("font_color", Color("111318"))
 	start.add_theme_color_override("font_hover_color", Color("111318"))
 	start.add_theme_color_override("font_pressed_color", Color("111318"))
-	start.pressed.connect(start_match)
+	start.pressed.connect(func(): _transition_to(start_match))
 	preparation.add_child(start)
 	_select_character(character)
 	_refresh_preparation_art()
 	if online_client != null:
 		_online_room_changed(online_client.room_state)
+	_set_preparation_mode()
 
 func _build_online_controls(parent: Control) -> void:
 	var section = _vbox(8)
+	online_section = section
 	section.name = "OnlineFriendly"
 	parent.add_child(section)
 	var heading = _hbox(8)
@@ -463,7 +557,7 @@ func _online_room_changed(state: Dictionary) -> void:
 	if phase_name == "battle":
 		online_ready_button.text = "온라인 대전 연결됨"
 		if not online_battle:
-			_start_online_battle(state)
+			_transition_to(_start_online_battle.bind(state))
 		else:
 			_sync_online_battle(state)
 	elif phase_name == "finished" and online_battle:
@@ -501,6 +595,7 @@ func _start_online_battle(state: Dictionary) -> void:
 	presentation_trace.clear()
 	in_battle = true
 	paused = false
+	lobby.hide()
 	preparation.hide()
 	arena.show()
 	back_button.show()
@@ -539,6 +634,7 @@ func _sync_online_battle(state: Dictionary) -> void:
 		_online_state_ready()
 
 func _begin_online_turn() -> void:
+	pause_button.show()
 	_cancel_reshape()
 	display_actor = game.actor
 	shown_fighters.clear()
@@ -673,6 +769,7 @@ func _refresh_preparation_art() -> void:
 		preparation.get_node("Start").disabled = Catalog.portrait(data.characters[character], _skin_for(character)) == null or Catalog.portrait(data.characters[opponent]) == null
 	if live != null:
 		live.request_image(Catalog.image_id(data.characters[opponent]))
+	_refresh_lobby_art()
 
 func _apply_pending_content() -> void:
 	if pending_content.is_empty():
@@ -703,6 +800,8 @@ func _open_gallery() -> void:
 	if in_battle:
 		return
 	_apply_pending_content()
+	gallery_origin = "lobby" if lobby.visible else "preparation"
+	lobby.hide()
 	preparation.hide()
 	gallery.show()
 	gallery.configure(data, skin_choices, character)
@@ -713,7 +812,10 @@ func _open_gallery() -> void:
 
 func _close_gallery() -> void:
 	gallery.hide()
-	show_preparation()
+	if gallery_origin == "lobby":
+		show_lobby()
+	else:
+		show_preparation()
 	_trim_live_textures()
 
 func _trim_live_textures() -> void:
@@ -728,12 +830,13 @@ func _trim_live_textures() -> void:
 		keep.append(Catalog.image_id(data.characters[opponent], battle_skins[1]))
 	Catalog.trim_textures(keep)
 
-func _setting_row(parent: Control, title: String, option: Control) -> void:
+func _setting_row(parent: Control, title: String, option: Control) -> Control:
 	var row = _vbox(5)
 	row.add_child(_label(title, 12, MUTED))
 	option.custom_minimum_size.y = 44
 	row.add_child(option)
 	parent.add_child(row)
+	return row
 
 func _select_character(id: String) -> void:
 	character = id
@@ -886,10 +989,10 @@ func _build_popups() -> void:
 			_refresh())
 	leave_popup = ConfirmationDialog.new()
 	leave_popup.theme = theme
-	leave_popup.title = "대전 준비로 돌아갈까요?"
+	leave_popup.title = "로비로 돌아갈까요?"
 	leave_popup.dialog_autowrap = true
-	leave_popup.dialog_text = "진행 중인 연습전은 종료됩니다."
-	leave_popup.get_ok_button().text = "준비로"
+	leave_popup.dialog_text = "진행 중인 대전은 종료됩니다."
+	leave_popup.get_ok_button().text = "로비로"
 	leave_popup.get_cancel_button().text = "계속 대전"
 	add_child(leave_popup)
 	leave_popup.confirmed.connect(_leave_current_battle)
@@ -947,18 +1050,20 @@ func _build_result() -> void:
 	layout.add_child(result_label)
 	var actions = _hbox(8)
 	layout.add_child(actions)
-	result_change = _button("선택 변경", "back")
+	result_change = _button("로비로", "back")
 	result_rematch = _button("다시 대전", "replay")
 	for button in [result_change, result_rematch]:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		actions.add_child(button)
 	result_rematch.add_theme_stylebox_override("normal", _box(ACCENT, ACCENT))
 	result_rematch.add_theme_color_override("font_color", Color("111318"))
-	result_rematch.pressed.connect(func():
-		match_seed += 1
-		start_match())
-	result_change.pressed.connect(show_preparation)
+	result_rematch.pressed.connect(func(): _transition_to(_rematch))
+	result_change.pressed.connect(func(): _transition_to(show_lobby))
 	result_popup.hide()
+
+func _rematch() -> void:
+	match_seed += 1
+	start_match()
 
 func _build_feedback() -> void:
 	presentation = BattleFeedback.new()
@@ -1050,6 +1155,8 @@ func _on_host_event(arguments: Array) -> void:
 			host_error_popup.popup_centered(Vector2i(330, 160))
 
 func _request_back() -> void:
+	if transitioning:
+		return
 	if gallery.visible:
 		_close_gallery()
 	elif reshape_popup.visible:
@@ -1069,8 +1176,9 @@ func _request_back() -> void:
 		paused = popup_paused
 		_refresh()
 	elif result_popup.visible:
-		result_popup.hide()
-		show_preparation()
+		_transition_to(show_lobby)
+	elif preparation.visible:
+		_transition_to(show_lobby)
 	elif not in_battle:
 		if not exit_popup.visible:
 			exit_popup.popup_centered(Vector2i(330, 160))
@@ -1102,7 +1210,32 @@ func _show_help(block_index: int = -1) -> void:
 	help_popup.popup_centered(Vector2i(350, 420 if block_index < 0 else 250))
 	_refresh()
 
-func show_preparation() -> void:
+func _set_preparation_mode() -> void:
+	if preparation_mode_label == null:
+		return
+	var private_room = preparation_mode == "private"
+	preparation_mode_label.text = "초대 코드 대전" if private_room else "AI 연습전"
+	for control in practice_settings:
+		control.visible = not private_room
+	if online_section != null:
+		online_section.visible = private_room
+	preparation.get_node("Start").visible = not private_room
+
+func show_lobby() -> void:
+	var waiting_room = not online_battle and online_client != null and not online_client.room_code.is_empty()
+	show_preparation()
+	if waiting_room:
+		online_client.leave_room()
+	preparation.hide()
+	lobby.show()
+	back_button.hide()
+	pause_button.hide()
+	_refresh_lobby_art()
+	_qa_snapshot.call_deferred()
+
+func show_preparation(mode: String = "") -> void:
+	if mode in ["practice", "private"]:
+		preparation_mode = mode
 	var was_online = online_battle
 	online_battle = false
 	online_waiting = false
@@ -1121,10 +1254,12 @@ func show_preparation() -> void:
 	_apply_pending_content()
 	paused = false
 	ai_delay = 0.0
+	lobby.hide()
 	preparation.show()
 	arena.hide()
-	back_button.hide()
-	pause_button.disabled = true
+	_set_preparation_mode()
+	back_button.show()
+	pause_button.hide()
 	puzzle.set_interactive(false)
 	audio.set_suspended(not window_active or not host_visible)
 	audio.music("menu")
@@ -1150,6 +1285,7 @@ func start_match() -> void:
 	game = Battle.new(match_seed, Vector2i(size_value.cols, size_value.rows), character, opponent, spell, 0, 5, data)
 	in_battle = true
 	paused = false
+	lobby.hide()
 	preparation.hide()
 	arena.show()
 	back_button.show()
@@ -1157,6 +1293,7 @@ func start_match() -> void:
 	_begin_turn()
 
 func _begin_turn() -> void:
+	pause_button.show()
 	_cancel_reshape()
 	ai_skill_done = false
 	ai_spell_done = false
@@ -1175,7 +1312,7 @@ func _leave_current_battle() -> void:
 	if online_battle and online_client != null:
 		online_client.forfeit()
 		await get_tree().create_timer(0.2).timeout
-	show_preparation()
+	_transition_to(show_lobby)
 
 func _open_turn() -> void:
 	phase = "player_input" if game.actor == 0 else "ai_think"
@@ -1655,7 +1792,8 @@ func _qa_snapshot() -> void:
 	if not web_qa:
 		return
 	await get_tree().process_frame
-	var controls = {"start": preparation.get_node("Start"), "pause": pause_button, "end": end_button,
+	var controls = {"start": preparation.get_node("Start"), "lobby_practice": lobby.get_node("Practice"), "lobby_friendly": lobby.get_node("Friendly"),
+		"lobby_collection": lobby.get_node("Navigation/Collection"), "lobby_art": lobby_art, "pause": pause_button, "end": end_button,
 		"spell": spell_button, "active": active_button, "board": puzzle, "header": $SafeArea/Layout/Header, "body": $SafeArea/Layout/Body,
 		"player_art": meters[0].portrait, "enemy_art": meters[1].portrait, "result_art": result_art, "rematch": result_rematch, "change": result_change,
 		"sound": sound_button, "mute": mute_switch, "music_volume": music_slider, "sfx_volume": sfx_slider, "gallery": gallery_button,
@@ -1675,7 +1813,8 @@ func _qa_snapshot() -> void:
 		elif key == "leave_confirm":
 			rect.position += Vector2(leave_popup.position)
 		rects[key] = {"x": rect.position.x, "y": rect.position.y, "width": rect.size.x, "height": rect.size.y}
-	var snapshot = {"screen": "battle" if in_battle else "gallery" if gallery.visible else "prepare", "paused": paused, "rects": rects, "characters": character_ids,
+	var snapshot = {"screen": "result" if result_popup.visible else "battle" if in_battle else "gallery" if gallery.visible else "lobby" if lobby.visible else "prepare",
+		"mode": preparation_mode, "transitioning": transitioning, "paused": paused, "rects": rects, "characters": character_ids,
 		"content_revision": data.get("content_revision", "bundled"), "content_pending": not pending_content.is_empty(), "content_status": content_status,
 		"selected_skins": skin_choices, "battle_skins": battle_skins, "gallery": gallery.diagnostics() if gallery.visible else {},
 		"selected_character": character, "selected_skin": _skin_for(character),
@@ -1723,9 +1862,15 @@ func _qa_snapshot() -> void:
 		web_host.publishDiagnostics(JSON.stringify(snapshot))
 
 func _show_result() -> void:
-	presentation.cancel()
+	if phase == "result" or transitioning:
+		return
 	phase = "result"
 	paused = true
+	_transition_to(_present_result)
+
+func _present_result() -> void:
+	presentation.cancel()
+	pause_button.hide()
 	audio.music("menu")
 	audio.cue("victory" if game.result == "player" else "defeat")
 	puzzle.present(game.boards[game.actor], game.dimensions, false, 0)
@@ -1736,6 +1881,7 @@ func _show_result() -> void:
 	result_name.text = data.characters[character].name
 	result_label.text = "%02d ROUND · %d TURN\n%s  HP %d   :   %s  HP %d\n누적 피해 %d · 최대 %d콤보 · 스킬 %d회" % [game.round_number, game.records.size(), data.characters[character].name, game.fighters[0].hp,
 		data.characters[opponent].name, game.fighters[1].hp, game.fighters[0].damage, game.fighters[0].maxCombo, game.fighters[0].activeUses]
+	result_rematch.visible = not online_battle
 	result_popup.show()
 	_qa_snapshot.call_deferred()
 
@@ -1812,6 +1958,11 @@ func _safe_area() -> void:
 func _smoke() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
+	show_lobby()
+	assert(lobby.visible and not preparation.visible)
+	show_preparation("private")
+	assert(preparation.visible and online_section.visible and not preparation.get_node("Start").visible)
+	show_preparation("practice")
 	assert(preparation.visible and not arena.visible)
 	character = character_ids.back()
 	opponent = character_ids[0]
@@ -1831,11 +1982,11 @@ func _smoke() -> void:
 	while game.result == null:
 		finish_turn(Board.simple_match(game.boards[game.actor], game.dimensions))
 		_smoke_settle()
+	await get_tree().create_timer(0.5).timeout
 	assert(result_popup.visible)
-	result_popup.hide()
-	show_preparation()
-	assert(preparation.visible and character == character_ids.back() and spell == "barrier")
-	print("GODOT_UI_SMOKE_OK: enabled catalog -> Barrier -> shield 150 -> staged matching/strike -> full match -> retained preparation")
+	show_lobby()
+	assert(lobby.visible and character == character_ids.back() and spell == "barrier")
+	print("GODOT_UI_SMOKE_OK: lobby -> private/practice -> battle -> result -> lobby")
 	get_tree().quit()
 
 func _smoke_settle() -> void:
