@@ -75,3 +75,9 @@ The initial schema keeps profile edits scoped to the signed-in user. Catalog
 publication, skin grants, and match result writes are server-only. Match
 participants may read their own results. No project password, secret key, project
 identifier, or connection string belongs in Git.
+
+Anonymous sign-ins were enabled and saved on 2026-10-21. Anonymous sessions use
+the `authenticated` role, so the same RLS policies continue to restrict profile,
+skin, and match-result access. The Cloudflare email-verification gate was also
+cleared and the Workers creation screen is available. No Worker, Durable Object,
+paid feature, payment method, or server secret has been created yet.

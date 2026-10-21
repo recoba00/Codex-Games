@@ -176,8 +176,9 @@
   초기 RLS 스키마를 SQL Editor로 실제 적용해 프로필/카탈로그/스킨/전적 4개 테이블과
   공개 읽기·서버 쓰기 원화 버킷(8MB, WebP/PNG/JPEG)을 대시보드에서 확인했다.
   같은 SQL은 버전 관리하고 보안 계약 Node 검사에 포함했다. 최초 적용은 SQL Editor라
-  별도 CLI migration history에는 표시되지 않는다. 익명 로그인 활성화와 Cloudflare
-  Worker/DO는 아직 진행 중이다.
+  별도 CLI migration history에는 표시되지 않는다. 익명 로그인 활성화·저장을 완료했고,
+  Cloudflare 이메일 인증 차단 해제와 Worker 생성 화면 접근도 확인했다. 실제 Worker/DO
+  생성과 비밀키 연결은 아직 진행하지 않았다.
   세부 경계와 확인 항목은 `docs/FREE_TEST_INFRA.md` 참고.
 
 - [ ] HOST-001 (외부 조치 필요): 2026-10-20 09:20 UTC 닷홈 월간 트래픽 소진 확인.
