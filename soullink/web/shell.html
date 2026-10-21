@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <!-- SOUL_LINK_RELEASE_BASE -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0d171c">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,6 +22,8 @@
     #game { position: fixed; inset: 0; padding: max(env(safe-area-inset-top, 0px), var(--host-safe-top, 0px)) max(env(safe-area-inset-right, 0px), var(--host-safe-right, 0px)) max(env(safe-area-inset-bottom, 0px), var(--host-safe-bottom, 0px)) max(env(safe-area-inset-left, 0px), var(--host-safe-left, 0px)); }
     #viewport { position: relative; width: 100%; height: 100%; }
     #canvas { display: block; width: 100%; height: 100%; border: 0; outline: none; }
+    /* Godot inserts these controls before the canvas for mobile text entry. */
+    #viewport > input, #viewport > textarea { font-size: 16px !important; }
   </style>
 </head>
 <body>

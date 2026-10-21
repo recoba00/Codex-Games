@@ -14,9 +14,15 @@ const migrationPath = path.join(
 );
 const sql = fs.readFileSync(migrationPath, 'utf8');
 const exportPreset = fs.readFileSync(path.join(__dirname, '..', 'export_presets.cfg'), 'utf8');
+const webShell = fs.readFileSync(path.join(__dirname, '..', 'web', 'shell.html'), 'utf8');
 
 test('mobile virtual keyboard is enabled for Godot web exports', () => {
   assert.match(exportPreset, /^html\/experimental_virtual_keyboard=true$/m);
+});
+
+test('mobile text entry does not trigger persistent browser zoom', () => {
+  assert.match(webShell, /maximum-scale=1, user-scalable=no/);
+  assert.match(webShell, /#viewport > input, #viewport > textarea \{ font-size: 16px !important; \}/);
 });
 
 test('initial online schema includes the required persistent records', () => {
