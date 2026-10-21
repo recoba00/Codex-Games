@@ -4,6 +4,8 @@ Git 개발 경로는 `C:\Users\user\Desktop\my\Codex-Games\soullink`다.
 저장소는 `recoba00/Codex-Games`이며 기존 `my\soul`은 원본 보존용으로 남긴다.
 기존 Phaser 웹판은 저장소 밖 `../../soul-link`에 참고용으로 보존한다.
 기존 Godot 창/로컬 서버는 자동으로 새 경로로 바뀌지 않는다. `docs/REPOSITORY.md` 참고.
+새 작업자는 현재 구조/배포/보안 경계가 정리된 `ABOUT.md`와 남은 우선순위인
+`TASKS.md`를 먼저 읽는다.
 
 ## 바로 실행
 
@@ -88,8 +90,9 @@ powershell -NoProfile -File tools/run-godot.ps1 -Mode pack
 
 토스 우선, 이후 Steam/Google Play. 토스에는 Godot 웹 출력과 앱인토스 SDK 브리지가
 필요하다. Web 출력 생성 성공이 토스 호환/출시/HTTP 공개 성공을 뜻하지 않는다.
-공개 주소: http://recoba00.dothome.co.kr/games/soullink/
-현재 닷홈 월간 트래픽 소진으로 공개 접속/재배포는 보류 중이다. 새 전투는 로컬로 제공한다.
+현재 공개 주소: https://recoba00.github.io/Codex-Games/soullink/
+Godot Web 출력은 `main` 푸시 후 GitHub Actions가 자동 게시한다. 닷홈 주소와 트래픽
+소진 기록은 과거 배포 이력이며 현재 공개 기준이 아니다.
 엔진/팩/JS는 gzip 약 18.1MB로 전송된다(원본 약 47.6MB). 음원 15개는 총 약 2.8MB로,
 BGM은 필요할 때 받는다. 비활성 시 타이머 정지와
 호스트 안전영역/뒤로가기 확인 처리를 연결했다.

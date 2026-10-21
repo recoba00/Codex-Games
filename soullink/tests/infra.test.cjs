@@ -20,6 +20,12 @@ test('mobile virtual keyboard is enabled for Godot web exports', () => {
   assert.match(exportPreset, /^html\/experimental_virtual_keyboard=true$/m);
 });
 
+test('handoff and operational sources stay outside the game export', () => {
+  for (const entry of ['ABOUT.md', 'TASKS.md', 'README.md', 'server/*', 'supabase/*', 'tools/*']) {
+    assert.match(exportPreset, new RegExp(`exclude_filter=.*${entry.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  }
+});
+
 test('mobile text entry does not trigger persistent browser zoom', () => {
   assert.match(webShell, /maximum-scale=1, user-scalable=no/);
   assert.match(webShell, /#viewport > input, #viewport > textarea \{ font-size: 16px !important; \}/);
