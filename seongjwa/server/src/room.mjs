@@ -231,8 +231,14 @@ export class FriendRoom extends DurableObject {
     room.expiresAt = now + LOBBY_TTL_MS;
     if (room.options.bans) {
       room.phase = "ban";
-      room.phaseDeadline = now + PREP.ban_sec * 1000 + PREP.grace_ms;
+      room.phaseDeadline = now + this.prepSec("ban_sec") * 1000 + PREP.grace_ms;
     } else this.toPick(now);
+  }
+
+  // 준비 단계 시간: 데이터의 설정값(시트 `설정값` ban_sec·pick_sec·loadout_sec)이 있으면 그 값, 없으면 총괄 7장 기본값
+  prepSec(key) {
+    const v = Number(this.room.game?.data?.settings?.[key]);
+    return Number.isFinite(v) && v > 0 ? v : PREP[key];
   }
 
   banned(g) { return [...new Set(g.bans.map((b) => b?.id).filter(Boolean))]; }  // 같은 캐릭터를 둘이 밴하면 1명만
@@ -242,19 +248,22 @@ export class FriendRoom extends DurableObject {
     const g = this.room.game;
     g.bans = g.bans.map((b) => b ?? { id: null, done: true });  // 밴 시간 초과: 밴 없음
     this.room.phase = "pick";
-    this.room.phaseDeadline = now + PREP.pick_sec * 1000 + PREP.grace_ms;
+    this.room.phaseDeadline = now + this.prepSec("pick_sec") * 1000 + PREP.grace_ms;
   }
 
   toLoadout(now) {
     const g = this.room.game;
     const pool = this.pickable(g);
-    g.picks = g.picks.map((p, seat) => {  // 픽 시간 초과: 선호 1·2·3순위, 없으면 남은 첫 캐릭터
+    g.picks = g.picks.map((p, seat) => {  // 픽 시간 초과: 선호 1·2·3순위 → 직전 사용 캐릭터 → 목록 첫 번째 (총괄 7장, 기획답변 2차 8)
       if (p) return p;
-      const pref = this.room.members[seat].defaults.preferred.find((id) => pool.includes(id));
-      return pref ?? pool[0];
+      const m = this.room.members[seat];
+      const pref = m.defaults.preferred.find((id) => pool.includes(id));
+      if (pref) return pref;
+      if (m.lastPick && pool.includes(m.lastPick)) return m.lastPick;
+      return pool[0];
     });
     this.room.phase = "loadout";
-    this.room.phaseDeadline = now + PREP.loadout_sec * 1000 + PREP.grace_ms;
+    this.room.phaseDeadline = now + this.prepSec("loadout_sec") * 1000 + PREP.grace_ms;
   }
 
   validLoadout(g, charId, msg) {
@@ -267,12 +276,19 @@ export class FriendRoom extends DurableObject {
   startBattle(now) {
     const room = this.room;
     const g = room.game;
-    g.loadouts = g.loadouts.map((l, seat) => {  // 스펠·덱 시간 초과: 직전에 쓴 것(클라이언트 기본값) → 없으면 앞 2개·균형 덱
+    g.loadouts = g.loadouts.map((l, seat) => {  // 스펠·덱 시간 초과: 그 캐릭터로 직전에 쓴 것 → 클라이언트 기본값 → 수호·거울 + 균형 덱 (기획답변 2차 8)
       if (l) return l;
-      const d = room.members[seat].defaults;
-      try { return this.validLoadout(g, g.picks[seat], { spells: d.spells, preset: d.preset }); } catch {
-        return this.validLoadout(g, g.picks[seat], { spells: Object.keys(g.data.spells).sort().slice(0, 2), preset: 2 });
+      const m = room.members[seat];
+      const tries = [m.lastLoadout?.[g.picks[seat]], { spells: m.defaults.spells, preset: m.defaults.preset }, { spells: ["SP01", "SP02"], preset: 2 }];
+      for (const t of tries) {
+        if (!t) continue;
+        try { return this.validLoadout(g, g.picks[seat], t); } catch { /* 다음 후보 */ }
       }
+      throw new Error("loadout_fallback_failed");
+    });
+    room.members.forEach((m, seat) => {  // 직전 사용 기록(이 방 안에서 유지)
+      m.lastPick = g.picks[seat];
+      m.lastLoadout = { ...(m.lastLoadout ?? {}), [g.picks[seat]]: { spells: g.loadouts[seat].spells, preset: g.loadouts[seat].preset ?? 2 } };
     });
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
     g.battle = createBattle({

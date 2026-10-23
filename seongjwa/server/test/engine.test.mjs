@@ -101,6 +101,20 @@ test("봉쇄: 상대 스펠 무효, 양측 봉쇄는 상쇄, 쿨다운은 둘 �
   assert.equal(st.players[0].spellReady.SP05, 7 + 5);
 });
 
+test("충전이 봉쇄로 무효: 처리 순서상 뒤쪽(공격) 카드부터 무효, 에너지 소모 (기획답변 2차 2)", () => {
+  const st = battle("UM", "AU", { spells: [["SP06", "SP01"], ["SP05", "SP01"]] });
+  toTurn(st, 2);
+  const p = st.players[0];
+  p.energy = 3;
+  const atk = give(st, 0, "C02"), def = give(st, 0, "C06");  // 공격 2E를 먼저 골라도 방어(1단계)가 먼저 지불
+  const hpB = st.players[1].hp;
+  play(st, { cards: [atk, def], spell: "SP06" }, { spell: "SP05" });
+  assert.ok(st.log.some((e) => e.t === "void" && e.card === "C02" && e.why === "energy"));
+  assert.ok(st.log.some((e) => e.t === "card" && e.id === "C06"));
+  assert.equal(st.players[1].hp >= hpB - 0, true);
+  assert.ok(p.discard.some((c) => c.id === "C02"), "무효 카드도 버려짐");
+});
+
 test("면역이 침묵보다 먼저(1단계): 같은 턴 침묵 무효 (총괄 12장)", () => {
   const st = battle("SI", "AU");
   st.players[0].energy = 5; st.players[1].energy = 5;

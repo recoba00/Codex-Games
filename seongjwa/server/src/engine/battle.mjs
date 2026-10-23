@@ -401,16 +401,21 @@ export function resolveTurn(state) {
     state.log.push({ t: "spell", seat: p.seat, id: pl.spell });
   }
 
-  // 에너지 지불: 충전이 무효되면 모자란 뒤쪽 카드는 무효(에너지는 있는 만큼 소모)
+  // 에너지 지불: 충전이 무효되면 처리 순서(단계 → 선택 순서)상 뒤쪽 카드부터 무효, 무효 카드도 버려지고 에너지 소모(기획답변 2차 2)
   for (const p of state.players) {
     const pl = plays.get(p);
     const available = p.energy + (pl.spell === SPELL.CHARGE && pl.spellOn ? state.spells[SPELL.CHARGE].value : 0);
-    const costs = cardCost(state, p, pl.cards.map((c) => c.id));
+    const costs = cardCost(state, p, pl.cards.map((c) => c.id));  // 순풍(첫 1E 무료)은 선택 순서 기준
+    const order = pl.cards.map((c, i) => ({ c, i, cost: costs[i] })).sort((x, y) => state.cards[x.c.id].phase - state.cards[y.c.id].phase || x.i - y.i);
     let paid = 0;
-    pl.cards.forEach((c, i) => {
-      if (paid + costs[i] <= available) { paid += costs[i]; pl.live.push(c); } else state.log.push({ t: "void", seat: p.seat, card: c.id, why: "energy" });
+    const ok = new Set();
+    for (const o of order) {
+      if (paid + o.cost <= available) { paid += o.cost; ok.add(o.c.uid); } else state.log.push({ t: "void", seat: p.seat, card: o.c.id, why: "energy" });
+    }
+    for (const c of pl.cards) {
+      if (ok.has(c.uid)) pl.live.push(c);
       p.discard.push(c);
-    });
+    }
     gaugeAdd(state, p, paid * state.rules.gauge_per_energy);
     p.carry = Math.min(state.rules.energy_carry_max, Math.max(0, p.energy - Math.min(paid, p.energy)));
   }

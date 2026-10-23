@@ -8,8 +8,9 @@
   "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "FriendRoom" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["FriendRoom"] }],
   // 비밀값은 `wrangler secret put` 으로만 넣는다(소스·Git 금지):
-  //   SUPABASE_URL, SUPABASE_SERVICE_KEY, TOKEN_SECRET(32자 이상), STEAM_WEB_API_KEY, STEAM_APP_ID
+  //   SUPABASE_SERVICE_KEY, TOKEN_SECRET(32자 이상), STEAM_WEB_API_KEY, STEAM_APP_ID
   "vars": {
+    "SUPABASE_URL": "https://ivnycrhvfqvpavbbjsgo.supabase.co",  // Supabase 테스트 프로젝트 seongjwa-dev(서울, 무료). 주소는 비밀값 아님
     "STEAM_TICKET_IDENTITY": "seongjwa-auth",
     "DEV_LOGIN": "0"
   }

@@ -2,8 +2,8 @@ name: Seongjwa Server
 
 # 성좌 결투 서버: 푸시마다 테스트, 배포는 Actions 화면에서 수동 실행(Run workflow)으로만.
 # 필요한 저장소 설정(Settings → Secrets and variables → Actions):
-#   Secrets:   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, SEONGJWA_SUPABASE_SERVICE_KEY, SEONGJWA_TOKEN_SECRET
-#   Variables: SEONGJWA_SUPABASE_URL
+#   Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, SEONGJWA_SUPABASE_SERVICE_KEY, SEONGJWA_TOKEN_SECRET
+#   Supabase 주소는 seongjwa/server/wrangler.jsonc 의 vars.SUPABASE_URL
 on:
   push:
     paths:
@@ -76,22 +76,19 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Check settings
         env:
-          URL: ${{ vars.SEONGJWA_SUPABASE_URL }}
           KEY: ${{ secrets.SEONGJWA_SUPABASE_SERVICE_KEY }}
           TOK: ${{ secrets.SEONGJWA_TOKEN_SECRET }}
         run: |
           missing=""
           [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
           [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
-          [ -n "$URL" ] || missing="$missing SEONGJWA_SUPABASE_URL(variable)"
           [ -n "$KEY" ] || missing="$missing SEONGJWA_SUPABASE_SERVICE_KEY"
           [ "${#TOK}" -ge 32 ] || missing="$missing SEONGJWA_TOKEN_SECRET(32자 이상)"
           if [ -n "$missing" ]; then echo "::error::저장소 설정이 없습니다:$missing"; exit 1; fi
       - name: Deploy worker
         env:
-          URL: ${{ vars.SEONGJWA_SUPABASE_URL }}
           DEV: ${{ inputs.dev_login && '1' || '0' }}
-        run: npx wrangler deploy --var "SUPABASE_URL:$URL" --var "DEV_LOGIN:$DEV"
+        run: npx wrangler deploy --var "DEV_LOGIN:$DEV"
       - name: Set worker secrets
         env:
           KEY: ${{ secrets.SEONGJWA_SUPABASE_SERVICE_KEY }}
