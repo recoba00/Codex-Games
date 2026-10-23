@@ -98,5 +98,19 @@ jobs:
           node -e 'require("fs").writeFileSync(process.env.RUNNER_TEMP + "/s.json", JSON.stringify({ SUPABASE_SERVICE_KEY: process.env.KEY, TOKEN_SECRET: process.env.TOK }))'
           npx wrangler secret bulk "$RUNNER_TEMP/s.json"
           rm -f "$RUNNER_TEMP/s.json"
+      - name: Smoke test (deployed worker)
+        env:
+          BASE: https://seongjwa.recoba00.workers.dev
+          DEV: ${{ inputs.dev_login && '1' || '0' }}
+        run: |
+          set -e
+          sleep 5
+          echo "health:";  curl -fsS "$BASE/health"; echo
+          echo "data:";    curl -fsS "$BASE/v1/data/live" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);const d=j.data;console.log({version:j.version,characters:Object.keys(d.characters).length,cards:Object.keys(d.cards).length,spells:Object.keys(d.spells).length,presets:Object.keys(d.presets).length})})'
+          if [ "$DEV" = "1" ]; then
+            tok=$(curl -fsS -X POST "$BASE/v1/auth/dev" -H 'content-type: application/json' -d '{"devId":"smoke-test"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).accessToken))')
+            echo "me:";   curl -fsS "$BASE/v1/me" -H "authorization: Bearer $tok"; echo
+            echo "room:"; curl -fsS -X POST "$BASE/v1/rooms" -H "authorization: Bearer $tok" -H 'content-type: application/json' -d '{"options":{"bans":true,"turnSec":20}}'; echo
+          fi
       - name: Show deployment
         run: npx wrangler deployments list | head -20   # 배포 주소(…workers.dev)는 위 Deploy worker 단계 로그에 표시
