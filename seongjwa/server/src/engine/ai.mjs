@@ -48,7 +48,7 @@ function combos(list, max) {
   return out;
 }
 
-function score(state, seat, cand, pred, level) {
+function score(state, seat, cand, pred, level, weights = {}) {
   const me = state.players[seat], o = state.players[1 - seat];
   const rush = rushMult(state);
   const late = state.turn >= state.rules.rush_start_turn - 1;
@@ -90,7 +90,7 @@ function score(state, seat, cand, pred, level) {
   if (cand.spell === SPELL.EXHAUST) saved += incoming * 0.3;
   if (cand.spell === SPELL.MIRROR) v += (incoming * 0.5 / o.maxHp) * 100;
   if (cand.spell === SPELL.HEAL && hpRatio < 0.6) saved += me.maxHp * state.spells[SPELL.HEAL].value;
-  v += (saved / me.maxHp) * 100 * (hpRatio < 0.4 ? 1.6 : 1);
+  v += (saved / me.maxHp) * 100 * (hpRatio < 0.4 ? 1.6 : 1) * (weights.survival ?? 1);  // 생존 가치 비중(시뮬레이션 진단용)
 
   // 읽기 가치: 예측한 상대 행동에 상성상 이기는 카드
   if (ids.some((id) => state.cards[id].kind === "immune")) v += pred.silence * 12;
@@ -120,7 +120,7 @@ function spellAllowed(state, seat, spell, level) {
   return me.hp / me.maxHp <= 0.5 || o.gauge >= 100 || state.turn === state.rules.rush_start_turn - 1 || state.turn >= state.rules.rush_start_turn;
 }
 
-export function chooseAction(state, seat, { difficulty = "normal", subopt, random = Math.random, memory = null } = {}) {
+export function chooseAction(state, seat, { difficulty = "normal", subopt, random = Math.random, memory = null, weights = {} } = {}) {
   const prof = DIFFICULTY[difficulty] ?? DIFFICULTY.normal;
   const p = state.players[seat];
   const hand = p.hand.filter((c) => !p.sealed.includes(c.uid) && !(state.cards[c.id].kind === "skill" && within(p.st.skillBlock, state.turn)));
@@ -136,7 +136,7 @@ export function chooseAction(state, seat, { difficulty = "normal", subopt, rando
       if (cost > p.energy + bonus) continue;
       for (const active of canActive ? [false, true] : [false]) {
         const cand = { cards, spell, active };
-        cands.push({ cand, s: score(state, seat, cand, pred, prof.read) + random() * 0.5 });
+        cands.push({ cand, s: score(state, seat, cand, pred, prof.read, weights) + random() * 0.5 });
       }
     }
   }
