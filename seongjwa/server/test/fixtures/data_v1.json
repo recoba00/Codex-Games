@@ -1,0 +1,1181 @@
+{
+"cards": {
+"C01": {
+"coef": 1.0,
+"cost": 1,
+"hits": 1,
+"kind": "attack",
+"name": "베기",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×1.0",
+"owner_character": null
+},
+"C02": {
+"coef": 1.8,
+"cost": 2,
+"hits": 1,
+"kind": "attack",
+"name": "강타",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×1.8",
+"owner_character": null
+},
+"C03": {
+"coef": 0.6,
+"cost": 2,
+"hits": 3,
+"kind": "attack",
+"name": "연속 찌르기",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×0.6 3회. 타격마다 실드 차감",
+"owner_character": null
+},
+"C04": {
+"coef": 1.5,
+"cost": 3,
+"hits": 1,
+"kind": "attack",
+"name": "관통 일격",
+"phase": 4,
+"params": {},
+"pierce": 0.5,
+"effect_text": "ATK×1.5, 방어력 50% 무시",
+"owner_character": null
+},
+"C05": {
+"coef": 2.0,
+"cost": 1,
+"hits": 1,
+"kind": "defense",
+"name": "막기",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "실드 DEF×2.0 (이번 턴)",
+"owner_character": null
+},
+"C06": {
+"coef": 3.5,
+"cost": 2,
+"hits": 1,
+"kind": "defense",
+"name": "철벽",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "실드 DEF×3.5 (이번 턴)",
+"owner_character": null
+},
+"C07": {
+"coef": 0.8,
+"cost": 2,
+"hits": 1,
+"kind": "counter",
+"name": "받아치기",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "상대 공격 카드 1장 무효 + ATK×0.8 반격",
+"owner_character": null
+},
+"C08": {
+"coef": null,
+"cost": 2,
+"hits": 1,
+"kind": "silence",
+"name": "봉인",
+"phase": 2,
+"params": {},
+"pierce": 0.0,
+"effect_text": "상대 이번 턴 스킬·액티브 무효, 다음 턴 액티브 봉인",
+"owner_character": null
+},
+"C09": {
+"coef": null,
+"cost": 1,
+"hits": 1,
+"kind": "silence",
+"name": "쉿",
+"phase": 2,
+"params": {},
+"pierce": 0.0,
+"effect_text": "상대 다음 턴 스킬 봉쇄(이번 턴 효과 없음)",
+"owner_character": null
+},
+"C10": {
+"coef": null,
+"cost": 1,
+"hits": 1,
+"kind": "immune",
+"name": "정신 집중",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "이번 턴 + 다음 턴 디버프 면역",
+"owner_character": null
+},
+"C11": {
+"coef": 1.0,
+"cost": 2,
+"hits": 1,
+"kind": "immune",
+"name": "신성 결계",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "이번 턴 디버프 면역 + 디버프 해제 + 실드 DEF×1.0",
+"owner_character": null
+},
+"C12": {
+"coef": 0.2,
+"cost": 1,
+"hits": 1,
+"kind": "disrupt",
+"name": "약화",
+"phase": 2,
+"params": {},
+"pierce": 0.0,
+"effect_text": "상대 다음 턴 ATK −20%",
+"owner_character": null
+},
+"C13": {
+"coef": 0.12,
+"cost": 2,
+"hits": 1,
+"kind": "skill",
+"name": "응급 처치",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "최대 HP 12% 회복",
+"owner_character": null
+},
+"C14": {
+"coef": 25.0,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "집중",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "스킬 게이지 +25",
+"owner_character": null
+},
+"C15": {
+"coef": 2.0,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "전술 드로우",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "카드 2장 드로우",
+"owner_character": null
+},
+"C16": {
+"coef": 0.3,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "분노",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "공격 강화: 이번 턴 공격 피해 +30%",
+"owner_character": null
+},
+"AU01": {
+"coef": 2.5,
+"cost": 2,
+"hits": 1,
+"kind": "defense",
+"name": "일출의 방패",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "실드 DEF×2.5, 이 실드는 다음 턴 100% 이월",
+"owner_character": "AU"
+},
+"AU02": {
+"coef": 0.3,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "정오의 결의",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "현재 실드 +30%, 게이지 +20",
+"owner_character": "AU"
+},
+"IG01": {
+"coef": 2.0,
+"cost": 2,
+"hits": 1,
+"kind": "counter",
+"name": "화염 결계",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "상대 공격 카드 1장 무효 + 작열 2스택",
+"owner_character": "IG"
+},
+"IG02": {
+"coef": 0.5,
+"cost": 2,
+"hits": 3,
+"kind": "attack",
+"name": "불티 세례",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×0.5 3회, HP 피해가 들어가면 작열 1스택",
+"owner_character": "IG"
+},
+"MO01": {
+"coef": 0.2,
+"cost": 1,
+"hits": 1,
+"kind": "disrupt",
+"name": "저주의 손길",
+"phase": 2,
+"params": {},
+"pierce": 0.0,
+"effect_text": "상대 약화 2턴(ATK −20%)",
+"owner_character": "MO"
+},
+"MO02": {
+"coef": 2.0,
+"cost": 2,
+"hits": 1,
+"kind": "defense",
+"name": "망령 갑주",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "실드 DEF×2.0, 약화 상태 상대에게 맞으면 실드 +50%",
+"owner_character": "MO"
+},
+"PY01": {
+"coef": 2.0,
+"cost": 2,
+"hits": 1,
+"kind": "attack",
+"name": "불꽃 일격",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×2.0, 자신 최대 HP 5% 소모",
+"owner_character": "PY"
+},
+"PY02": {
+"coef": 35.0,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "연소",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "자신 최대 HP 8% 소모, 게이지 +35",
+"owner_character": "PY"
+},
+"SE01": {
+"coef": 0.5,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "달의 기도",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "이번·다음 턴 회복량 +50%, 게이지 +15",
+"owner_character": "SE"
+},
+"SE02": {
+"coef": 1.2,
+"cost": 2,
+"hits": 1,
+"kind": "attack",
+"name": "월광 일섬",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×1.2, 준 HP 피해의 30% 회복",
+"owner_character": "SE"
+},
+"SI01": {
+"coef": 30.0,
+"cost": 2,
+"hits": 1,
+"kind": "silence",
+"name": "마나 붕괴",
+"phase": 2,
+"params": {},
+"pierce": 0.0,
+"effect_text": "봉인 효과 + 상대 게이지 −30",
+"owner_character": "SI"
+},
+"SI02": {
+"coef": 0.9,
+"cost": 1,
+"hits": 1,
+"kind": "attack",
+"name": "어둠 화살",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×0.9, 침묵 상태 상대에게 +50%",
+"owner_character": "SI"
+},
+"SL01": {
+"coef": 1.0,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "산들바람",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "1장 드로우, 게이지 +20",
+"owner_character": "SL"
+},
+"SL02": {
+"coef": 0.7,
+"cost": 1,
+"hits": 1,
+"kind": "attack",
+"name": "칼바람",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×0.7, 이번 턴 내 SPD가 더 높으면 ×1.5",
+"owner_character": "SL"
+},
+"TE01": {
+"coef": 1.3,
+"cost": 2,
+"hits": 1,
+"kind": "attack",
+"name": "밀물 찌르기",
+"phase": 4,
+"params": {},
+"pierce": 0.0,
+"effect_text": "ATK×1.3, 밀물(홀수) 턴이면 게이지 +20",
+"owner_character": "TE"
+},
+"TE02": {
+"coef": 1.5,
+"cost": 1,
+"hits": 1,
+"kind": "defense",
+"name": "썰물 방벽",
+"phase": 1,
+"params": {},
+"pierce": 0.0,
+"effect_text": "실드 DEF×1.5, 썰물(짝수) 턴이면 ×2",
+"owner_character": "TE"
+},
+"UM01": {
+"coef": 0.2,
+"cost": 1,
+"hits": 1,
+"kind": "disrupt",
+"name": "그림자 표식",
+"phase": 2,
+"params": {},
+"pierce": 0.0,
+"effect_text": "표식: 2턴간 받는 치명 피해 +20%, 처형 계수 +10%p",
+"owner_character": "UM"
+},
+"UM02": {
+"coef": 25.0,
+"cost": 1,
+"hits": 1,
+"kind": "skill",
+"name": "그림자 걸음",
+"phase": 3,
+"params": {},
+"pierce": 0.0,
+"effect_text": "다음 턴 SPD +30, 게이지 +25",
+"owner_character": "UM"
+}
+},
+"spells": {
+"SP01": {
+"name": "수호",
+"value": 1.0,
+"params": {},
+"cooldown": 5,
+"effect_text": "이번 턴 받는 모든 피해 0(지속 피해 포함)"
+},
+"SP02": {
+"name": "거울",
+"value": 0.5,
+"params": {},
+"cooldown": 4,
+"effect_text": "이번 턴 받는 직접 피해의 N% 반사(받는 피해 그대로)"
+},
+"SP03": {
+"name": "정화",
+"value": null,
+"params": {},
+"cooldown": 4,
+"effect_text": "디버프 전부 해제 + 이번 턴 디버프 면역"
+},
+"SP04": {
+"name": "회복",
+"value": 0.15,
+"params": {},
+"cooldown": 5,
+"effect_text": "최대 HP N% 회복(폭주 중 절반)"
+},
+"SP05": {
+"name": "봉쇄",
+"value": null,
+"params": {},
+"cooldown": 5,
+"effect_text": "이번 턴 상대 스펠 효과 무효"
+},
+"SP06": {
+"name": "충전",
+"value": 2.0,
+"params": {},
+"cooldown": 5,
+"effect_text": "이번 턴 에너지 +N"
+},
+"SP07": {
+"name": "통찰",
+"value": 2.0,
+"params": {},
+"cooldown": 4,
+"effect_text": "즉시 N장 드로우 + 상대 손패 1장 공개"
+},
+"SP08": {
+"name": "탈진",
+"value": 0.3,
+"params": {},
+"cooldown": 4,
+"effect_text": "상대 이번 턴 공격 피해 −N%"
+}
+},
+"presets": {
+"AU": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C05",
+"C06",
+"C06",
+"C14",
+"C14",
+"C15",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C02",
+"C05",
+"C05",
+"C06",
+"C07",
+"C10",
+"C13",
+"C14",
+"C15"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C05",
+"C05",
+"C06",
+"C06",
+"C07",
+"C10",
+"C11",
+"C13",
+"C14",
+"C15"
+],
+"style": "defense"
+}
+],
+"IG": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C03",
+"C03",
+"C10",
+"C12",
+"C14",
+"C15",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C02",
+"C03",
+"C05",
+"C07",
+"C10",
+"C12",
+"C13",
+"C14",
+"C15"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C03",
+"C05",
+"C05",
+"C06",
+"C07",
+"C10",
+"C10",
+"C11",
+"C13",
+"C15"
+],
+"style": "defense"
+}
+],
+"MO": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C03",
+"C08",
+"C12",
+"C12",
+"C14",
+"C15",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C05",
+"C06",
+"C07",
+"C08",
+"C10",
+"C12",
+"C12",
+"C13",
+"C14"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C05",
+"C05",
+"C06",
+"C06",
+"C10",
+"C11",
+"C12",
+"C12",
+"C13",
+"C14"
+],
+"style": "defense"
+}
+],
+"PY": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C02",
+"C03",
+"C13",
+"C14",
+"C15",
+"C16",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C02",
+"C02",
+"C04",
+"C05",
+"C07",
+"C13",
+"C13",
+"C15",
+"C16"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C01",
+"C02",
+"C05",
+"C05",
+"C06",
+"C07",
+"C11",
+"C13",
+"C13",
+"C15"
+],
+"style": "defense"
+}
+],
+"SE": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C03",
+"C05",
+"C13",
+"C14",
+"C15",
+"C16",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C02",
+"C05",
+"C05",
+"C07",
+"C10",
+"C13",
+"C13",
+"C14",
+"C15"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C05",
+"C05",
+"C06",
+"C06",
+"C07",
+"C10",
+"C11",
+"C13",
+"C13",
+"C15"
+],
+"style": "defense"
+}
+],
+"SI": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C08",
+"C08",
+"C09",
+"C09",
+"C12",
+"C15",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C02",
+"C05",
+"C07",
+"C08",
+"C09",
+"C10",
+"C13",
+"C14",
+"C15"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C05",
+"C05",
+"C06",
+"C08",
+"C09",
+"C10",
+"C10",
+"C11",
+"C13",
+"C15"
+],
+"style": "defense"
+}
+],
+"SL": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C03",
+"C12",
+"C14",
+"C15",
+"C15",
+"C16",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C05",
+"C07",
+"C10",
+"C12",
+"C13",
+"C14",
+"C14",
+"C15",
+"C15"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C01",
+"C05",
+"C05",
+"C07",
+"C10",
+"C10",
+"C11",
+"C13",
+"C15",
+"C15"
+],
+"style": "defense"
+}
+],
+"TE": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C02",
+"C03",
+"C04",
+"C14",
+"C15",
+"C16",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C02",
+"C05",
+"C05",
+"C06",
+"C07",
+"C13",
+"C14",
+"C15",
+"C16"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C01",
+"C05",
+"C05",
+"C06",
+"C06",
+"C07",
+"C10",
+"C11",
+"C13",
+"C14"
+],
+"style": "defense"
+}
+],
+"UM": [
+{
+"slot": 1,
+"cards": [
+"C01",
+"C01",
+"C02",
+"C02",
+"C04",
+"C12",
+"C14",
+"C15",
+"C16",
+"C16"
+],
+"style": "aggro"
+},
+{
+"slot": 2,
+"cards": [
+"C01",
+"C02",
+"C04",
+"C05",
+"C07",
+"C10",
+"C12",
+"C14",
+"C14",
+"C15"
+],
+"style": "balance"
+},
+{
+"slot": 3,
+"cards": [
+"C01",
+"C05",
+"C05",
+"C06",
+"C07",
+"C10",
+"C11",
+"C12",
+"C13",
+"C14"
+],
+"style": "defense"
+}
+]
+},
+"version": 1,
+"settings": {
+"max_turn": 10,
+"crit_mult": 1.5,
+"legend_cap": 100,
+"mmr_adj_max": 8,
+"mmr_adj_per": 20,
+"rp_per_tier": 100,
+"win_rp_base": 25,
+"loss_rp_base": 20,
+"streak_start": 3,
+"timebank_sec": 15,
+"rush_dmg_step": 0.25,
+"rush_heal_cut": 0.5,
+"streak_rp_max": 10,
+"legend_top_pct": 0.1,
+"streak_rp_step": 5,
+"ai_fallback_sec": 30,
+"promo_ai_counts": 1,
+"rush_start_turn": 7,
+"stat_budget_tol": 0.03,
+"turn_select_sec": 20,
+"dodge_rp_penalty": 5,
+"leave_rp_penalty": 10,
+"ai_daily_rp_games": 5,
+"ai_rp_penalty_pct": 0.4,
+"season_reset_tiers": 4,
+"stat_budget_target": 320,
+"ai_off_from_tier_no": 13,
+"reconnect_grace_sec": 60,
+"season_early_win_mult": 1.5
+},
+"characters": {
+"AU": {
+"hp": 1150,
+"atk": 85,
+"def": 55,
+"job": "태양 기사",
+"spd": 85,
+"crit": 5,
+"name": "아우렐",
+"role": "탱커",
+"offer": "included",
+"rarity": "일반",
+"enabled": true,
+"faction": "불",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "일륜 반격",
+"active_text": "보유 실드의 150%를 피해로 전환, 실드 소멸",
+"passive_name": "태양 방패",
+"passive_text": "방어 카드 실드 +20%, 턴 종료 시 남은 실드 50% 이월",
+"active_params": {},
+"passive_params": {}
+},
+"IG": {
+"hp": 950,
+"atk": 100,
+"def": 40,
+"job": "불꽃 검사",
+"spd": 105,
+"crit": 15,
+"name": "이그니스",
+"role": "견제",
+"offer": "included",
+"rarity": "전설",
+"enabled": true,
+"faction": "불",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "대화재",
+"active_text": "상대의 남은 작열 피해를 2배로 즉시 터뜨림",
+"passive_name": "불씨",
+"passive_text": "공격 적중 시 25% 작열 1스택(2턴, 턴당 최대 HP 3%, 최대 3스택)",
+"active_params": {},
+"passive_params": {}
+},
+"MO": {
+"hp": 1220,
+"atk": 80,
+"def": 50,
+"job": "망령 기사",
+"spd": 75,
+"crit": 5,
+"name": "모르테",
+"role": "탱커",
+"offer": "included",
+"rarity": "영웅",
+"enabled": true,
+"faction": "물",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "영혼 수확",
+"active_text": "상대에게 건 디버프 횟수(최대 5)×상대 최대 HP 4% 피해 + 그만큼 회복",
+"passive_name": "죽음의 그림자",
+"passive_text": "상대가 약화 상태면 받는 피해 −15%",
+"active_params": {},
+"passive_params": {}
+},
+"PY": {
+"hp": 1100,
+"atk": 110,
+"def": 35,
+"job": "광전사",
+"spd": 80,
+"crit": 10,
+"name": "피로스",
+"role": "브루저",
+"offer": "included",
+"rarity": "희귀",
+"enabled": true,
+"faction": "불",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "업화",
+"active_text": "2턴간 공격 카드 2회 타격, 받는 피해 +15%",
+"passive_name": "타오르는 피",
+"passive_text": "잃은 HP 10%당 ATK +4%",
+"active_params": {},
+"passive_params": {}
+},
+"SE": {
+"hp": 1050,
+"atk": 90,
+"def": 50,
+"job": "달빛 사제",
+"spd": 95,
+"crit": 5,
+"name": "셀레네",
+"role": "유지",
+"offer": "included",
+"rarity": "일반",
+"enabled": true,
+"faction": "물",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "만월 역행",
+"active_text": "HP를 2턴 전 시작 시점으로 되돌림",
+"passive_name": "월광",
+"passive_text": "턴 종료 시 최대 HP 3% 회복, 넘친 회복은 실드로(최대 HP 10%)",
+"active_params": {},
+"passive_params": {}
+},
+"SI": {
+"hp": 920,
+"atk": 105,
+"def": 35,
+"job": "침묵의 수녀",
+"spd": 115,
+"crit": 10,
+"name": "실렌티아",
+"role": "컨트롤",
+"offer": "included",
+"rarity": "희귀",
+"enabled": true,
+"faction": "바람",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "망각의 밤",
+"active_text": "상대 다음 턴 에너지 −1, 손패 1장 봉인",
+"passive_name": "고요",
+"passive_text": "침묵 카드 사용 시 1장 드로우",
+"active_params": {},
+"passive_params": {}
+},
+"SL": {
+"hp": 900,
+"atk": 100,
+"def": 30,
+"job": "바람 사수",
+"spd": 130,
+"crit": 10,
+"name": "실피",
+"role": "템포",
+"offer": "included",
+"rarity": "희귀",
+"enabled": true,
+"faction": "바람",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "회오리",
+"active_text": "상대 손패를 덱에 섞고 같은 장수만큼 다시 뽑게 함, 상대 다음 턴 에너지 이월 0",
+"passive_name": "순풍",
+"passive_text": "매 턴 처음 내는 1E 카드는 에너지 0",
+"active_params": {},
+"passive_params": {}
+},
+"TE": {
+"hp": 1050,
+"atk": 100,
+"def": 45,
+"job": "조수의 창기사",
+"spd": 90,
+"crit": 5,
+"name": "테티스",
+"role": "리듬 브루저",
+"offer": "included",
+"rarity": "영웅",
+"enabled": true,
+"faction": "물",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "대조류",
+"active_text": "2턴간 밀물·썰물 효과 동시 적용",
+"passive_name": "조류",
+"passive_text": "홀수 턴 공격 피해 +20%, 짝수 턴 받는 피해 −20%",
+"active_params": {},
+"passive_params": {}
+},
+"UM": {
+"hp": 850,
+"atk": 115,
+"def": 30,
+"job": "그림자 암살자",
+"spd": 110,
+"crit": 15,
+"name": "움브라",
+"role": "딜러",
+"offer": "included",
+"rarity": "일반",
+"enabled": true,
+"faction": "바람",
+"art_face": null,
+"art_full": null,
+"keywords": [],
+"price_note": null,
+"release_at": null,
+"active_name": "처형",
+"active_text": "상대가 잃은 HP의 35% 피해, 방어력·실드 무시",
+"passive_name": "어둠의 칼날",
+"passive_text": "상대 HP 50% 이하일 때 치명 +15%p",
+"active_params": {},
+"passive_params": {}
+}
+}
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
-import worker, { ACCESS_TTL_SECONDS } from "../src/index.mjs";
+import { app as worker, ACCESS_TTL_SECONDS } from "../src/app.mjs";
 import { _resetCache, getVersion, LIVE_TTL_MS, getLive } from "../src/gamedata.mjs";
 import { verifySteamTicket } from "../src/steam.mjs";
 import { sha256Hex, signAccess, verifyAccess } from "../src/tokens.mjs";

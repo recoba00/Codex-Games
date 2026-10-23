@@ -2,11 +2,11 @@
 
 실시간 1:1 동시 턴 카드 PvP. Godot 클라이언트, Cloudflare Workers·Durable Objects 서버, Supabase(Postgres) DB. Steam 우선 출시 후 Android·iOS.
 
-현재 단계: **이식 1단계 — 계정·인증과 게임 데이터 버전** (전투·클라이언트는 2단계)
+현재 단계: **서버 2·3단계 — 동시 턴 전투, 친구 비밀방** (공개 매칭·AI·랭크와 Godot 클라이언트는 다음 단계)
 
 ```text
 seongjwa/
-  server/                Cloudflare Worker (로그인·세션, 게임 데이터 API)
+  server/                Cloudflare Worker (로그인·세션, 게임 데이터 API, 친구방 DO, 전투 엔진)
   supabase/migrations/   DB 스키마 (계정·세션, 게임 데이터 버전)
   supabase/seed/         xlsx에서 생성한 데이터 버전 (seed_data_v1.sql = 첫 버전)
   supabase/tests/        로컬 Postgres 점검 SQL
@@ -32,11 +32,12 @@ python3 seongjwa/tools/import_balance.py TCG_밸런스테이블_v0.1.xlsx -o see
 | 카드 34 | 공용 C01~C16, 전용 18장(캐릭터ID+2자리, 캐릭터당 2) |
 | 스펠 8 | SP01 수호 … SP08 탈진 |
 | 설정 29 | 시트 `설정값` 영문 키 |
+| 추천덱 27 | 캐릭터 9 × 공세·균형·수비, 공용 10장(시트 `추천덱`, 상세 15) |
 
 ## 로컬 점검
 
 ```bash
-psql -f seongjwa/supabase/migrations/20261023000000_step1_accounts_gamedata.sql
+for f in seongjwa/supabase/migrations/*.sql; do psql -f "$f"; done
 psql -f seongjwa/supabase/seed/seed_data_v1.sql
 psql -f seongjwa/supabase/tests/step1_check.sql
 ```
@@ -53,6 +54,47 @@ psql -f seongjwa/supabase/tests/step1_check.sql
 | `GET /v1/me` | 토큰과 세션 유효성 확인 |
 | `GET /v1/data/live` | 배포된 게임 데이터 스냅샷. ETag가 같으면 304 |
 | `POST /v1/auth/dev` `{devId}` | 개발 전용 로그인. `DEV_LOGIN=1` 환경에서만 열림 |
+| `POST /v1/rooms` `{options:{bans,turnSec}}` | 친구 비밀방 만들기(6자리 코드) |
+| `POST /v1/rooms/{code}/join` | 방 참가(2명까지) |
+| `POST /v1/rooms/{code}/ticket` → `GET /v1/rooms/{code}/ws?ticket=` | 세션 확인 후 일회용 티켓으로 웹소켓 접속 |
+| `GET /dev` | 개발용 브라우저 테스트 화면. `DEV_LOGIN=1` 환경에서만 |
+
+### 친구방 웹소켓 메시지 (클라이언트 → 서버)
+
+`ready{ready,defaults}` · `options{bans,turnSec}`(방장) · `ban{characterId|null}` · `pick{characterId}` · `loadout{spells:[2], preset:1~3 | commonCards:[10]}` · `act{turn,cards:[uid…],spell,active}` · `timebank` · `surrender` · `leave` · `{"type":"ping"}`
+
+서버 → 클라이언트는 상태가 바뀔 때마다 자리별 시야로 필터한 `room` 메시지 1개(상대 손패·덱 순서·제출 내용은 없음), 그 밖에 `error`·`afk_warning`.
+
+### 판 흐름 (총괄 3·7·10·12장)
+
+대기실(양측 준비) → 밴 10초(방장이 끌 수 있음) → 픽 15초(동시·비공개) → 상대 공개 + 스펠 2·덱 15초 → 전투(턴 20/30초, 양측 확정 시 즉시 공개) → 결과 → 재대결(방 유지).
+끊기면 60초 유예 동안 서버가 자동 방어로 턴을 넘기고, 못 돌아오면 친구방은 결과 없음(void)으로 기록한다.
+
+## 테스트
+
+```bash
+cd seongjwa/server
+npm test             # 엔진·API 단위 테스트(전 캐릭터 조합 243판 무작위 시뮬레이션 포함)
+npm run test:live    # 실제 Workers 런타임(wrangler 로컬)에서 친구방 한 판 통합 테스트, 약 40초
+LIVE_LONG=1 npm run test:live   # + 60초 재접속 유예 초과 시나리오
+```
+
+## 기획 확인 필요 (개발이 문서 해석으로 임시 구현한 부분)
+
+| # | 내용 | 현재 구현 | 근거 |
+| --- | --- | --- | --- |
+| 1 | 업화(피로스)·대조류(테티스) "2턴간" | 키워드 사전의 "N턴 효과는 다음 턴부터" 규칙을 따라 사용한 턴에는 효과 없음(다음 2턴 적용) | 상세 02 지속 턴 |
+| 2 | 충전이 봉쇄로 무효될 때 | 낸 카드 중 에너지가 모자란 뒤쪽 카드는 무효(에너지는 소모) | 총괄 5장 |
+| 3 | 영혼 수확(모르테) 피해 성격 | 고정 피해: 방어력·치명 미적용, 실드에 흡수됨, 폭주 적용 | 총괄 4장 |
+| 4 | 셀레네 넘친 회복의 실드 | 다음 턴까지 이월(이번 턴 실드면 턴 종료 직후 사라져 의미 없음) | 총괄 4장, 상세 02 |
+| 5 | 받아치기 반격 피해 | 공격 카드 피해 공식에서 공격 강화(분노)·조류만 빼고 적용(약화·치명 적용) | 상세 02 |
+| 6 | 일륜 반격·처형·영혼 수확에 거울 반사 | 직접 피해로 보고 반사됨 | 상세 02 거울 |
+| 7 | 이그니스 불씨 "적중" | 카드당 1회, HP 피해가 1 이상일 때 25% 판정 | 상세 02 작열 |
+| 8 | 픽·스펠 시간 초과 기본값이 없을 때 | 선호 캐릭터 없음 → 남은 첫 캐릭터, 직전 스펠·덱 없음 → 스펠 목록 앞 2개·균형 덱 | 총괄 7장 |
+| 9 | 친구방 준비 단계에서 나감 | 판 취소, 대기실로(방 유지) | 총괄 12장 |
+| 10 | 연결 끊김 중 자동 방어 턴 | AFK(3턴 무행동) 횟수에 세지 않음. 60초 유예가 따로 판정 | 총괄 10장 |
+| 11 | Steam 패밀리 공유 | 허용하고 기록만 | 상세 09 |
+
 
 - 접근 토큰 15분(Worker가 직접 서명·검증, 요청마다 DB 조회 없음), 리프레시 30일. DB에는 리프레시 토큰의 해시만 저장한다.
 - 비밀값(`wrangler secret put`): `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TOKEN_SECRET`(32자 이상), `STEAM_WEB_API_KEY`, `STEAM_APP_ID`.

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
+    "test:live": "node test/live/run.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
