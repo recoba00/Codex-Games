@@ -185,6 +185,7 @@ try {
   console.log(`\n통합 테스트 ${steps.length}단계 통과`);
 } catch (error) {
   console.error("FAIL:", error.message);
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=live test::${String(error.message).replace(/\n/g, " ").slice(0, 900)}`);
   console.error(wlog.split("\n").slice(-30).join("\n"));
   process.exitCode = 1;
 } finally {
