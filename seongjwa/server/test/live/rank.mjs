@@ -72,7 +72,11 @@ async function playToTurn4(players) {  // 사람 자리들이 매 턴 카드 1�
 async function prep(players, picks) {
   const lead = players[0];
   if (lead.state.phase === "ban") { players.forEach((p) => p.send({ type: "ban", characterId: null })); await lead.until((s) => s.phase === "pick"); }
-  players.forEach((p, i) => p.send({ type: "pick", characterId: picks[i] }));
+  players.forEach((p, i) => {  // AI가 무작위로 밴할 수 있으니 밴되지 않은 캐릭터로 바꿔 고름
+    const banned = p.state.prep.banned;
+    const id = picks[i] && !banned.includes(picks[i]) ? picks[i] : p.state.prep.characters.find((c) => !banned.includes(c));
+    p.send({ type: "pick", characterId: id });
+  });
   await lead.until((s) => s.phase === "loadout");
   players.forEach((p) => p.send({ type: "loadout", spells: ["SP01", "SP04"], preset: 2 }));
   await lead.until((s) => s.phase === "battle");
