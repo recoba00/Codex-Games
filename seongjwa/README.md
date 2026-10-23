@@ -2,10 +2,11 @@
 
 실시간 1:1 동시 턴 카드 PvP. Godot 클라이언트, Cloudflare Workers·Durable Objects 서버, Supabase(Postgres) DB. Steam 우선 출시 후 Android·iOS.
 
-현재 단계: **이식 1단계 — DB 스키마와 게임 데이터 버전** (서버·클라이언트 코드는 다음 단계)
+현재 단계: **이식 1단계 — 계정·인증과 게임 데이터 버전** (전투·클라이언트는 2단계)
 
 ```text
 seongjwa/
+  server/                Cloudflare Worker (로그인·세션, 게임 데이터 API)
   supabase/migrations/   DB 스키마 (계정·세션, 게임 데이터 버전)
   supabase/seed/         xlsx에서 생성한 데이터 버전 (seed_data_v1.sql = 첫 버전)
   supabase/tests/        로컬 Postgres 점검 SQL
@@ -41,3 +42,21 @@ psql -f seongjwa/supabase/tests/step1_check.sql
 ```
 
 운영 Supabase에는 아직 적용하지 않았다.
+
+## 서버 API (server/)
+
+| 요청 | 하는 일 |
+| --- | --- |
+| `POST /v1/auth/steam` `{ticket, deviceId}` | Steam 티켓 검증 → 계정 찾기/만들기 → 다른 기기 세션 종료 → 토큰 발급 |
+| `POST /v1/auth/refresh` `{refreshToken}` | 리프레시 토큰 1회용 교체. 재사용·다른 기기 로그인 후에는 401 |
+| `POST /v1/auth/logout` | 현재 세션 종료 |
+| `GET /v1/me` | 토큰과 세션 유효성 확인 |
+| `GET /v1/data/live` | 배포된 게임 데이터 스냅샷. ETag가 같으면 304 |
+| `POST /v1/auth/dev` `{devId}` | 개발 전용 로그인. `DEV_LOGIN=1` 환경에서만 열림 |
+
+- 접근 토큰 15분(Worker가 직접 서명·검증, 요청마다 DB 조회 없음), 리프레시 30일. DB에는 리프레시 토큰의 해시만 저장한다.
+- 비밀값(`wrangler secret put`): `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TOKEN_SECRET`(32자 이상), `STEAM_WEB_API_KEY`, `STEAM_APP_ID`.
+
+```bash
+cd seongjwa/server && npm test
+```

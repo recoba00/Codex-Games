@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "seongjwa",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-21",
+  "workers_dev": true,
+  "keep_vars": true,
+  // 비밀값은 `wrangler secret put` 으로만 넣는다(소스·Git 금지):
+  //   SUPABASE_URL, SUPABASE_SERVICE_KEY, TOKEN_SECRET(32자 이상), STEAM_WEB_API_KEY, STEAM_APP_ID
+  "vars": {
+    "STEAM_TICKET_IDENTITY": "seongjwa-auth",
+    "DEV_LOGIN": "0"
+  }
+}

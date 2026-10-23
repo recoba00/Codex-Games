@@ -1,0 +1,33 @@
+// Supabase(PostgREST) 호출. service 키는 Worker 비밀값으로만 둔다.
+function headers(env) {
+  const key = env.SUPABASE_SERVICE_KEY;
+  if (!env.SUPABASE_URL || !key) throw new Error("db_not_configured");
+  const h = { apikey: key, "content-type": "application/json", accept: "application/json" };
+  if (key.startsWith("eyJ")) h.authorization = `Bearer ${key}`; // 구형 JWT 형식 service_role 키
+  return h;
+}
+
+function base(env) {
+  return String(env.SUPABASE_URL).replace(/\/$/, "");
+}
+
+// DB 함수가 raise한 코드(account_banned 등)는 그대로 넘기고, 나머지는 db_error로 감춘다.
+const PASS_THROUGH = new Set(["account_banned", "account_deleted", "ttl_invalid"]);
+
+export async function rpc(env, name, args, fetcher = fetch) {
+  const response = await fetcher(`${base(env)}/rest/v1/rpc/${name}`, {
+    method: "POST", headers: headers(env), body: JSON.stringify(args)
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = body?.message ?? "";
+    throw new Error(PASS_THROUGH.has(message) ? message : "db_error");
+  }
+  return body;
+}
+
+export async function select(env, pathAndQuery, fetcher = fetch) {
+  const response = await fetcher(`${base(env)}/rest/v1/${pathAndQuery}`, { headers: headers(env) });
+  if (!response.ok) throw new Error("db_error");
+  return response.json();
+}
