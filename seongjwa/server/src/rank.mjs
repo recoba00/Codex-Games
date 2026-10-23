@@ -7,7 +7,7 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const num = (settings, key, fallback) => (Number.isFinite(Number(settings?.[key])) ? Number(settings[key]) : fallback);
 
 export const DODGE_BLOCK_MIN = 5;    // 총괄 10장: 닷지 5분 매칭 제한
-export const ELO_K = 32;             // 숨은 MMR 갱신 폭(개발 기본값, 기획 수치 없음)
+export const ELO_K = 32;             // 숨은 MMR 갱신 폭 기본값. 시트 `설정값` mmr_k 우선 (기획답변 3차 A1)
 export const PROTECT_GAMES = 3;      // 총괄 9장: 새 티어 진입 직후 3판 강등 없음
 
 export function tiersOf(data) {
@@ -38,9 +38,19 @@ function blankState(tier, earlyUntil) {
   return { streak: 0, best: tier, floor: 0, protect: 0, protectTier: tier, earlyUntil, aiDay: "", aiGames: 0, games: 0, wins: 0 };
 }
 
-// 한 판 결과 반영. result: win | loss | draw | leave | dodge
+// 네트워크 면책(총괄 10장, 기획답변 3차 A3): 연결이 비정상으로 끊겨 60초 안에 못 돌아온 경우(drop),
+// 한국 날짜 기준 하루 첫 1회는 패배는 그대로 두고 이탈 누적·추가 감점은 빼 준다.
+export function netExemptAvailable(recent, now = Date.now()) {
+  const day = (t) => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  return !recent.some((e) => e.exempt && day(Date.parse(e.at)) === day(now));
+}
+
+// 한 판 결과 반영. result: win | loss | draw | leave | drop(비정상 끊김 이탈) | dodge
 // mode: ranked(사람) | ranked_ai. opponentMmr는 사람 판에서만 의미.
-export function settle({ data, row, result, mode, mmr, opponentMmr = mmr, now = Date.now() }) {
+export function settle({ data, row, result: rawResult, mode, mmr, opponentMmr = mmr, now = Date.now(), exemptAvailable = false }) {
+  let result = rawResult;
+  const exempt = rawResult === "drop" && exemptAvailable;
+  if (rawResult === "drop") result = exempt ? "loss" : "leave";
   const s = data.settings ?? {};
   const { tiers } = tiersOf(data);
   const state = { ...blankState(row.tier, 0), ...row.state };
@@ -49,7 +59,7 @@ export function settle({ data, row, result, mode, mmr, opponentMmr = mmr, now = 
   const isAi = mode === "ranked_ai";
   const aiMult = isAi ? 1 - num(s, "ai_rp_penalty_pct", 0.4) : 1;
   const adj = clamp(roundHalfAway((mmr - t.mmr) / num(s, "mmr_adj_per", 20)), -num(s, "mmr_adj_max", 8), num(s, "mmr_adj_max", 8));
-  const detail = { mmrAdj: adj, aiMult, tierBefore };
+  const detail = { mmrAdj: adj, aiMult, tierBefore, ...(exempt ? { netExempt: true } : {}) };
 
   // AI 랭킹전 하루 반영 한도(초과분은 RP 0, 총괄 8장)
   const day = new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 10);  // 한국 날짜 기준
@@ -86,7 +96,9 @@ export function settle({ data, row, result, mode, mmr, opponentMmr = mmr, now = 
     if (next && rp >= next.rp_start) { rp = next.rp_start - 1; detail.promoBlocked = true; }
   }
   // 하한선(골드·다이아 진입 후 그 시즌 동안) / 새 티어 진입 직후 3판 강등 없음
+  // 패배 감점이 없는 단계(브론즈)는 이탈 감점으로도 단계 시작점 아래로 안 내려감 (기획답변 3차 A2)
   if (delta < 0) {
+    if (t.loss_mult === 0) rp = Math.max(rp, t.rp_start);
     if (state.floor) rp = Math.max(rp, tierRow(tiers, state.floor).rp_start);
     if (state.protect > 0 && state.protectTier === tierBefore) rp = Math.max(rp, t.rp_start);
   }
@@ -101,7 +113,7 @@ export function settle({ data, row, result, mode, mmr, opponentMmr = mmr, now = 
   if (!isAi && ["win", "loss", "leave", "draw"].includes(result)) {
     const expected = 1 / (1 + 10 ** ((opponentMmr - mmr) / 400));
     const score = result === "win" ? 1 : result === "draw" ? 0.5 : 0;
-    mmrDelta = Math.round(ELO_K * (score - expected));
+    mmrDelta = Math.round(num(s, "mmr_k", ELO_K) * (score - expected));
   }
   return { rp, tier, state, rpDelta: rp - row.rp, mmrDelta, detail };
 }

@@ -115,6 +115,18 @@ test("충전이 봉쇄로 무효: 처리 순서상 뒤쪽(공격) 카드부터 �
   assert.ok(p.discard.some((c) => c.id === "C02"), "무효 카드도 버려짐");
 });
 
+test("이월 실드는 1턴만, 연쇄 이월 없음. 아우렐 50%는 새 실드에만 (기획답변 3차 B1)", () => {
+  const st = battle("AU", "SE");
+  const au = st.players[0];
+  au.energy = 5;
+  const def = give(st, 0, "C06");  // 철벽 DEF×3.5 ×1.2 = 231
+  play(st, { cards: [def] }, pass);
+  assert.equal(au.shield.carried, Math.round(Math.round(55 * 3.5 * 1.2) * 0.5));  // 다음 턴으로 50% 이월
+  st.players.forEach((p) => { p.idle = -99; });
+  play(st, pass, pass);
+  assert.equal(au.shield.carried, 0, "이월분은 다시 이월되지 않음");
+});
+
 test("면역이 침묵보다 먼저(1단계): 같은 턴 침묵 무효 (총괄 12장)", () => {
   const st = battle("SI", "AU");
   st.players[0].energy = 5; st.players[1].energy = 5;

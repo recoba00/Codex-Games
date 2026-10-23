@@ -44,14 +44,14 @@ export function startFakeSupabase(port) {
       if (url.pathname === "/rest/v1/rpc/rank_state") {
         const cur = ratings.get(`${body.p_account}|${body.p_season}`) ?? null;
         return reply(res, 200, { current: cur, previous: null, mmr: mmr.get(body.p_account) ?? 800,
-          recent: rankEvents.filter((e) => e.account_id === body.p_account).map((e) => ({ kind: e.kind, at: e.created_at, mode: e.mode })) });
+          recent: rankEvents.filter((e) => e.account_id === body.p_account).map((e) => ({ kind: e.kind, at: e.created_at, mode: e.mode, exempt: e.exempt })) });
       }
       if (url.pathname === "/rest/v1/rpc/rank_commit") {
         if (rankEvents.some((e) => e.match_id === body.p_match && e.account_id === body.p_account)) return reply(res, 200, "duplicate");
         const key = `${body.p_account}|${body.p_season}`;
         const cur = ratings.get(key);
         if ((cur?.version ?? 0) !== body.p_expected_version) return reply(res, 400, { message: "rank_conflict" });
-        rankEvents.push({ match_id: body.p_match, account_id: body.p_account, kind: body.p_event.kind, mode: body.p_event.mode, rp_delta: body.p_event.rp_delta, created_at: new Date().toISOString() });
+        rankEvents.push({ match_id: body.p_match, account_id: body.p_account, kind: body.p_event.kind, mode: body.p_event.mode, rp_delta: body.p_event.rp_delta, exempt: Boolean(body.p_event.detail?.netExempt), created_at: new Date().toISOString() });
         ratings.set(key, { account_id: body.p_account, season_id: body.p_season, rp: body.p_rp, tier_no: body.p_tier, state: body.p_state, version: (cur?.version ?? 0) + 1 });
         if (body.p_mmr_delta) mmr.set(body.p_account, (mmr.get(body.p_account) ?? 800) + body.p_mmr_delta);
         return reply(res, 200, "ok");

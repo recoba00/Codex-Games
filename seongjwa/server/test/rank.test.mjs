@@ -90,3 +90,24 @@ test("이탈 누적: 2회 → 다음 3판 5분 대기, 4회 → 24시간 잠금,
   assert.equal(old.leaves, 0, "7일 지난 이탈은 안 셈");
   assert.ok(leaverStatus(DATA, [{ kind: "dodge", at: at(0.05) }], now).dodgeUntil > now);
 });
+
+test("네트워크 면책: 비정상 끊김(drop) 하루 첫 1회는 패배만(이탈 누적·−10 없음), 두 번째부터 이탈 (기획답변 3차 A3)", async () => {
+  const { netExemptAvailable } = await import("../src/rank.mjs");
+  const r = row(8, { rpOff: 50 });
+  const first = settle({ data: DATA, row: r, result: "drop", mode: "ranked", mmr: 1150, exemptAvailable: true });
+  assert.equal(first.rpDelta, -20);
+  assert.equal(first.detail.netExempt, true);
+  const second = settle({ data: DATA, row: r, result: "drop", mode: "ranked", mmr: 1150, exemptAvailable: false });
+  assert.equal(second.rpDelta, -30);
+  const now = Date.UTC(2026, 9, 23, 5);
+  assert.equal(netExemptAvailable([{ kind: "loss", exempt: true, at: new Date(now - 3600000).toISOString() }], now), false);
+  assert.equal(netExemptAvailable([{ kind: "loss", exempt: true, at: new Date(now - 30 * 3600000).toISOString() }], now), true);
+});
+
+test("브론즈 이탈 −10은 단계 시작점 아래로 안 내려감, mmr_k 설정 반영 (기획답변 3차 A1·A2)", () => {
+  const r = row(2, { rpOff: 5 });  // 브론즈 II 105
+  assert.equal(settle({ data: DATA, row: r, result: "leave", mode: "ranked", mmr: 850 }).rp, 100);
+  const k16 = { ...DATA, settings: { ...DATA.settings, mmr_k: 16 } };
+  assert.equal(settle({ data: k16, row: r, result: "win", mode: "ranked", mmr: 850, opponentMmr: 850 }).mmrDelta, 8);
+  assert.equal(settle({ data: DATA, row: r, result: "win", mode: "ranked", mmr: 850, opponentMmr: 850 }).mmrDelta, 16);
+});

@@ -71,12 +71,12 @@ function score(state, seat, cand, pred, level) {
   dmg *= 1 - pred.counter * 0.6 - pred.guard * 0.5;
   if (cand.active) {
     if (me.char === "UM") dmg += (o.maxHp - o.hp) * 0.35 * rush;
-    if (me.char === "AU") dmg += (me.shield.norm + me.shield.full) * 1.5 * rush;
+    if (me.char === "AU") dmg += (me.shield.carried + me.shield.norm + me.shield.full) * 1.5 * rush;
     if (me.char === "IG") dmg += o.st.burn.length * o.maxHp * 0.03 * 2 * 2;
     if (me.char === "MO") dmg += Math.min(5, me.debuffsLanded) * o.maxHp * 0.04 * rush;
   }
   let v = (dmg / o.maxHp) * 100;
-  if (dmg >= o.hp + o.shield.norm + o.shield.full) v += 60;  // 이번 턴 처치 가능
+  if (dmg >= o.hp + o.shield.carried + o.shield.norm + o.shield.full) v += 60;  // 이번 턴 처치 가능
 
   // 생존 가치
   const incoming = pred.atk * o.atk * 1.6 * defRed(me.def) * rush;

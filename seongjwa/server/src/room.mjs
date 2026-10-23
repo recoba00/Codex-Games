@@ -149,7 +149,7 @@ export class FriendRoom extends DurableObject {
     }
   }
 
-  async webSocketClose(ws) {
+  async webSocketClose(ws, code) {
     const att = ws.deserializeAttachment();
     try { ws.close(1000, "bye"); } catch { /* already closed */ }
     if (!this.room || att?.seat === undefined || this.connected(att.seat, ws)) return;
@@ -159,6 +159,8 @@ export class FriendRoom extends DurableObject {
       g.log.push({ t: "prep_disconnect", seat: att.seat, at: now });  // 준비 단계: 스펠·덱 마감 때까지 안 돌아오면 닷지(랭킹전)·판 취소(친구방)
     } else if (g && this.room.phase === "battle") {
       g.away[att.seat] = now;  // 60초 유예 시작
+      g.awayAbnormal = g.awayAbnormal ?? [false, false];
+      g.awayAbnormal[att.seat] = code !== 1000;  // 정상 종료(1000)가 아니면 네트워크 끊김으로 봄(면책 대상)
       g.log.push({ t: "disconnect", seat: att.seat, at: now });
     }
     await this.save();
@@ -457,7 +459,8 @@ export class FriendRoom extends DurableObject {
       const loserLeft = ["leave", "afk"].includes(reason);
       const players = [0, 1].filter((s) => !this.isAi(s)).map((s) => {
         const mine = s === 0 ? "a" : "b";
-        let result = outcome === "draw" ? (loserLeft ? "leave" : "draw") : outcome === mine ? "win" : loserLeft ? "leave" : "loss";
+        const left = reason === "leave" && g.dropped?.includes(s) ? "drop" : "leave";  // 비정상 끊김은 면책 판정 대상(기획답변 3차 A3)
+        let result = outcome === "draw" ? (loserLeft ? left : "draw") : outcome === mine ? "win" : loserLeft ? left : "loss";
         return { seat: s, acc: room.members[s].acc, result };
       });
       room.ranks.push({ tries: 0, next: now, job: { matchId: g.id, seasonId: room.seasonId, mode, dataVersion: g.dataVersion, players } });
@@ -533,6 +536,7 @@ export class FriendRoom extends DurableObject {
       const gone = [0, 1].filter((s) => g.away[s] && now >= g.away[s] + grace);
       if (gone.length) {
         if (RANKED.includes(r.mode)) {  // 랭킹전: 60초 안에 못 돌아오면 이탈 패배(총괄 10장)
+          g.dropped = gone.filter((s) => g.awayAbnormal?.[s]);
           if (gone.length === 1) concede(g.battle, gone[0], "leave");
           else g.battle.result = { outcome: "draw", reason: "leave", turn: g.battle.turn };
           await this.finishGame(now);

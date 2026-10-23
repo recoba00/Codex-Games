@@ -83,7 +83,7 @@ export function createBattle({ seed, data, players, rules: overrides = {} }) {
       hand: [], discard: [],
       energy: 0, carry: 0, gauge: 0,
       spellReady: Object.fromEntries(spells.map((id) => [id, rules.spell_first_turn])),
-      shield: { norm: 0, full: 0 }, mo02: 0, mo02Used: false,
+      shield: { carried: 0, norm: 0, full: 0 }, mo02: 0, mo02Used: false,
       st: { burn: [] }, hpStart: {}, dealt: 0, debuffsLanded: 0,
       submitted: null, idle: 0, revealed: [], sealed: [], pendingSeal: 0,
       tb: false
@@ -207,7 +207,7 @@ function dealDirect(state, attacker, target, raw, { ignoreShield = false, reflec
       addShield(target, target.mo02 * state.cards.MO02.params.hitByWeakBonus);
       target.mo02Used = true;
     }
-    for (const k of ["norm", "full"]) {
+    for (const k of ["carried", "norm", "full"]) {  // 이월분(먼저 사라질 것)부터 깎음
       const used = Math.min(target.shield[k], rest);
       target.shield[k] -= used;
       rest -= used;
@@ -484,7 +484,7 @@ export function resolveTurn(state) {
         case "C14": gaugeAdd(state, p, card.coef); break;
         case "C15": draw(state, p, card.coef); break;
         case "C16": p.attackBuff += card.coef; break;
-        case "AU02": p.shield.norm = round(p.shield.norm * (1 + card.coef)); p.shield.full = round(p.shield.full * (1 + card.coef)); gaugeAdd(state, p, prm.gauge); break;
+        case "AU02": for (const k of ["carried", "norm", "full"]) p.shield[k] = round(p.shield[k] * (1 + card.coef)); gaugeAdd(state, p, prm.gauge); break;
         case "PY02": selfCost(state, p, prm.selfCost); gaugeAdd(state, p, card.coef); break;
         case "SE01": p.st.healBoost = { from: state.turn, to: state.turn + prm.turns - 1, v: card.coef }; gaugeAdd(state, p, prm.gauge); break;
         case "SL01": draw(state, p, card.coef); gaugeAdd(state, p, prm.gauge); break;
@@ -550,8 +550,9 @@ export function resolveTurn(state) {
   }
   for (const p of seq) if (p.char === "SE") heal(state, p, p.maxHp * p.cp.passiveRegen);
   for (const p of state.players) {
+    // 이월 실드는 1턴만, 연쇄 이월 없음. 아우렐 패시브 50%는 이번 턴에 새로 생긴 실드에만 (상세 02, 기획답변 3차 B1)
     const keepNorm = p.char === "AU" ? round(p.shield.norm * p.cp.passiveCarry) : 0;
-    p.shield = { norm: keepNorm + p.shield.full, full: 0 };  // 이월분은 다음 턴 일반 실드로
+    p.shield = { carried: keepNorm + p.shield.full, norm: 0, full: 0 };
     for (const [k, s] of Object.entries(p.st)) if (k !== "burn" && s && s.to !== undefined && s.to <= state.turn) delete p.st[k];
   }
   if (finishIfDead(state)) return state;
@@ -589,8 +590,8 @@ function useActive(state, p, o) {
   const fixed = (raw, opts = {}) => dealDirect(state, p, o, raw * rushMult(state) * receivedMult(state, p, o, false), { source: "active", ...opts });
   switch (p.char) {
     case "AU": {  // 일륜 반격: 실드 전부(이월 포함) ×150% → 피해, 방어력·치명 무시, 상대 실드 먼저
-      const total = p.shield.norm + p.shield.full;
-      p.shield = { norm: 0, full: 0 };
+      const total = p.shield.carried + p.shield.norm + p.shield.full;
+      p.shield = { carried: 0, norm: 0, full: 0 };
       fixed(total * cp.activeMult);
       break;
     }
@@ -665,7 +666,7 @@ export function concede(state, seat, reason = "surrender") {
 // ---------- 시야 필터: 상대 손패·덱 순서·제출 내용·난수 상태는 숨긴다 ----------
 export function view(state, seat) {
   const pub = (p, mine) => ({
-    char: p.char, hp: p.hp, maxHp: p.maxHp, shield: p.shield.norm + p.shield.full,
+    char: p.char, hp: p.hp, maxHp: p.maxHp, shield: p.shield.carried + p.shield.norm + p.shield.full,
     energy: p.energy, gauge: p.gauge, deck: p.deck.length, handCount: p.hand.length,
     discard: p.discard.map((c) => c.id),
     spells: Object.fromEntries(Object.entries(p.spellReady).map(([id, t]) => [id, Math.max(0, t - state.turn)])),

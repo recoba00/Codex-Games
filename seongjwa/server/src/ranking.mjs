@@ -1,6 +1,6 @@
 // 랭크 DB 연동: 시즌·상태 읽기 → rank.mjs로 계산 → 판 단위 1회 반영(rank_commit). 판 DO와 큐에서 쓴다.
 import { rpc } from "./db.mjs";
-import { leaverStatus, seasonStart, settle, tierForRp, tiersOf } from "./rank.mjs";
+import { leaverStatus, netExemptAvailable, seasonStart, settle, tierForRp, tiersOf } from "./rank.mjs";
 
 export async function currentSeason(env) {
   const s = await rpc(env, "season_current", { p_length_days: 28 });
@@ -26,14 +26,15 @@ export async function settleMatch(env, data, { matchId, seasonId, mode, players 
     const opp = loaded[1 - i];
     let r = loaded[i];
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const res = settle({ data, row: r.row, result: p.result, mode, mmr: r.mmr, opponentMmr: opp?.mmr ?? r.mmr });
+      const res = settle({ data, row: r.row, result: p.result, mode, mmr: r.mmr, opponentMmr: opp?.mmr ?? r.mmr, exemptAvailable: netExemptAvailable(r.recent) });
+      const kind = p.result === "drop" ? (res.detail.netExempt ? "loss" : "leave") : p.result;
       try {
         const status = await rpc(env, "rank_commit", {
           p_match: matchId, p_account: p.acc, p_season: seasonId, p_expected_version: r.row.version,
           p_rp: res.rp, p_tier: res.tier, p_state: res.state, p_mmr_delta: res.mmrDelta,
-          p_event: { kind: p.result, mode, rp_delta: res.rpDelta, detail: res.detail }
+          p_event: { kind, mode, rp_delta: res.rpDelta, detail: res.detail }
         });
-        out.push({ acc: p.acc, rpDelta: res.rpDelta, rp: res.rp, tier: res.tier, duplicate: status === "duplicate" });
+        out.push({ acc: p.acc, result: kind, netExempt: Boolean(res.detail.netExempt), rpDelta: res.rpDelta, rp: res.rp, tier: res.tier, duplicate: status === "duplicate" });
         break;
       } catch (error) {
         if (error.message !== "rank_conflict" || attempt === 2) throw error;  // 버전 충돌 → 다시 읽고 재계산
