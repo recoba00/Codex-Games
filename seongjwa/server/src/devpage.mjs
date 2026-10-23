@@ -14,14 +14,14 @@ button{cursor:pointer}button.on{background:var(--acc);color:#0b0e1a}button:disab
 .card{min-width:120px;text-align:left}.bar{height:8px;background:#232a45;border-radius:4px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--ok)}
 pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220px;overflow:auto}
 </style></head><body>
-<h1>성좌 결투 · 서버 테스트 <span class="dim" id="who"></span></h1>
+<h1>성좌 결투 · 서버 테스트 <span class="dim" id="who" style="font-size:12px;font-weight:400"></span></h1>
 <section id="login"><div class="row"><input id="devId" placeholder="개발 ID (예: alice)"><button id="btnLogin">로그인</button></div>
 <p class="dim">탭 2개에서 서로 다른 ID로 로그인 → 한쪽이 방을 만들고 다른 쪽이 코드로 참가합니다.</p></section>
 <section id="lobby" hidden><div class="row">
 <label><input type="checkbox" id="optBans" checked> 밴 켜기</label>
 <select id="optTurn"><option value="20">턴 20초</option><option value="30">턴 30초</option></select>
 <button id="btnCreate">방 만들기</button><span class="dim">또는</span>
-<input id="joinCode" placeholder="방 코드 6자리" maxlength="6" size="8"><button id="btnJoin">참가</button></div></section>
+<input id="joinCode" placeholder="상대의 방 코드 6자리" maxlength="6" size="8"><button id="btnJoin">참가</button></div></section>
 <section id="room" hidden></section>
 <section><b>로그</b><pre id="log"></pre></section>
 <script>
@@ -30,12 +30,12 @@ var $=function(id){return document.getElementById(id)};
 function log(m){$('log').textContent=new Date().toLocaleTimeString()+' '+m+'\n'+$('log').textContent}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.token?{authorization:'Bearer '+S.token}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function nm(kind,id){var d=S.data&&S.data[kind]&&S.data[kind][id];return d?d.name:id}
-function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('who').textContent=S.acc?'('+S.acc.slice(0,8)+')':'';
+function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
  if(S.token&&!S.data)fetch('/v1/data/live').then(function(r){return r.json()}).then(function(j){S.data=j.data;log('데이터 버전 '+j.version)});
  var code=sessionStorage.getItem('room');if(S.token&&code)connect(code)}
 $('btnLogin').onclick=function(){api('/v1/auth/dev',{devId:$('devId').value.trim().toLowerCase()}).then(function(j){S.token=j.accessToken;S.acc=j.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('로그인 '+(j.replacedSessions?'(다른 기기 세션 종료됨)':''));start()}).catch(function(e){log('로그인 실패: '+e.message)})};
 $('btnCreate').onclick=function(){api('/v1/rooms',{options:{bans:$('optBans').checked,turnSec:Number($('optTurn').value)}}).then(function(j){log('방 '+j.code);connect(j.code)}).catch(function(e){log(e.message)})};
-$('btnJoin').onclick=function(){var c=$('joinCode').value.trim().toUpperCase();api('/v1/rooms/'+c+'/join',{}).then(function(){connect(c)}).catch(function(e){log('참가 실패: '+e.message)})};
+$('btnJoin').onclick=function(){var c=$('joinCode').value.trim().toUpperCase();if(!/^[2-9A-HJKMNP-Z]{6}$/.test(c)){log('방 코드는 상대 화면의 "방 코드" 6자리입니다(예: JCWBV3)');return}api('/v1/rooms/'+c+'/join',{}).then(function(){connect(c)}).catch(function(e){log('참가 실패: '+({not_found:'방 코드 형식 오류',room_not_found:'그런 방이 없음(코드 확인)',room_full:'방이 가득 참'}[e.message]||e.message))})};
 function connect(code){sessionStorage.setItem('room',code);api('/v1/rooms/'+code+'/ticket',{}).then(function(j){
  var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/rooms/'+code+'/ws?ticket='+encodeURIComponent(j.ticket));S.ws=ws;
  ws.onmessage=function(e){var m=JSON.parse(e.data);if(m.type==='room'){S.st=m;render()}else if(m.type==='error')log('오류: '+m.error+' ('+m.about+')');else if(m.type==='afk_warning')log('⚠ 2턴째 행동 없음: 다음 턴도 없으면 이탈 처리');};
@@ -47,7 +47,7 @@ function btn(label,fn,on,dis){var b=document.createElement('button');b.textConte
 function left(t){return t?Math.max(0,Math.ceil((t-Date.now())/1000))+'초':''}
 function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;
  var head=document.createElement('div');head.className='row';
- head.innerHTML='<b>방 '+m.code+'</b><span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
+ head.innerHTML='<span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span><span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
  el.appendChild(head);
  var mem=document.createElement('p');mem.className='dim';mem.textContent=m.members.map(function(x){return (x.seat===m.you?'나':'상대')+(x.host?'(방장)':'')+(x.connected?' 접속':' 끊김')+(x.ready?' 준비':'')}).join(' / ');el.appendChild(mem);
  var row=document.createElement('div');row.className='row';el.appendChild(row);
