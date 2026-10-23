@@ -6,10 +6,11 @@ Multi-game source repository: https://github.com/recoba00/Codex-Games
 Codex-Games/
   .github/workflows/       Game-specific checks and future deployment workflows
   soullink/               Soul Link Godot source, assets, tools, and documentation
+  seongjwa/               성좌 결투 (Seongjwa Duel) server, database, and tools
 ```
 
 Add future games as sibling folders with their own instructions, tests, build
-settings, and hosting resources. No other local games have been imported.
+settings, and hosting resources. 
 
 ## Soul Link
 
@@ -40,3 +41,8 @@ live character/skin records or player data.
 Generated Godot builds, `.ait` packages, local publication history, backups,
 dependencies and secrets remain excluded from Git. App-store and Toss client
 releases are separate from the web test deployment.
+
+## 성좌 결투 (Seongjwa Duel)
+
+- Folder: [seongjwa/](seongjwa/) — 상태와 할 일은 [seongjwa/TASKS.md](seongjwa/TASKS.md).
+- Soul Link의 서버 구조와 유저 플로우만 가져와 새로 만든다.
