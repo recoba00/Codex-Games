@@ -50,8 +50,10 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Unit tests (engine, API)
         run: npm test
-      - name: Live test on local Workers runtime
+      - name: Live test on local Workers runtime (friend room)
         run: npm run test:live
+      - name: Live test on local Workers runtime (ranked queue, AI, practice)
+        run: npm run test:live:rank
 
   deploy:
     name: Deploy to Cloudflare
@@ -111,6 +113,10 @@ jobs:
             tok=$(curl -fsS -X POST "$BASE/v1/auth/dev" -H 'content-type: application/json' -d '{"devId":"smoke-test"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).accessToken))')
             echo "me:";   curl -fsS "$BASE/v1/me" -H "authorization: Bearer $tok"; echo
             echo "room:"; curl -fsS -X POST "$BASE/v1/rooms" -H "authorization: Bearer $tok" -H 'content-type: application/json' -d '{"options":{"bans":true,"turnSec":20}}'; echo
+            echo "practice:"; curl -fsS -X POST "$BASE/v1/practice" -H "authorization: Bearer $tok" -H 'content-type: application/json' -d '{"difficulty":"easy"}'; echo
+            echo "rank:"; curl -fsS "$BASE/v1/rank/me" -H "authorization: Bearer $tok"; echo
+            echo "queue ticket:"; curl -fsS -X POST "$BASE/v1/queue/ticket" -H "authorization: Bearer $tok" -H 'content-type: application/json' -d '{}' | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);if(!j.ticket)process.exit(1);console.log({tier:j.tierName,rp:j.rp,aiFallback:j.aiFallback})})'
+            echo "board:"; curl -fsS "$BASE/v1/rank/board" | head -c 300; echo
           fi
       - name: Show deployment
         run: npx wrangler deployments list | head -20   # 배포 주소(…workers.dev)는 위 Deploy worker 단계 로그에 표시

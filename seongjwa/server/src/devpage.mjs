@@ -22,6 +22,10 @@ pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220
 <select id="optTurn"><option value="20">턴 20초</option><option value="30">턴 30초</option></select>
 <button id="btnCreate">방 만들기</button><span class="dim">또는</span>
 <input id="joinCode" placeholder="상대의 방 코드 6자리" maxlength="6" size="8"><button id="btnJoin">참가</button></div></section>
+<section id="ranked" hidden><div class="row"><b>랭킹전</b> <span id="rankInfo" class="dim"></span></div>
+<div class="row" style="margin-top:8px"><button id="btnQueue">랭킹전 찾기</button><label><input type="checkbox" id="humanOnly"> 사람 상대만 기다리기</label><button id="btnCancelQ" hidden>취소</button><span id="qInfo" class="dim"></span></div>
+<div class="row" style="margin-top:8px"><b>AI 대전(연습)</b><button data-d="easy" class="pr">쉬움</button><button data-d="normal" class="pr">보통</button><button data-d="hard" class="pr">어려움</button><button id="btnBoard">랭킹 보드</button></div>
+<pre id="board" hidden></pre></section>
 <section id="room" hidden></section>
 <section><b>로그</b><pre id="log"></pre></section>
 <script>
@@ -30,32 +34,46 @@ var $=function(id){return document.getElementById(id)};
 function log(m){$('log').textContent=new Date().toLocaleTimeString()+' '+m+'\n'+$('log').textContent}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.token?{authorization:'Bearer '+S.token}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function nm(kind,id){var d=S.data&&S.data[kind]&&S.data[kind][id];return d?d.name:id}
-function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
+function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;if(S.token)loadRank();$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
  if(S.token&&!S.data)fetch('/v1/data/live').then(function(r){return r.json()}).then(function(j){S.data=j.data;log('데이터 버전 '+j.version)});
  var code=sessionStorage.getItem('room');if(S.token&&code)connect(code)}
 $('btnLogin').onclick=function(){api('/v1/auth/dev',{devId:$('devId').value.trim().toLowerCase()}).then(function(j){S.token=j.accessToken;S.acc=j.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('로그인 '+(j.replacedSessions?'(다른 기기 세션 종료됨)':''));start()}).catch(function(e){log('로그인 실패: '+e.message)})};
 $('btnCreate').onclick=function(){api('/v1/rooms',{options:{bans:$('optBans').checked,turnSec:Number($('optTurn').value)}}).then(function(j){log('방 '+j.code);connect(j.code)}).catch(function(e){log(e.message)})};
 $('btnJoin').onclick=function(){var c=$('joinCode').value.trim().toUpperCase();if(!/^[2-9A-HJKMNP-Z]{6}$/.test(c)){log('방 코드는 상대 화면의 "방 코드" 6자리입니다(예: JCWBV3)');return}api('/v1/rooms/'+c+'/join',{}).then(function(){connect(c)}).catch(function(e){log('참가 실패: '+({not_found:'방 코드 형식 오류',room_not_found:'그런 방이 없음(코드 확인)',room_full:'방이 가득 참'}[e.message]||e.message))})};
+function loadRank(){api('/v1/rank/me').then(function(r){$('rankInfo').textContent=r.tierName+' '+r.rp+'RP · '+r.wins+'승/'+r.games+'판'+(r.streak?' · '+r.streak+'연승':'')+(r.leaver.step?' · 이탈 '+r.leaver.step:'')}).catch(function(e){$('rankInfo').textContent='랭크 정보 없음('+e.message+')'})}
+function queue(){api('/v1/queue/ticket',{humanOnly:$('humanOnly').checked}).then(function(j){
+ if(j.waitBeforeMin)log('이탈 누적으로 매칭 전 '+j.waitBeforeMin+'분 대기');
+ var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/queue/ws?ticket='+encodeURIComponent(j.ticket));S.qws=ws;$('btnCancelQ').hidden=false;$('btnQueue').disabled=true;
+ ws.onmessage=function(e){var m=JSON.parse(e.data);if(m.type==='waiting')$('qInfo').textContent='대기 '+m.waitSec+'초 · MMR ±'+m.range+(j.aiFallback?' · 30초 뒤 AI 랭킹전 전환':'');
+  else if(m.type==='matched'){log((m.ai?'AI 랭킹전':'랭킹전')+' 매칭 성사 ('+m.waitSec+'초)');$('qInfo').textContent='';connect(m.code)}else if(m.type==='timeout')log('매칭 시간 초과(120초)')};
+ ws.onclose=function(){$('btnCancelQ').hidden=true;$('btnQueue').disabled=false}}).catch(function(e){log('랭킹전 불가: '+({queue_locked:'이탈 누적으로 랭킹전 잠금',dodge_blocked:'닷지로 5분 매칭 제한'}[e.message]||e.message))})}
+$('btnQueue').onclick=queue;$('btnCancelQ').onclick=function(){S.qws&&S.qws.send('{"type":"cancel"}')};
+Array.prototype.forEach.call(document.querySelectorAll('.pr'),function(b){b.onclick=function(){api('/v1/practice',{difficulty:b.dataset.d}).then(function(j){log('AI 대전 '+b.textContent);connect(j.code)}).catch(function(e){log(e.message)})}});
+$('btnBoard').onclick=function(){api('/v1/rank/board').then(function(j){var b=$('board');b.hidden=!b.hidden;b.textContent='시즌 '+j.season.id+'\n'+j.rows.map(function(r){return r.rank+'. '+r.tierName+' '+r.rp+'RP '+r.name}).join('\n')})};
 function connect(code){sessionStorage.setItem('room',code);api('/v1/rooms/'+code+'/ticket',{}).then(function(j){
  var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/rooms/'+code+'/ws?ticket='+encodeURIComponent(j.ticket));S.ws=ws;
  ws.onmessage=function(e){var m=JSON.parse(e.data);if(m.type==='room'){S.st=m;render()}else if(m.type==='error')log('오류: '+m.error+' ('+m.about+')');else if(m.type==='afk_warning')log('⚠ 2턴째 행동 없음: 다음 턴도 없으면 이탈 처리');};
  ws.onclose=function(e){log('연결 끊김 '+e.code+' '+(e.reason||''));if(e.code===4001)return;setTimeout(function(){if(sessionStorage.getItem('room'))connect(code)},1500)};
  setInterval(function(){if(ws.readyState===1)ws.send('{"type":"ping"}')},20000);
 }).catch(function(e){log('접속 실패: '+e.message);if(e.message==='room_not_found')sessionStorage.removeItem('room')})}
+function leaveRoom(){sessionStorage.removeItem('room');if(S.ws){S.ws.onclose=null;S.ws.close()}S.ws=null;S.st=null;$('room').hidden=true;$('lobby').hidden=false;$('ranked').hidden=false;loadRank()}
 function send(o){S.ws&&S.ws.readyState===1&&S.ws.send(JSON.stringify(o))}
 function btn(label,fn,on,dis){var b=document.createElement('button');b.textContent=label;if(on)b.className='on';if(dis)b.disabled=true;b.onclick=fn;return b}
 function left(t){return t?Math.max(0,Math.ceil((t-Date.now())/1000))+'초':''}
-function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;
+function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;
  var head=document.createElement('div');head.className='row';
- head.innerHTML='<span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span><span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
+ var MODE={friend:'친구방',practice:'AI 대전',ranked:'랭킹전',ranked_ai:'AI 랭킹전'};head.innerHTML='<b>'+MODE[m.mode]+'</b>'+(m.mode==='friend'?' <span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span>':'')+'<span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
  el.appendChild(head);
- var mem=document.createElement('p');mem.className='dim';mem.textContent=m.members.map(function(x){return (x.seat===m.you?'나':'상대')+(x.host?'(방장)':'')+(x.connected?' 접속':' 끊김')+(x.ready?' 준비':'')}).join(' / ');el.appendChild(mem);
+ var mem=document.createElement('p');mem.className='dim';mem.textContent=m.members.map(function(x){return (x.seat===m.you?'나':(x.ai?'AI('+x.ai.difficulty+')':'상대'))+(x.host&&m.mode==='friend'?'(방장)':'')+(x.connected?' 접속':' 끊김')+(x.ready?' 준비':'')}).join(' / ');el.appendChild(mem);
  var row=document.createElement('div');row.className='row';el.appendChild(row);
+ if(m.phase==='closed'){row.appendChild(document.createTextNode('판이 취소됨('+(m.notice||'')+')'+(String(m.notice).indexOf('dodge')===0?' · 상대가 밴픽 중 나감, 대기열 우선권 부여':'')+' '));row.appendChild(btn('로비',leaveRoom));return tick()}
  if(m.phase==='lobby'||m.phase==='result'){
   if(m.last)row.appendChild(document.createTextNode('지난 판: '+({a:'0번 승',b:'1번 승',draw:'무승부',void:'결과 없음'}[m.last.outcome])+' ('+m.last.reason+', '+m.last.turn+'턴) · 내 결과: '+(m.last.outcome==='draw'||m.last.outcome==='void'?'-':((m.last.outcome==='a')===(m.you===0)?'승리':'패배'))+' '));
+  if(m.last&&m.last.rank&&m.last.rank[m.you]){var rk=m.last.rank[m.you];row.appendChild(document.createTextNode(' · RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+' '))}
+  if(m.mode==='ranked'||m.mode==='ranked_ai'){row.appendChild(btn('다시 찾기',function(){leaveRoom();queue()}));row.appendChild(btn('로비',leaveRoom));if(m.lastLog){var pl=document.createElement('pre');pl.textContent=fmtLog(m.lastLog,m.you);el.appendChild(pl)}return tick()}
   var me=m.members[m.you];row.appendChild(btn(me&&me.ready?'준비 취소':(m.phase==='result'?'재대결 준비':'준비'),function(){send({type:'ready',ready:!(me&&me.ready),defaults:{preferred:['SE','AU','UM'],spells:['SP01','SP04'],preset:2}})},me&&me.ready));
-  if(m.you===0&&m.phase==='lobby'){row.appendChild(btn('밴 '+(m.options.bans?'끄기':'켜기'),function(){send({type:'options',bans:!m.options.bans})}))}
-  row.appendChild(btn('방 나가기',function(){send({type:'leave'});sessionStorage.removeItem('room');S.ws.close();location.reload()}));
+  if(m.you===0&&m.phase==='lobby'&&m.mode==='friend'){row.appendChild(btn('밴 '+(m.options.bans?'끄기':'켜기'),function(){send({type:'options',bans:!m.options.bans})}))}
+  row.appendChild(btn('방 나가기',function(){send({type:'leave'});leaveRoom()}));
   if(m.lastLog){var p=document.createElement('pre');p.textContent=fmtLog(m.lastLog,m.you);el.appendChild(p)}
  }else if(m.phase==='ban'||m.phase==='pick'){var P=m.prep;
   row.appendChild(document.createTextNode((m.phase==='ban'?'밴할 캐릭터(상대 '+(P.oppBanDone?'완료':'선택 중')+'): ':'픽(동시·비공개, 상대 '+(P.oppPickDone?'완료':'선택 중')+'): ')));

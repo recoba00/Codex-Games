@@ -2,4 +2,5 @@
 import { app } from "./app.mjs";
 
 export { FriendRoom } from "./room.mjs";
+export { MatchQueue } from "./queue.mjs";
 export default app;

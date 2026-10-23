@@ -467,6 +467,220 @@
 "effect_text": "상대 이번 턴 공격 피해 −N%"
 }
 },
+"tables": {
+"leaver": {
+"steps": [
+{
+"count": 1,
+"games": 0,
+"label": "경고 팝업",
+"lock_h": 0,
+"delay_min": 0,
+"reward_mult": 1
+},
+{
+"count": 2,
+"games": 3,
+"label": "매칭 지연",
+"lock_h": 0,
+"delay_min": 5,
+"reward_mult": 1
+},
+{
+"count": 3,
+"games": 5,
+"label": "매칭 지연 + 보상 감소",
+"lock_h": 0,
+"delay_min": 15,
+"reward_mult": 0.5
+},
+{
+"count": 4,
+"games": 0,
+"label": "랭킹전 잠금",
+"lock_h": 24,
+"delay_min": 0,
+"reward_mult": 1
+},
+{
+"count": 5,
+"games": 0,
+"label": "랭킹전 잠금(5회 이상)",
+"lock_h": 72,
+"delay_min": 0,
+"reward_mult": 1
+}
+],
+"window_days": 7,
+"reduce_per_games": 5,
+"net_exempt_per_day": 1
+},
+"rank_tiers": {
+"tiers": [
+{
+"ai": true,
+"no": 1,
+"mmr": 800,
+"name": "브론즈 III",
+"floor": false,
+"reset_to": 1,
+"rp_start": 0,
+"loss_mult": 0
+},
+{
+"ai": true,
+"no": 2,
+"mmr": 850,
+"name": "브론즈 II",
+"floor": false,
+"reset_to": 1,
+"rp_start": 100,
+"loss_mult": 0
+},
+{
+"ai": true,
+"no": 3,
+"mmr": 900,
+"name": "브론즈 I",
+"floor": false,
+"reset_to": 1,
+"rp_start": 200,
+"loss_mult": 0
+},
+{
+"ai": true,
+"no": 4,
+"mmr": 950,
+"name": "실버 III",
+"floor": false,
+"reset_to": 1,
+"rp_start": 300,
+"loss_mult": 0.5
+},
+{
+"ai": true,
+"no": 5,
+"mmr": 1000,
+"name": "실버 II",
+"floor": false,
+"reset_to": 1,
+"rp_start": 400,
+"loss_mult": 0.5
+},
+{
+"ai": true,
+"no": 6,
+"mmr": 1050,
+"name": "실버 I",
+"floor": false,
+"reset_to": 2,
+"rp_start": 500,
+"loss_mult": 0.5
+},
+{
+"ai": true,
+"no": 7,
+"mmr": 1100,
+"name": "골드 III",
+"floor": true,
+"reset_to": 3,
+"rp_start": 600,
+"loss_mult": 1
+},
+{
+"ai": true,
+"no": 8,
+"mmr": 1150,
+"name": "골드 II",
+"floor": false,
+"reset_to": 4,
+"rp_start": 700,
+"loss_mult": 1
+},
+{
+"ai": true,
+"no": 9,
+"mmr": 1200,
+"name": "골드 I",
+"floor": false,
+"reset_to": 5,
+"rp_start": 800,
+"loss_mult": 1
+},
+{
+"ai": true,
+"no": 10,
+"mmr": 1250,
+"name": "플래티넘 III",
+"floor": false,
+"reset_to": 6,
+"rp_start": 900,
+"loss_mult": 1
+},
+{
+"ai": true,
+"no": 11,
+"mmr": 1300,
+"name": "플래티넘 II",
+"floor": false,
+"reset_to": 7,
+"rp_start": 1000,
+"loss_mult": 1
+},
+{
+"ai": true,
+"no": 12,
+"mmr": 1350,
+"name": "플래티넘 I",
+"floor": false,
+"reset_to": 8,
+"rp_start": 1100,
+"loss_mult": 1
+},
+{
+"ai": false,
+"no": 13,
+"mmr": 1400,
+"name": "다이아 III",
+"floor": true,
+"reset_to": 9,
+"rp_start": 1200,
+"loss_mult": 1
+},
+{
+"ai": false,
+"no": 14,
+"mmr": 1450,
+"name": "다이아 II",
+"floor": false,
+"reset_to": 10,
+"rp_start": 1300,
+"loss_mult": 1
+},
+{
+"ai": false,
+"no": 15,
+"mmr": 1500,
+"name": "다이아 I",
+"floor": false,
+"reset_to": 11,
+"rp_start": 1400,
+"loss_mult": 1
+},
+{
+"ai": false,
+"no": 16,
+"mmr": 1550,
+"name": "마스터",
+"floor": false,
+"reset_to": 12,
+"rp_start": 1500,
+"loss_mult": 1
+}
+],
+"mmr_start": 800
+}
+},
 "presets": {
 "AU": [
 {

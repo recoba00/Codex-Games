@@ -2,7 +2,7 @@
 
 실시간 1:1 동시 턴 카드 PvP. Godot 클라이언트, Cloudflare Workers·Durable Objects 서버, Supabase(Postgres) DB. Steam 우선 출시 후 Android·iOS.
 
-현재 단계: **서버 2·3단계 — 동시 턴 전투, 친구 비밀방** (공개 매칭·AI·랭크와 Godot 클라이언트는 다음 단계)
+현재 단계: **서버 4단계 — 공개 매칭·AI 봇·랭크·시즌·이탈 누적** (Godot 클라이언트, 경제·상점은 다음 단계)
 
 ```text
 seongjwa/
@@ -33,6 +33,7 @@ python3 seongjwa/tools/import_balance.py TCG_밸런스테이블_v0.1.xlsx -o see
 | 스펠 8 | SP01 수호 … SP08 탈진 |
 | 설정 29 | 시트 `설정값` 영문 키 |
 | 추천덱 27 | 캐릭터 9 × 공세·균형·수비, 공용 10장(시트 `추천덱`, 상세 15) |
+| 표 2 (v2) | 랭크 단계표 16단계(시트 `랭크_승점`), 이탈 패널티 5단계(시트 `이탈패널티`) |
 
 ## 로컬 점검
 
@@ -57,6 +58,10 @@ Supabase 테스트 프로젝트 `seongjwa-dev`(서울, 무료)에 마이그레�
 | `POST /v1/rooms` `{options:{bans,turnSec}}` | 친구 비밀방 만들기(6자리 코드) |
 | `POST /v1/rooms/{code}/join` | 방 참가(2명까지) |
 | `POST /v1/rooms/{code}/ticket` → `GET /v1/rooms/{code}/ws?ticket=` | 세션 확인 후 일회용 티켓으로 웹소켓 접속 |
+| `POST /v1/queue/ticket` `{humanOnly}` → `GET /v1/queue/ws?ticket=` | 랭킹전 매칭. 이탈 잠금·닷지 제한 확인 후 대기열 입장, 성사 시 `matched{code,mode,ai}` |
+| `POST /v1/practice` `{difficulty: easy|normal|hard}` | AI 대전(연습) 방 만들기. 밴 없음, 승점 없음 |
+| `GET /v1/rank/me` | 이번 시즌 단계·RP·연승·최고 단계·이탈 단계(숨은 MMR은 비공개) |
+| `GET /v1/rank/board` | 시즌 랭킹 보드(마스터 중 상위 N%·최대 M명 레전드 표시) |
 | `GET /dev` | 개발용 브라우저 테스트 화면. `DEV_LOGIN=1` 환경에서만 |
 
 ### 친구방 웹소켓 메시지 (클라이언트 → 서버)
@@ -70,12 +75,21 @@ Supabase 테스트 프로젝트 `seongjwa-dev`(서울, 무료)에 마이그레�
 대기실(양측 준비) → 밴 10초(방장이 끌 수 있음) → 픽 15초(동시·비공개) → 상대 공개 + 스펠 2·덱 15초 → 전투(턴 20/30초, 양측 확정 시 즉시 공개) → 결과 → 재대결(방 유지).
 끊기면 60초 유예 동안 서버가 자동 방어로 턴을 넘기고, 못 돌아오면 친구방은 결과 없음(void)으로 기록한다.
 
+### 랭킹전·AI (총괄 8~10장, 상세 03)
+
+- 매칭: 0~10초 ±100, 10~20초 ±200, 20초~ ±350 MMR. 30초(`ai_fallback_sec`)에 사람이 없으면 AI 랭킹전(승점 ×0.6, 하루 5판, MMR 미반영). 다이아 III 이상·"사람만 기다리기"는 AI 없이 범위를 넓히며 최대 120초.
+- RP: `server/src/rank.mjs` 한 곳에서 계산(시트 `랭크_승점` 계산기 값과 테스트로 일치 확인). 연승 보너스, 브론즈 무감점·실버 50%, 골드·다이아 하한선, 새 단계 3판 보호, 시즌 리셋(시트 리셋 열)·초반 ×1.5.
+- 이탈: 60초 유예 초과·AFK = 패배 + 10RP, 최근 7일 누적 단계(경고 → 매칭 지연 → 보상 감소 → 24·72시간 잠금), 정상 5판마다 1회 감면. 닷지 −5RP·5분 제한, 상대는 원래 대기 시각으로 우선 재입장.
+- AI: 후보 조합 → 상대 예측(공개 정보만) → 피해·생존·읽기·자원 점수 → 난이도별 차선(쉬움 30%·보통 15%·어려움 5%). 확정 3~12초. 밴픽·스펠·덱 규칙 포함.
+- 밸런스 시뮬레이션: `npm run simulate -- 20 > report.md` (AI 어려움 대 어려움, 캐릭터·덱·상성표). 최신 결과는 `docs/simulation_v2.md`.
+
 ## 테스트
 
 ```bash
 cd seongjwa/server
 npm test             # 엔진·API 단위 테스트(전 캐릭터 조합 243판 무작위 시뮬레이션 포함)
 npm run test:live    # 실제 Workers 런타임(wrangler 로컬)에서 친구방 한 판 통합 테스트, 약 40초
+npm run test:live:rank   # 같은 런타임에서 AI 연습·랭킹전 매칭·AI 전환·닷지·랭크 조회
 LIVE_LONG=1 npm run test:live   # + 60초 재접속 유예 초과 시나리오
 ```
 

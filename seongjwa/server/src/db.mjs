@@ -12,7 +12,7 @@ function base(env) {
 }
 
 // DB 함수가 raise한 코드(account_banned 등)는 그대로 넘기고, 나머지는 db_error로 감춘다.
-const PASS_THROUGH = new Set(["account_banned", "account_deleted", "ttl_invalid"]);
+const PASS_THROUGH = new Set(["account_banned", "account_deleted", "ttl_invalid", "rank_conflict"]);
 
 export async function rpc(env, name, args, fetcher = fetch) {
   const response = await fetcher(`${base(env)}/rest/v1/rpc/${name}`, {

@@ -5,6 +5,8 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "test:live": "node test/live/run.mjs",
+    "test:live:rank": "node test/live/rank.mjs",
+    "simulate": "node tools/simulate.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
