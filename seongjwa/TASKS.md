@@ -18,7 +18,7 @@
 - [x] 개발용 브라우저 테스트 화면 `GET /dev`
 - [x] 기획 2차 답변 반영(충전 무효 순서, 시간 초과 기본값, ban_sec·pick_sec·loadout_sec 설정 키)
 - [x] Supabase 테스트 프로젝트 seongjwa-dev 생성·마이그레이션·데이터 v1 배포
-- [ ] Cloudflare 첫 배포(저장소 Secrets 등록 후 Actions 수동 실행)
+- [x] Cloudflare 첫 배포: https://seongjwa.recoba00.workers.dev (테스트 환경, 개발 로그인·/dev 켜짐). 배포 후 자동 점검(health·데이터·로그인·방 생성)
 - [ ] 공개 매칭, AI 봇(엔진의 시뮬레이션으로 추천덱 승률 45~55% 검증, 상세 15), 랭크·시즌, 이탈 누적
 - [ ] 경제·미션·우편, 상점·Steam 결제
 - [ ] 백오피스 API, 에셋(R2), 신고·제재, 지표
