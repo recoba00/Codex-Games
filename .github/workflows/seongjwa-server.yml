@@ -1,0 +1,105 @@
+name: Seongjwa Server
+
+# 성좌 결투 서버: 푸시마다 테스트, 배포는 Actions 화면에서 수동 실행(Run workflow)으로만.
+# 필요한 저장소 설정(Settings → Secrets and variables → Actions):
+#   Secrets:   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, SEONGJWA_SUPABASE_SERVICE_KEY, SEONGJWA_TOKEN_SECRET
+#   Variables: SEONGJWA_SUPABASE_URL
+on:
+  push:
+    paths:
+      - 'seongjwa/server/**'
+      - '.github/workflows/seongjwa-server.yml'
+  pull_request:
+    paths:
+      - 'seongjwa/server/**'
+      - '.github/workflows/seongjwa-server.yml'
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Cloudflare에 배포'
+        type: boolean
+        default: true
+      dev_login:
+        description: '개발 로그인·테스트 화면(/dev) 켜기 (출시 전 테스트 환경만)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seongjwa-server-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Server Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: seongjwa/server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - name: Unit tests (engine, API)
+        run: npm test
+      - name: Live test on local Workers runtime
+        run: npm run test:live
+
+  deploy:
+    name: Deploy to Cloudflare
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: seongjwa/server
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - name: Check settings
+        env:
+          URL: ${{ vars.SEONGJWA_SUPABASE_URL }}
+          KEY: ${{ secrets.SEONGJWA_SUPABASE_SERVICE_KEY }}
+          TOK: ${{ secrets.SEONGJWA_TOKEN_SECRET }}
+        run: |
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$URL" ] || missing="$missing SEONGJWA_SUPABASE_URL(variable)"
+          [ -n "$KEY" ] || missing="$missing SEONGJWA_SUPABASE_SERVICE_KEY"
+          [ "${#TOK}" -ge 32 ] || missing="$missing SEONGJWA_TOKEN_SECRET(32자 이상)"
+          if [ -n "$missing" ]; then echo "::error::저장소 설정이 없습니다:$missing"; exit 1; fi
+      - name: Deploy worker
+        env:
+          URL: ${{ vars.SEONGJWA_SUPABASE_URL }}
+          DEV: ${{ inputs.dev_login && '1' || '0' }}
+        run: npx wrangler deploy --var "SUPABASE_URL:$URL" --var "DEV_LOGIN:$DEV"
+      - name: Set worker secrets
+        env:
+          KEY: ${{ secrets.SEONGJWA_SUPABASE_SERVICE_KEY }}
+          TOK: ${{ secrets.SEONGJWA_TOKEN_SECRET }}
+        run: |
+          umask 077
+          node -e 'require("fs").writeFileSync(process.env.RUNNER_TEMP + "/s.json", JSON.stringify({ SUPABASE_SERVICE_KEY: process.env.KEY, TOKEN_SECRET: process.env.TOK }))'
+          npx wrangler secret bulk "$RUNNER_TEMP/s.json"
+          rm -f "$RUNNER_TEMP/s.json"
+      - name: Show deployment
+        run: npx wrangler deployments list | head -20   # 배포 주소(…workers.dev)는 위 Deploy worker 단계 로그에 표시
