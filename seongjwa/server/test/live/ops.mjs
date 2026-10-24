@@ -211,6 +211,7 @@ try {
 } catch (error) {
   console.error("FAIL:", error.message, error.stack?.split("\n").slice(1, 3).join(" "));
   if (process.env.GITHUB_ACTIONS) console.log(`::error title=ops live test::${String(error.message).replace(/\n/g, " ").slice(0, 900)}`);
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=ops worker log::${wlog.split("\n").filter((l) => /error|Error|✘|exception|reset|Uncaught/i.test(l)).slice(-8).join(" | ").replace(/\x1b\[[0-9;]*m/g, "").slice(0, 1500)}`);
   console.error(wlog.split("\n").filter((l) => /error|Error|✘/.test(l)).slice(-20).join("\n"));
   process.exitCode = 1;
 } finally {
