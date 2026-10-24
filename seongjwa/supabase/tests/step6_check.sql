@@ -65,6 +65,27 @@ begin
   perform public.bo_review(v2, p, 'request', null, null);
   perform public.bo_review(v2, rv, 'approve', null, null);
   perform public.bo_publish(v2, ad);
+  -- 1인 운영 모드: 관리자만 자기 초안 승인 가능, 기획자는 여전히 불가, 끄면 다시 금지. 켜고 끄기·자기 승인 모두 감사 로그
+  failed := false;
+  begin perform public.bo_config_set('solo_mode', 'true', p, '1인 운영'); exception when others then failed := sqlerrm = 'forbidden'; end;
+  assert failed, 'only admin toggles';
+  perform public.bo_config_set('solo_mode', 'true', ad, '혼자 운영 중');
+  v2 := public.bo_import_draft(v, '관리자 초안', ad, payload, '{"errors":[],"blocks":[]}');
+  perform public.bo_review(v2, ad, 'request', null, null);
+  perform public.bo_review(v2, ad, 'approve', null, null);
+  assert (select state from public.data_reviews where version_id = v2) = 'approved', 'solo self approve';
+  v2 := public.bo_import_draft(v, '기획 초안', p, payload, '{"errors":[],"blocks":[]}');
+  perform public.bo_review(v2, p, 'request', null, null);
+  failed := false;
+  begin perform public.bo_review(v2, p, 'approve', null, null); exception when others then failed := sqlerrm = 'self_review'; end;
+  assert failed, 'planner self approve still blocked in solo mode';
+  perform public.bo_config_set('solo_mode', 'false', ad, '팀 합류');
+  v2 := public.bo_import_draft(v, '관리자 초안2', ad, payload, '{"errors":[],"blocks":[]}');
+  perform public.bo_review(v2, ad, 'request', null, null);
+  failed := false;
+  begin perform public.bo_review(v2, ad, 'approve', null, null); exception when others then failed := sqlerrm = 'self_review'; end;
+  assert failed, 'solo off blocks again';
+  assert (select count(*) from public.audit_log where action like '1인 운영 모드%') = 3, 'audit solo on/off + self approve';
   v2 := public.bo_rollback(v, ad, '직전 버전으로');
   assert (select version_id from public.data_live) = v2 and (select kind from public.data_versions where id = v2) = 'rollback', 'rollback';
   assert jsonb_array_length(public.bo_versions(10)->'versions') >= 4, 'versions';

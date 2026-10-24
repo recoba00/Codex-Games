@@ -152,7 +152,18 @@ export async function handleBo(request, env, url) {
 
     case "GET /me": {
       const st = await staffOf(request, env);
-      return json({ ok: true, staff: st, perms: Object.fromEntries(Object.entries(PERMS).map(([k, v]) => [k, v.includes(st.role)])) });
+      const cfg = await rpc(env, "bo_config_get", {});
+      return json({ ok: true, staff: st, perms: Object.fromEntries(Object.entries(PERMS).map(([k, v]) => [k, v.includes(st.role)])),
+        soloMode: cfg?.solo_mode?.value === true });
+    }
+
+    // 1인 운영 모드(상세 14 데이터 반영 경로): 켜면 관리자가 자기 초안도 승인. 관리자만, 사유 필수, 감사 로그
+    case "GET /settings": { const st = await staffOf(request, env); allow(st, "audit"); return json({ ok: true, settings: await rpc(env, "bo_config_get", {}) }); }
+    case "POST /settings": {
+      const st = await staffOf(request, env); allow(st, "staff");
+      const input = await body(request);
+      if (input.key !== "solo_mode" || typeof input.value !== "boolean") throw new Error("value_invalid");
+      return json({ ok: true, settings: await rpc(env, "bo_config_set", { p_key: input.key, p_value: input.value, p_staff: st.id, p_reason: reasonOf(input) }) });
     }
 
     case "POST /password": {

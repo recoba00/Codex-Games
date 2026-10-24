@@ -19,7 +19,7 @@ const PASS_THROUGH = new Set(["account_banned", "account_deleted", "ttl_invalid"
   // 6단계 백오피스·제재·신고
   "invite_invalid", "login_taken", "last_admin", "validation_failed", "state_invalid", "self_review", "reason_required", "schedule_invalid",
   "not_approved", "version_invalid", "action_invalid", "days_required", "sanction_invalid", "report_invalid", "report_limited",
-  "title_required", "target_invalid", "job_invalid"]);
+  "title_required", "target_invalid", "job_invalid", "forbidden", "value_invalid", "key_invalid"]);
 
 export async function rpc(env, name, args, fetcher = fetch) {
   const response = await fetcher(`${base(env)}/rest/v1/rpc/${name}`, {

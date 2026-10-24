@@ -98,6 +98,24 @@ try {
   assert.equal(view.data.characters.PY.active_params.active_hit_mult, 1.5);
   step(`xlsx 업로드 v${v1}(검증 통과) → 검수(본인·관리자 자기 승인 불가) → 배포 → v${up2.version} 예약 → 크론 배포 → 롤백 v${rb.live}`);
 
+  // 2-1) 1인 운영 모드(상세 14 데이터 반영 경로): 관리자 1계정으로 업로드·승인·배포, 끄면 다시 금지
+  await err(call("/bo/v1/settings", { key: "solo_mode", value: true, reason: "혼자 운영" }, planner), "forbidden", 403);
+  await err(call("/bo/v1/settings", { key: "solo_mode", value: true }, admin), "reason_required");
+  await ok(call("/bo/v1/settings", { key: "solo_mode", value: true, reason: "혼자 운영 중" }, admin));
+  assert.equal((await ok(call("/bo/v1/me", undefined, admin))).soloMode, true);
+  const solo = await ok(call("/bo/v1/data/import?note=solo-upload", XLSX, admin, true));
+  await ok(call("/bo/v1/data/review", { version: solo.version, action: "request" }, admin));
+  await ok(call("/bo/v1/data/review", { version: solo.version, action: "approve" }, admin));
+  await ok(call("/bo/v1/data/publish", { version: solo.version }, admin));
+  assert.equal((await ok(call("/bo/v1/data/versions", undefined, ops))).live, solo.version);
+  await ok(call("/bo/v1/settings", { key: "solo_mode", value: false, reason: "검수자 합류" }, admin));
+  const solo2 = await ok(call("/bo/v1/data/import?note=after-team", XLSX, admin, true));
+  await ok(call("/bo/v1/data/review", { version: solo2.version, action: "request" }, admin));
+  await err(call("/bo/v1/data/review", { version: solo2.version, action: "approve" }, admin), "self_review", 403);
+  const soloLog = (await ok(call(`/bo/v1/audit?q=${encodeURIComponent("1인 운영")}`, undefined, planner))).rows.map((r) => r.action);
+  assert.deepEqual(soloLog.sort(), ["1인 운영 모드 끔(본인 초안 승인 금지)", "1인 운영 모드 켬(본인 초안 승인 허용)", "1인 운영 모드로 본인 초안 승인"].sort());
+  step(`1인 운영 모드: 관리자 1계정으로 업로드→승인→배포(v${solo.version}), 기획자는 못 켬, 끄면 다시 자기 승인 금지, 감사 로그 3건`);
+
   // 3) 유저 조회·재화·제재(랭킹전 제한·정지)·우편·신고
   const pl = await ok(call("/v1/auth/dev", { devId: `bo${tag}` }));
   const pl2 = await ok(call("/v1/auth/dev", { devId: `bp${tag}` }));
@@ -146,7 +164,7 @@ try {
 
   // 5) 대시보드·감사 로그(수정 불가)·직원 비활성화
   const dash = await ok(call("/bo/v1/dashboard", undefined, reviewer));
-  assert.ok(dash.accounts >= 2 && dash.liveVersion === rb.live);
+  assert.ok(dash.accounts >= 2 && dash.liveVersion === solo.version);
   const audit = await ok(call(`/bo/v1/audit?q=${encodeURIComponent("제재")}`, undefined, planner));
   assert.ok(audit.rows.length >= 3);
   const all = (await ok(call("/bo/v1/audit", undefined, planner))).rows.map((r) => r.action);
