@@ -11,7 +11,9 @@ const API = `http://127.0.0.1:${API_PORT}`;
 const here = new URL("../../", import.meta.url).pathname;
 const db = await startFakeSupabase(DB_PORT);
 writeFileSync(`${here}.dev.vars`, `SUPABASE_URL=http://127.0.0.1:${DB_PORT}\nSUPABASE_SERVICE_KEY=sb_secret_local\nTOKEN_SECRET=local-test-secret-local-test-secret-123\nDEV_LOGIN=1\nAI_THINK_MS=150,300\n`);
-const wr = spawn("npx", ["wrangler", "dev", "--port", String(API_PORT), "--ip", "127.0.0.1", "--var", "DEV_LOGIN:1", "--var", "AI_THINK_MS:150,300"], { cwd: here, stdio: ["ignore", "pipe", "pipe"] });
+// 시험마다 따로 둔 로컬 DO 저장소(앞 시험의 workerd가 늦게 끝나면 SQLITE_BUSY로 DO가 리셋되던 문제)
+const PERSIST = `${here}.wrangler/live-${process.pid}`;
+const wr = spawn("npx", ["wrangler", "dev", "--persist-to", PERSIST, "--port", String(API_PORT), "--ip", "127.0.0.1", "--var", "DEV_LOGIN:1", "--var", "AI_THINK_MS:150,300"], { cwd: here, stdio: ["ignore", "pipe", "pipe"] });
 let wlog = "";
 wr.stdout.on("data", (d) => { wlog += d; });
 wr.stderr.on("data", (d) => { wlog += d; });
@@ -168,5 +170,6 @@ try {
   wr.kill("SIGTERM");
   db.close();
   rmSync(`${here}.dev.vars`, { force: true });
+  setTimeout(() => { try { rmSync(PERSIST, { recursive: true, force: true }); } catch { /* */ } }, 300);
   setTimeout(() => process.exit(), 500);
 }

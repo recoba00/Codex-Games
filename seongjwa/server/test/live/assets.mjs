@@ -15,7 +15,9 @@ const fx = (n) => new URL(`../fixtures/assets/${n}`, import.meta.url).pathname;
 const XLSX = readFileSync(new URL("../../../data/balance_v8.xlsx", import.meta.url));
 const db = await startPgRest(DB_PORT);
 writeFileSync(`${here}.dev.vars`, `SUPABASE_URL=http://127.0.0.1:${DB_PORT}\nSUPABASE_SERVICE_KEY=sb_secret_local\nTOKEN_SECRET=local-test-secret-local-test-secret-123\nLIVE_TTL_MS=500\n`);
-const wr = spawn("npx", ["wrangler", "dev", "--port", String(API_PORT), "--ip", "127.0.0.1", "--var", "DEV_LOGIN:1"], { cwd: here, stdio: ["ignore", "pipe", "pipe"] });
+// 시험마다 따로 둔 로컬 DO 저장소(앞 시험의 workerd가 늦게 끝나면 SQLITE_BUSY로 DO가 리셋되던 문제)
+const PERSIST = `${here}.wrangler/live-${process.pid}`;
+const wr = spawn("npx", ["wrangler", "dev", "--persist-to", PERSIST, "--port", String(API_PORT), "--ip", "127.0.0.1", "--var", "DEV_LOGIN:1"], { cwd: here, stdio: ["ignore", "pipe", "pipe"] });
 let wlog = "";
 wr.stdout.on("data", (d) => { wlog += d; });
 wr.stderr.on("data", (d) => { wlog += d; });
@@ -174,5 +176,6 @@ try {
   db.close();
   await pool.end().catch(() => {});
   rmSync(`${here}.dev.vars`, { force: true });
+  setTimeout(() => { try { rmSync(PERSIST, { recursive: true, force: true }); } catch { /* */ } }, 300);
   setTimeout(() => process.exit(), 500);
 }
