@@ -224,6 +224,20 @@ export async function handleBo(request, env, url) {
       return json({ ok: true, id: await rpc(env, "bo_word_add", { p_staff: st.id, p_word: String(b.word ?? "").slice(0, 40), p_lang: pick(b.lang, ["ko", "en", "ja", "any"], "ko"),
         p_kind: pick(b.kind, ["profanity", "hate", "impersonation", "staff", "other"], "profanity"), p_match: pick(b.match, ["contains", "prefix", "exact"], "contains"), p_note: String(b.note ?? "").slice(0, 200) }) });
     }
+    case "POST /words/bulk": {  // { text: "씨발, 시발\n…", kind, match, lang, note } 쉼표·줄바꿈으로 나눔, 최대 500개
+      const st = await staffOf(request, env); allow(st, "users");
+      const b = await body(request);
+      const words = [...new Set(String(b.text ?? "").split(/[,\n\r]+/).map((x) => x.trim()).filter(Boolean))];
+      if (!words.length || words.length > 500) throw new Error("value_invalid");
+      const items = words.map((word) => ({ word, kind: b.kind, match: b.match, lang: b.lang }));
+      return json({ ok: true, ...(await rpc(env, "bo_words_bulk", { p_staff: st.id, p_items: items, p_note: String(b.note ?? "").slice(0, 200) })) });
+    }
+    case "POST /words/check": {  // { names: [...] } 여러 닉네임 한 번에 미리 검사(오탐 점검)
+      const st = await staffOf(request, env); allow(st, "users");
+      const b = await body(request);
+      const names = (Array.isArray(b.names) ? b.names : String(b.names ?? "").split(/[,\n\r]+/)).map((x) => String(x).trim()).filter(Boolean).slice(0, 200);
+      return json({ ok: true, results: await rpc(env, "names_check", { p_names: names }) });
+    }
     case "POST /words/remove": {
       const st = await staffOf(request, env); allow(st, "users");
       const b = await body(request);

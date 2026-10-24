@@ -31,6 +31,10 @@ begin
   assert failed, 'dup word';
   update public.accounts set display_name = '바보123' where id = b;
   assert exists (select 1 from jsonb_array_elements(public.bo_names_flagged(50)) x where x->>'id' = b::text), 'flagged';
+  r := public.bo_words_bulk(ad, '[{"word":"멍청이","kind":"profanity"},{"word":"바 보"},{"word":"ㅂㅅ","match":"exact"},{"word":"!!"},{"word":"x","match":"weird"}]'::jsonb, '일괄');
+  assert (r->>'added')::integer = 2 and r->'skipped' = '["바 보"]' and jsonb_array_length(r->'invalid') = 2, 'bulk ' || r::text;
+  r := public.names_check('["멍청이123", "ㅂㅅ", "ㅂㅅ왕", "평범"]');
+  assert jsonb_array_length(r->0->'hits') = 1 and jsonb_array_length(r->1->'hits') = 1 and jsonb_array_length(r->2->'hits') = 0 and jsonb_array_length(r->3->'hits') = 0, 'names check';
   perform public.bo_word_remove(ad, wid, '테스트 끝');
   assert jsonb_array_length(public.name_matches('바보123')) = 0, 'removed';
   assert (select count(*) from public.audit_log where target = '금칙어') >= 2, 'audit';

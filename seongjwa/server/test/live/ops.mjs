@@ -151,6 +151,10 @@ try {
   assert.ok(flagged.users.some((u) => u.id === c.acc));
   await ok(call("/bo/v1/user/sanction", { account: c.acc, kind: "rename", reason: "부적절한 닉네임" }, admin));
   assert.ok(!(await ok(call("/bo/v1/words/flagged", undefined, admin))).users.some((u) => u.id === c.acc), "강제 변경 후 목록에서 빠짐");
+  const bulk = await ok(call("/bo/v1/words/bulk", { text: "멍청이, 바보\n나쁜말\nㅂㅅ", kind: "profanity", match: "contains", note: "일괄" }, admin));
+  assert.deepEqual([bulk.added, bulk.skipped], [3, ["나쁜말"]]);
+  const chk = await ok(call("/bo/v1/words/check", { names: "멍청이왕, 평범한이름\n바 보" }, admin));
+  assert.deepEqual(chk.results.map((r) => r.hits.length > 0), [true, false, true]);
   await err(call("/bo/v1/words/remove", { id: wid }, admin), "reason_required");
   await ok(call("/bo/v1/words/remove", { id: wid, reason: "테스트 끝" }, admin));
   assert.equal((await ok(call(`/bo/v1/words/test?name=${encodeURIComponent("나쁜말쟁이")}`, undefined, admin))).hits.length, 0, "삭제 뒤엔 통과");
