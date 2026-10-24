@@ -37,6 +37,8 @@ test("영역: 카드는 3:4(크기·위치 자유), 얼굴은 1:1·이미지 안
   const r = checkRegions(full, { x: 0, y: 0.1, w: 1, h: 0.75 }, { x: 0.3, y: 0.05, w: 0.4, h: 0.225 });
   assert.deepEqual(r.warnings, []);
   assert.match(checkRegions(full, { x: 0, y: 0, w: 1, h: 0.75 }, { x: 0.3, y: 0.05, w: 0.2, h: 0.1125 }).warnings[0], /288px/);
+  const small = checkRegions(full, { x: 0, y: 0, w: 0.4, h: 0.3 }, { x: 0.3, y: 0.05, w: 0.4, h: 0.225 });
+  assert.match(small.warnings[0], /카드 영역 576×768px/);  // 720×960 미만이면 경고만(기획답변 22차)
   checkRegions(full, { x: 0.1, y: 0.05, w: 0.6, h: 0.45 }, { x: 0, y: 0, w: 0.4, h: 0.225 });  // 카드도 크기·위치 자유(3:4만)
   assert.throws(() => checkRegions(full, { x: 0.1, y: 0, w: 0.6, h: 0.6 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /3:4/.test(e.extra.detail));
   assert.throws(() => checkRegions(full, { x: 0.5, y: 0, w: 0.6, h: 0.45 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /밖/.test(e.extra.detail));

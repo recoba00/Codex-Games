@@ -11,7 +11,8 @@ export const ART = Object.freeze({
   thumb: { exact: [576, 1024], alpha: true },
   face: { exact: [512, 512], alpha: true },
   card: { ratio: [3, 4] },        // 카드 그림 창 영역: 3:4, 크기·위치는 얼굴처럼 자유(사용자 결정 2026-10-24)
-  faceRect: { ratio: [1, 1], minPx: 512 }
+  faceRect: { ratio: [1, 1], minPx: 512 },
+  cardRect: { ratio: [3, 4], minPx: 720 }  // 카드 그림 창 출력 720×960(기획답변 22차, 가정값). 작으면 경고만
 });
 
 // 슬롯 목록(상세 14 표, 규격은 상세 10 '슬롯 이미지 규격'·기획답변 18차). alpha: true = 투명 필요, false = 불투명, "corners" = 모서리만 투명
@@ -89,7 +90,9 @@ export function checkRegions(full, card, face) {
   if (Math.abs(face.w * W - face.h * H) > 2) throw bad("얼굴 영역 비율 1:1");
   if (face.x + face.w > 1 + eps || face.y + face.h > 1 + eps) throw bad("얼굴 영역이 이미지 밖");
   const round = (r) => Object.fromEntries(["x", "y", "w", "h"].map((k) => [k, Math.round(r[k] * 1e5) / 1e5]));
-  const warnings = face.w * W < ART.faceRect.minPx ? [`얼굴 영역 ${Math.round(face.w * W)}px — 출력 512px보다 작아 흐릴 수 있음(상세 10)`] : [];
+  const warnings = [];
+  if (card.w * W < ART.cardRect.minPx) warnings.push(`카드 영역 ${Math.round(card.w * W)}×${Math.round(card.h * H)}px — 출력 720×960px보다 작아 흐릴 수 있음(상세 10)`);
+  if (face.w * W < ART.faceRect.minPx) warnings.push(`얼굴 영역 ${Math.round(face.w * W)}px — 출력 512px보다 작아 흐릴 수 있음(상세 10)`);
   return { card: round(card), face: round(face), warnings };
 }
 
