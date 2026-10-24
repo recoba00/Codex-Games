@@ -7,7 +7,7 @@ export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;  // 서버 하드 상한(버킷
 
 // 전신(9:16, 권장 1440×2560·최소 1080×1920, 가로·세로 4의 배수), 밴픽용 축소본(긴 변 1024), 얼굴 파일(선택, 512×512)
 export const ART = Object.freeze({
-  full: { ratio: [9, 16], min: [1080, 1920], max: [1440, 2560], mult: 4, alpha: true },  // min = 권장 최소(경고만)
+  full: { ratio: [9, 16], min: [1080, 1920], max: [1440, 2560], mult: 4, alpha: true },
   thumb: { exact: [576, 1024], alpha: true },
   face: { exact: [512, 512], alpha: true },
   card: { ratio: [3, 4] },        // 카드 영역(상세 14): 전신 너비 전체, 위쪽 약 3/4 안에서 위아래로만
@@ -68,7 +68,7 @@ export function checkUpload(kind, info, bytes, slot = null) {
   if (kind === "full") {
     const s = ART.full;
     if (info.w * s.ratio[1] !== info.h * s.ratio[0]) throw bad(`전신은 9:16 (올린 파일 ${info.w}×${info.h})`);
-    if (info.w < 36 || info.w > s.max[0]) throw bad(`전신 너비 ${s.max[0]} 이하 (올린 파일 ${info.w})`);  // 작은 이미지도 비율만 맞으면 받음(사용자 요청 2026-10-24), 최소 크기는 화면에서 경고
+    if (info.w < s.min[0] || info.w > s.max[0]) throw bad(`전신 너비 ${s.min[0]}~${s.max[0]} (올린 파일 ${info.w})`);
     if (info.w % s.mult || info.h % s.mult) throw bad("전신 가로·세로는 4의 배수");
     return;
   }
