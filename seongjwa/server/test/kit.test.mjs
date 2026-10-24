@@ -11,7 +11,7 @@ const P = Object.fromEntries(Object.entries(DATA.characters).map(([id, ch]) => [
 const pct = (v) => `${Math.round(v * 100)}%`;
 const CHECKS = [
   ["AU", "passive_text", `실드 +${pct(P.AU.passiveShieldBonus)}`], ["AU", "passive_text", `${pct(P.AU.passiveCarry)} 이월`], ["AU", "active_text", `${pct(P.AU.activeMult)}를 피해`],
-  ["PY", "passive_text", `ATK +${pct(P.PY.passiveAtkPer10)}`], ["PY", "active_text", `받는 피해 +${pct(P.PY.activeTakenUp)}`], ["PY", "active_text", `${P.PY.activeTurns}턴간`],
+  ["PY", "passive_text", `ATK +${pct(P.PY.passiveAtkPer10)}`], ["PY", "active_text", `받는 피해 +${pct(P.PY.activeTakenUp)}`], ["PY", "active_text", `${P.PY.activeTurns}턴간`], ["PY", "active_text", P.PY.activeHitMult !== 1 ? `피해 ×${P.PY.activeHitMult}` : `${P.PY.activeHits}회 타격`],
   ["IG", "passive_text", pct(P.IG.passiveChance)], ["IG", "active_text", `${P.IG.activeMult}배`],
   ["SE", "passive_text", `최대 HP ${pct(P.SE.passiveRegen)} 회복`], ["SE", "passive_text", `최대 HP ${pct(P.SE.passiveShieldCap)}`], ["SE", "active_text", `${P.SE.activeLookback}턴 전`],
   ["TE", "passive_text", `공격 피해 +${pct(P.TE.passiveFlood)}`], ["TE", "passive_text", `받는 피해 −${pct(P.TE.passiveEbb)}`], ["TE", "active_text", `${P.TE.activeTurns}턴간`],

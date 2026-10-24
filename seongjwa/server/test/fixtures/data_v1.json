@@ -1194,8 +1194,13 @@
 "active_text": "보유 실드의 150%를 피해로 전환, 실드 소멸",
 "passive_name": "태양 방패",
 "passive_text": "방어 카드 실드 +20%, 턴 종료 시 남은 실드 50% 이월",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_mult": 1.5
+},
+"passive_params": {
+"passive_shield_bonus": 0.2,
+"passive_carry": 0.5
+}
 },
 "IG": {
 "hp": 950,
@@ -1219,8 +1224,12 @@
 "active_text": "상대의 남은 작열 피해를 2배로 즉시 터뜨림",
 "passive_name": "불씨",
 "passive_text": "공격 적중 시 25% 작열 1스택(2턴, 턴당 최대 HP 3%, 최대 3스택)",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_mult": 2
+},
+"passive_params": {
+"passive_chance": 0.25
+}
 },
 "MO": {
 "hp": 1220,
@@ -1244,8 +1253,13 @@
 "active_text": "상대에게 건 디버프 횟수(최대 5)×상대 최대 HP 6% 피해 + 그만큼 회복",
 "passive_name": "죽음의 그림자",
 "passive_text": "상대가 약화 상태면 받는 피해 −15%",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_per_debuff": 0.06,
+"active_max_debuffs": 5
+},
+"passive_params": {
+"passive_reduce": 0.15
+}
 },
 "PY": {
 "hp": 1100,
@@ -1266,11 +1280,18 @@
 "price_note": null,
 "release_at": null,
 "active_name": "업화",
-"active_text": "2턴간 공격 카드 2회 타격, 받는 피해 +15%",
+"active_text": "2턴간 공격 카드 피해 ×1.5, 받는 피해 +15%",
 "passive_name": "타오르는 피",
-"passive_text": "잃은 HP 10%당 ATK +4%",
-"active_params": {},
-"passive_params": {}
+"passive_text": "잃은 HP 10%당 ATK +3%",
+"active_params": {
+"active_turns": 2,
+"active_taken_up": 0.15,
+"active_hits": 1,
+"active_hit_mult": 1.5
+},
+"passive_params": {
+"passive_atk_per10": 0.03
+}
 },
 "SE": {
 "hp": 1050,
@@ -1294,8 +1315,13 @@
 "active_text": "HP를 2턴 전 시작 시점으로 되돌림",
 "passive_name": "월광",
 "passive_text": "턴 종료 시 최대 HP 3% 회복, 넘친 회복은 실드로(최대 HP 10%)",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_lookback": 2
+},
+"passive_params": {
+"passive_regen": 0.03,
+"passive_shield_cap": 0.1
+}
 },
 "SI": {
 "hp": 980,
@@ -1319,8 +1345,13 @@
 "active_text": "상대 다음 턴 에너지 −1, 손패 1장 봉인",
 "passive_name": "고요",
 "passive_text": "침묵 카드 사용 시 1장 드로우",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_energy_down": 1,
+"active_seal": 1
+},
+"passive_params": {
+"passive_draw": 1
+}
 },
 "SL": {
 "hp": 1000,
@@ -1344,8 +1375,12 @@
 "active_text": "상대 손패를 덱에 섞고 같은 장수만큼 다시 뽑게 함, 상대 다음 턴 에너지 이월 0",
 "passive_name": "순풍",
 "passive_text": "매 턴 처음 내는 1E 카드는 에너지 0",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_no_carry_turns": 1
+},
+"passive_params": {
+"passive_free_cards": 1
+}
 },
 "TE": {
 "hp": 1050,
@@ -1369,8 +1404,13 @@
 "active_text": "2턴간 밀물·썰물 효과 동시 적용",
 "passive_name": "조류",
 "passive_text": "홀수 턴 공격 피해 +20%, 짝수 턴 받는 피해 −20%",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_turns": 2
+},
+"passive_params": {
+"passive_flood": 0.2,
+"passive_ebb": 0.2
+}
 },
 "UM": {
 "hp": 900,
@@ -1394,8 +1434,13 @@
 "active_text": "상대가 잃은 HP의 35% 피해, 방어력·실드 무시",
 "passive_name": "어둠의 칼날",
 "passive_text": "상대 HP 50% 이하일 때 치명 +15%p",
-"active_params": {},
-"passive_params": {}
+"active_params": {
+"active_pct": 0.35
+},
+"passive_params": {
+"passive_crit_bonus": 15,
+"passive_hp_below": 0.5
+}
 }
 }
 }
