@@ -5,6 +5,8 @@ import { currentSeason } from "../ranking.mjs";
 import { sha256Hex, signAccess, verifyAccess } from "../tokens.mjs";
 import { importWorkbook } from "./importer.mjs";
 import { readXlsx } from "./xlsx.mjs";
+import { pinLive } from "../gamedata.mjs";
+import { payoutConfig } from "../season.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -112,9 +114,19 @@ export async function runCron(env) {
       done.push(d.version);
     } catch { /* 다음 크론에서 다시 */ }
   }
-  const season = await currentSeason(env).catch(() => ({ id: 0 }));
+  const season = await currentSeason(env).catch(() => ({ id: 0 }));  // 끝난 시즌이면 여기서 새 시즌이 생긴다
   const mailed = await rpc(env, "mail_jobs_run", { p_season: season.id });
-  return { published: done, mailed };
+  // 시즌 보상(상세 08): 끝났고 아직 지급 안 한 시즌 → 최고 도달 티어 기준 우편, 레전드 = 마스터 상위 N%(상한)
+  const paid = [];
+  for (const s of (await rpc(env, "seasons_due_payout", {})) ?? []) {
+    try {
+      const { snapshot: data } = await pinLive(env);
+      const masters = await rpc(env, "season_masters", { p_season: s.id });
+      const skin = data?.tables?.season_skins?.[String(s.id)] ?? null;
+      paid.push({ season: s.id, mailed: await rpc(env, "season_payout", { p_season: s.id, p_cfg: payoutConfig(data, masters, { skinItem: skin }) }) });
+    } catch { /* 다음 크론에서 다시 */ }
+  }
+  return { published: done, mailed, seasons: paid };
 }
 
 export async function handleBo(request, env, url) {

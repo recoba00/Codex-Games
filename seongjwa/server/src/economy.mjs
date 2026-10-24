@@ -50,6 +50,9 @@ export function econConfig(data) {
   const cfg = { ...ECON_DEFAULTS };
   for (const k of Object.keys(cfg)) if (s[k] !== undefined && Number.isFinite(Number(s[k]))) cfg[k] = Number(s[k]);
   cfg.missions = data?.tables?.missions ?? MISSION_DEFAULTS;
+  const rr = data?.tables?.rank_rewards;  // 시트 랭크보상: 첫 승 기본 골드·티어 배율
+  if (rr && s.econ_first_win_gold === undefined && Number.isFinite(Number(rr.first_win_gold))) cfg.econ_first_win_gold = Number(rr.first_win_gold);
+  cfg.firstWin = rr?.tiers?.length ? Object.fromEntries(rr.tiers.map((t) => [t.label, Number(t.first_win_mult)])) : { ...FIRST_WIN_MULT };
   const tiers = data?.tables?.rank_tiers?.tiers ?? [];
   cfg.tierNo = Object.fromEntries(Object.entries(TIER_WORD).map(([en, ko]) => [en, tiers.find((t) => String(t.name).startsWith(ko))?.no ?? TIER_NO_DEFAULT[en]]));
   return cfg;
@@ -186,9 +189,10 @@ export function applyTier(state, tier, cfg) {
   return s;
 }
 
-export function firstWinMult(tierName) {
-  const key = Object.keys(FIRST_WIN_MULT).find((k) => String(tierName ?? "").startsWith(k));
-  return key ? FIRST_WIN_MULT[key] : 1;
+export function firstWinMult(tierName, cfg) {
+  const table = cfg?.firstWin ?? FIRST_WIN_MULT;
+  const key = Object.keys(table).find((k) => String(tierName ?? "").startsWith(k));
+  return key ? table[key] : 1;
 }
 
 // ---------- 미션 받기·교체 ----------

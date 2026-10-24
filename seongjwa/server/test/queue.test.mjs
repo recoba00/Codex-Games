@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { matchTick, nextWake, searchRange } from "../src/queue-logic.mjs";
+import { matchTick, nextWake, pairKey, searchRange } from "../src/queue-logic.mjs";
 
 const cfg = { aiFallbackSec: 30 };
 const T0 = 1_000_000;
@@ -32,4 +32,13 @@ test("이탈 대기(notBefore) 중엔 매칭 안 됨, 다음 깨울 시각 계�
   assert.equal(matchTick([waiting, e("b", 1000, 1)], T0, cfg).pairs.length, 0);
   assert.equal(nextWake([waiting], T0, cfg), T0 + 60000);
   assert.equal(nextWake([e("a", 1000, 3)], T0, cfg), T0 + 7000);
+});
+
+test("몰아주기 방지: 같은 두 계정은 24시간 안에 2번까지, 3번째는 다른 상대·AI (상세 13)", () => {
+  const es = [e("a", 1000, 5), e("b", 1000, 4), e("c", 1050, 3)];
+  const history = { [pairKey("a", "b")]: [T0 - 3600e3, T0 - 7200e3] };
+  const r = matchTick(es, T0, { ...cfg, history });
+  assert.deepEqual(r.pairs.map(([x, y]) => [x.acc, y.acc]), [["a", "c"]]);
+  const old = { [pairKey("a", "b")]: [T0 - 25 * 3600e3, T0 - 3600e3] };
+  assert.deepEqual(matchTick([e("a", 1000, 5), e("b", 1000, 4)], T0, { ...cfg, history: old }).pairs.length, 1, "24시간 지난 기록은 안 셈");
 });

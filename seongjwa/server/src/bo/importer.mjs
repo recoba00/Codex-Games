@@ -318,6 +318,35 @@ export function importWorkbook(sheets) {
     tables.leaver = { ...lp, steps };
   }
 
+  // ---------- 랭크보상(상세 08): 시즌 보상·일일 첫 승 배율 ----------
+  if (!sheets["랭크보상"]) warnings.push("시트 `랭크보상` 없음 → 시즌 보상·첫 승 배율은 서버 기본값");
+  else {
+    const rows = sheets["랭크보상"];
+    const [r0, h] = headerIndex(rows, ["티어", "시즌 골드", "일일 첫 승 배율"], "랭크보상");
+    const base = rows.slice(0, r0).find((r) => norm(r?.[0]) === "일일 첫 승 기본 골드");
+    const TIER_KEY = { "브론즈": "bronze", "실버": "silver", "골드": "gold", "플래티넘": "platinum", "다이아": "diamond", "마스터": "master", "레전드": "legend" };
+    const has = (v) => { const t = norm(v); return Boolean(t) && t !== "-"; };
+    const list = [];
+    for (let r = r0 + 1; r < rows.length; r += 1) {
+      const row = rows[r] ?? [];
+      const key = TIER_KEY[norm(cell(row, h["티어"]))];
+      if (!key) continue;
+      const where = `랭크보상 ${r + 1}행 ${norm(cell(row, h["티어"]))}`;
+      const gold = cell(row, h["시즌 골드"]), mult = cell(row, h["일일 첫 승 배율"]);
+      if (!isInt(gold) || gold < 0) err(`${where}: 시즌 골드가 0 이상 정수가 아님 → ${JSON.stringify(gold)}`);
+      if (!isNum(mult) || mult < 1 || mult > 3) err(`${where}: 일일 첫 승 배율 1~3 밖 → ${JSON.stringify(mult)}`);
+      const gradeRaw = norm(cell(row, h["프레임 연출 등급"]));
+      list.push({ tier: key, label: norm(cell(row, h["티어"])), gold, first_win_mult: mult,
+        frame: has(cell(row, h["시즌 한정 카드 프레임"])), title: has(cell(row, h["칭호"])),
+        grade: /^\d/.test(gradeRaw) ? Number(gradeRaw.match(/^\d+/)[0]) : null,
+        skin: norm(cell(row, h["시즌 이벤트 스킨"])) === "지급" });
+    }
+    if (list.length !== 7) err(`랭크보상: 티어 ${list.length}행 (브론즈~레전드 7행이어야 함)`);
+    const firstWin = base ? base.slice(1).find(isNum) : undefined;
+    if (firstWin !== undefined && !(isInt(firstWin) && firstWin >= 0)) err(`랭크보상: 일일 첫 승 기본 골드 오류 → ${JSON.stringify(firstWin)}`);
+    tables.rank_rewards = { first_win_gold: firstWin ?? 100, tiers: list };
+  }
+
   // ---------- 상세 14 자동 검증: 스탯 범위·예산(검수 차단), 스펠 개수(알림) ----------
   {
     const [, hc] = headerIndex(charRows, ["HP", "ATK", "DEF", "SPD", "CRIT(%)"], "캐릭터");

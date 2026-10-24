@@ -12,6 +12,7 @@ import { aiProfileForTier } from "./rank.mjs";
 import { currentSeason, settleMatch } from "./ranking.mjs";
 import { settleEconomy } from "./econ-db.mjs";
 import { sha256Hex } from "./tokens.mjs";
+import { rpc } from "./db.mjs";
 
 export const PREP = Object.freeze({ ban_sec: 10, pick_sec: 15, loadout_sec: 15, grace_ms: 500 });
 const LOBBY_TTL_MS = 30 * 60 * 1000;
@@ -19,6 +20,10 @@ const TICKET_TTL_MS = 45 * 1000;
 const SAVE_RETRY_MS = 30 * 1000;
 const SAVE_MAX_TRIES = 10;
 const RANKED = ["ranked", "ranked_ai"];
+// 감정표현(상세 05): 장착 4칸(없으면 기본 4종), 3초에 1회, 판당 10회, 상대 감정표현 끄기
+const DEFAULT_EMOTES = ["EMOTE_HELLO", "EMOTE_NICE", "EMOTE_OOPS", "EMOTE_THINK"];
+const EMOTE_GAP_MS = 3000;
+const EMOTE_MAX = 10;
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 
@@ -142,6 +147,7 @@ export class FriendRoom extends DurableObject {
     let msg;
     try { msg = JSON.parse(raw); } catch { return send(ws, { type: "error", error: "json_invalid" }); }
     try {
+      if (msg.type === "emote" || msg.type === "mute_emotes") { await this.emote(att.seat, msg, Date.now()); await this.save(); return; }
       await this.handle(att.seat, msg, Date.now());
       await this.save();
       this.broadcast();
@@ -166,6 +172,44 @@ export class FriendRoom extends DurableObject {
     }
     await this.save();
     this.broadcast();
+  }
+
+  // ---------- 감정표현(전체 상태 방송 없이 상대에게만 보냄) ----------
+  async emote(seat, msg, now) {
+    const g = this.room.game;
+    if (!g || this.room.phase !== "battle") throw new Error("phase_invalid");
+    g.emote ??= { sets: [null, null], used: [0, 0], last: [0, 0], muted: [false, false] };
+    const e = g.emote;
+    if (msg.type === "mute_emotes") {  // 이 판 내내 상대 감정표현 끔
+      e.muted[seat] = true;
+      for (const ws of this.sockets(seat)) send(ws, { type: "emote_muted" });
+      return;
+    }
+    if (!e.sets[seat]) e.sets[seat] = await this.emoteSet(seat);
+    const id = String(msg.id ?? "");
+    if (!e.sets[seat].includes(id)) throw new Error("emote_not_equipped");
+    if (e.used[seat] >= EMOTE_MAX) throw new Error("emote_limit");
+    if (now - e.last[seat] < EMOTE_GAP_MS) throw new Error("emote_cooldown");
+    e.used[seat] += 1; e.last[seat] = now;
+    for (const ws of this.sockets(seat)) send(ws, { type: "emote", seat, id, left: EMOTE_MAX - e.used[seat] });
+    if (!e.muted[1 - seat]) for (const ws of this.sockets(1 - seat)) send(ws, { type: "emote", seat, id });
+  }
+
+  async emoteSet(seat) {
+    const acc = this.room.members[seat]?.acc;
+    if (!acc || !this.env.SUPABASE_URL) return DEFAULT_EMOTES;
+    try {
+      const inv = await rpc(this.env, "inventory_list", { p_account: acc });
+      const eq = inv?.equipped?.emotes;
+      return Array.isArray(eq) && eq.length ? eq.slice(0, 4) : DEFAULT_EMOTES;
+    } catch { return DEFAULT_EMOTES; }
+  }
+
+  // 친구 목록의 "게임 중" 표시(상세 05). 실패해도 판 진행과 무관
+  presence(room) {
+    if (!this.env.SUPABASE_URL || !this.env.SUPABASE_SERVICE_KEY) return;
+    const accs = (this.room.members ?? []).filter((m) => m.acc && !m.ai).map((m) => m.acc);
+    this.ctx.waitUntil(Promise.all(accs.map((acc) => rpc(this.env, "presence_touch", { p_account: acc, p_away: null, p_room: room, p_hidden: null }).catch(() => null))));
   }
 
   async handle(seat, msg, now) {
@@ -367,6 +411,7 @@ export class FriendRoom extends DurableObject {
       players: g.picks.map((characterId, seat) => ({ characterId, spells: g.loadouts[seat].spells, deck: g.loadouts[seat].deck }))
     });
     g.battleStartedAt = now;
+    this.presence(room.code);
     room.phase = "battle";
     room.phaseDeadline = 0;
     g.aiMemory = { oppKinds: [] };
@@ -479,6 +524,7 @@ export class FriendRoom extends DurableObject {
       });
       if (players.length) { room.econs ??= []; room.econs.push({ tries: 0, next: now, job: { matchId: g.id, mode, players } }); }
     }
+    this.presence("");
     room.lastBattle = view(b, 0);  // 결과 화면용 마지막 로그(0번 시점; 공개 정보만 쓴다)
     room.lastData = g.data;
     room.game = null;
@@ -620,6 +666,7 @@ export class FriendRoom extends DurableObject {
       base.deadline = g.deadline[seat];
       base.oppDeadline = g.deadline[1 - seat];
       base.timebankUsed = Boolean(g.timebank[seat]);
+      base.emotes = { left: EMOTE_MAX - (g.emote?.used?.[seat] ?? 0), mutedOpp: Boolean(g.emote?.muted?.[seat]), set: g.emote?.sets?.[seat] ?? null };
     }
     return base;
   }

@@ -1,5 +1,5 @@
 // 통합 테스트용 PostgREST 대역: RPC를 실제 Postgres 함수로 그대로 실행한다(마이그레이션을 적용한 로컬·CI DB).
-// 게임 데이터(data_live)만 테스트 픽스처를 내려주고(설정 일부 단축), 판 결과(match_results)는 메모리에 둔다.
+// 게임 데이터(data_live)만 테스트 픽스처를 내려주고(설정 일부 단축), 판 결과(match_results)는 메모리와 실제 테이블 둘 다에 둔다.
 // 연결: PGHOST·PGPORT·PGUSER·PGPASSWORD·PGDATABASE 환경 변수(pg 기본 규칙).
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
@@ -57,6 +57,19 @@ function reply(res, status, body) {
   res.end(body === undefined ? "" : JSON.stringify(body));
 }
 
+// 판 결과도 실제 테이블에 넣는다(최근 대전 상대 등). 픽스처 데이터 버전 1은 '폐기' 자리표시 행으로 맞춘다
+let fixtureRow = false;
+async function saveMatch(row) {
+  if (!fixtureRow) {
+    await pool.query("insert into public.data_versions (id, status, note) overriding system value values (1, 'discarded', 'test fixture') on conflict (id) do nothing");
+    await pool.query("select setval(pg_get_serial_sequence('public.data_versions', 'id'), greatest((select max(id) from public.data_versions), 1))");
+    fixtureRow = true;
+  }
+  const cols = Object.keys(row);
+  await pool.query(`insert into public.match_results (${cols.join(", ")}) values (${cols.map((_, i) => `$${i + 1}`).join(", ")}) on conflict (id) do nothing`,
+    cols.map((c) => (row[c] !== null && typeof row[c] === "object" ? JSON.stringify(row[c]) : row[c])));
+}
+
 export function startPgRest(port) {
   const server = createServer((req, res) => {
     let raw = "";
@@ -70,6 +83,7 @@ export function startPgRest(port) {
       if (url.pathname === "/rest/v1/match_results" && req.method === "POST") {
         if (saved.some((r) => r.id === body.id)) return reply(res, 409, { message: "duplicate" });
         saved.push(body);
+        await saveMatch(body).catch((e) => console.error("match_results", e.message));
         return reply(res, 201);
       }
       return reply(res, 404, { message: "not found" });

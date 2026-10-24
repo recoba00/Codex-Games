@@ -9,6 +9,7 @@ import { econLoad, econMutate } from "./econ-db.mjs";
 import { claimAttendance, claimMissions, econConfig, econView, firstWinMult, periodKeys, rerollDaily } from "./economy.mjs";
 import { cancelOrder, finishOrder, recoverOrders, startOrder } from "./payments.mjs";
 import { handleBo, runCron } from "./bo/api.mjs";
+import { claimRankRoad, rankRoadView } from "./season.mjs";
 import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
 
@@ -31,6 +32,7 @@ const STATUS = {
   gold_short: 409, already_owned: 409, price_changed: 409, offer_unavailable: 410, econ_conflict: 409, attendance_done: 409,
   mission_claimed: 409, mission_not_done: 409, nothing_to_claim: 409, reroll_used: 409, order_closed: 409, too_many_orders: 429,
   payment_unavailable: 503, payment_pending: 409, payment_failed: 402, steam_txn_failed: 502, item_not_owned: 403,
+  friend_not_found: 404, already_friends: 409, friend_blocked: 403, friend_limit: 409, friend_in_game: 409, invite_expired: 410, not_friend: 403, invite_limit: 429, block_limit: 409,
   forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
 };
@@ -253,10 +255,96 @@ export async function handle(request, env) {
       const recovered = ctx.raw.pending_orders?.length ? await recoverOrders(env, claims.sub, ctx.raw.pending_orders) : [];
       return json({
         ok: true, gold: ctx.raw.gold, name: ctx.raw.name, nameChangeGold: ctx.raw.name_changes > 0 ? ctx.cfg.econ_name_change_gold : 0,
-        mailUnread: Number(ctx.raw.mail_unread ?? 0) + recovered.length, tierName: ctx.tierName, firstWinGold: Math.round(ctx.cfg.econ_first_win_gold * firstWinMult(ctx.tierName)),
-        ...econView(ctx.state, ctx.cfg, Date.now()), recovered
+        mailUnread: Number(ctx.raw.mail_unread ?? 0) + recovered.length, tierName: ctx.tierName, firstWinGold: Math.round(ctx.cfg.econ_first_win_gold * firstWinMult(ctx.tierName, ctx.cfg)),
+        ...econView(ctx.state, ctx.cfg, Date.now()), recovered,
+        rankRoad: rankRoadView(ctx.state, data, { best: ctx.best, rp: ctx.rp })
       });
     }
+
+    case "POST /v1/rankroad/claim": {  // 랭크 로드: 이번 시즌 도달한 단계 보상 모두 받기(상세 08)
+      const claims = await authenticate(request, env);
+      const { snapshot: data } = await pinLive(env);
+      const r = await econMutate(env, data, claims.sub, (out, state) => `road:${state.season}:${out.tiers.join(",")}`, (state, ctx) => {
+        const out = claimRankRoad(state, data, { best: ctx.best });
+        return { ...out, reason: "rank_road", detail: { tiers: out.tiers, items: out.items } };
+      });
+      if (r.duplicate) throw new Error("nothing_to_claim");
+      return json({ ok: true, gold: r.gold, items: r.items, tiers: r.tiers, balance: r.balance });
+    }
+
+    // ---------- 친구·소셜(상세 05) ----------
+    case "POST /v1/presence": {  // 클라이언트 하트비트(1분마다): 온라인·자리 비움, 상태 숨기기
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      await rpc(env, "presence_touch", { p_account: claims.sub, p_away: input.away === undefined ? null : Boolean(input.away), p_room: null, p_hidden: input.hidden === undefined ? null : Boolean(input.hidden) });
+      return json({ ok: true });
+    }
+    case "GET /v1/friends": {  // 친구 목록(온라인→자리 비움→게임 중→오프라인), 받은·보낸 요청, 받은 초대, 차단 목록, 내 친구 코드
+      const claims = await authenticate(request, env);
+      await rpc(env, "friend_code_get", { p_account: claims.sub });
+      await rpc(env, "presence_touch", { p_account: claims.sub, p_away: null, p_room: null, p_hidden: null });
+      return json({ ok: true, ...(await rpc(env, "friends_list", { p_account: claims.sub })) });
+    }
+    case "POST /v1/friends/request": {  // { code: "ASTRA-XXXX" } 또는 { id: 계정 }
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const id = input.id ? String(input.id) : null;
+      if (id && !/^[0-9a-f-]{36}$/.test(id)) throw new Error("friend_not_found");
+      if (!id && !/^ASTRA-[2-9A-HJKMNP-Z]{4,6}$/i.test(String(input.code ?? "").trim())) throw new Error("friend_code_invalid");
+      return json({ ok: true, ...(await rpc(env, "friend_request", { p_account: claims.sub, p_code: id ? null : String(input.code).trim(), p_target: id })) });
+    }
+    case "POST /v1/friends/respond": {
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      return json({ ok: true, ...(await rpc(env, "friend_respond", { p_account: claims.sub, p_request: Number(input.id), p_accept: Boolean(input.accept) })) });
+    }
+    case "POST /v1/friends/remove": {
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      if (!/^[0-9a-f-]{36}$/.test(String(input.id ?? ""))) throw new Error("friend_not_found");
+      await rpc(env, "friend_remove", { p_account: claims.sub, p_other: String(input.id) });
+      return json({ ok: true });
+    }
+    case "POST /v1/friends/block": {  // { id, on: true|false } 차단 최대 100명
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      if (!/^[0-9a-f-]{36}$/.test(String(input.id ?? ""))) throw new Error("block_invalid");
+      await rpc(env, "block_set", { p_account: claims.sub, p_other: String(input.id), p_on: input.on !== false });
+      return json({ ok: true });
+    }
+    case "GET /v1/friends/search": {  // 닉네임 앞부분 검색(2자 이상)
+      const claims = await authenticate(request, env);
+      const q = String(url.searchParams.get("q") ?? "").trim();
+      if (q.length < 2) throw new Error("query_too_short");
+      return json({ ok: true, users: await rpc(env, "friend_search", { p_account: claims.sub, p_q: q.slice(0, 12) }) });
+    }
+    case "GET /v1/friends/recent": {  // 최근 대전 상대(최근 20판)
+      const claims = await authenticate(request, env);
+      return json({ ok: true, users: await rpc(env, "recent_opponents", { p_account: claims.sub }) });
+    }
+    case "POST /v1/friends/invite": {  // { friend, room } 친구방 초대(5분, 게임 중인 친구는 불가)
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const room = String(input.room ?? "").toUpperCase();
+      if (!ROOM_CODE.test(room) || !/^[0-9a-f-]{36}$/.test(String(input.friend ?? ""))) throw new Error("invite_invalid");
+      return json({ ok: true, id: await rpc(env, "friend_invite", { p_account: claims.sub, p_friend: String(input.friend), p_room: room }) });
+    }
+    case "POST /v1/friends/invite/answer": {  // 초대 받기 → 방 코드(참가는 /v1/rooms/{code}/join)
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const r = await rpc(env, "friend_invite_answer", { p_account: claims.sub, p_invite: Number(input.id) });
+      if (!r || !r.valid) throw new Error("invite_expired");
+      return json({ ok: true, room: r.room });
+    }
+    case "GET /v1/rank/friends": {  // 랭킹 보드 '친구' 탭
+      const claims = await authenticate(request, env);
+      const { snapshot: data } = await pinLive(env);
+      const season = await currentSeason(env);
+      const rows = await rpc(env, "rank_friends", { p_account: claims.sub, p_season: season.id });
+      return json({ ok: true, season, rows: rows.map((r, i) => ({ rank: i + 1, ...r, tierName: tierName(data, r.tier) })) });
+    }
+    case "GET /v1/hall-of-fame":  // 명예의 전당(시즌별 레전드 최종 순위)
+      return json({ ok: true, rows: await rpc(env, "hall_of_fame_list", { p_season: url.searchParams.get("season") ? Number(url.searchParams.get("season")) : null }) }, 200, { "cache-control": "public, max-age=300" });
 
     case "POST /v1/attendance/claim": {
       const claims = await authenticate(request, env);

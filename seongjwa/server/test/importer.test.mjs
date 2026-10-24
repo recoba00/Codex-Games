@@ -22,7 +22,7 @@ test("가져오기: 오류·검수 차단·경고 0건, 라이브 데이터와 �
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.blocks, []);
   assert.deepEqual(r.warnings, []);
-  assert.deepEqual(r.summary, { characters: 9, cards: 34, spells: 8, settings: 44, presets: 27, tables: ["missions", "rank_tiers", "leaver"] });
+  assert.deepEqual(r.summary, { characters: 9, cards: 34, spells: 8, settings: 44, presets: 27, tables: ["missions", "rank_tiers", "leaver", "rank_rewards"] });
   const d = r.data;
   for (const [id, c] of Object.entries(FIX.characters)) {
     for (const k of ["name", "job", "role", "faction", "rarity", "offer", "hp", "atk", "def", "spd", "crit", "passive_name", "passive_text", "active_name", "active_text", "passive_params", "active_params"]) {
@@ -77,6 +77,7 @@ test("변경표: 경제 키 추가는 설정 행, 미션 표는 미션 행 단�
   const v7 = structuredClone(FIX);
   for (const k of Object.keys(v7.settings)) if (/^econ_|^season_days$/.test(k)) delete v7.settings[k];
   delete v7.tables.missions;
+  delete v8.tables.rank_rewards; delete v7.tables.rank_rewards;
   const d = diffData(v7, v8);
   assert.equal(d.filter((x) => x.kind === "settings" && x.change === "added").length, 9);
   assert.deepEqual(d.filter((x) => x.kind === "tables").map((x) => x.id).slice(0, 2), ["missions.daily.D01", "missions.daily.D02"]);

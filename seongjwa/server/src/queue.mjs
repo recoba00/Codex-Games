@@ -4,7 +4,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { sha256Hex } from "./tokens.mjs";
 
-import { matchTick, nextWake, searchRange } from "./queue-logic.mjs";
+import { matchTick, nextWake, pairKey, prunePairs, searchRange } from "./queue-logic.mjs";
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 const send = (ws, v) => { try { ws.send(JSON.stringify(v)); } catch { /* closing */ } };
@@ -75,8 +75,13 @@ export class MatchQueue extends DurableObject {
   async tick(now) {
     const entries = this.entries();
     const aiFallbackSec = Number(entries[0]?.aiFallbackSec ?? 30);
-    const { pairs, ai, timeout } = matchTick(entries, now, { aiFallbackSec });
-    for (const [a, b] of pairs) await this.start("ranked", [a, b], now);
+    const history = prunePairs((await this.ctx.storage.get("pairs")) ?? {}, now);  // 몰아주기 방지(상세 13)
+    const { pairs, ai, timeout } = matchTick(entries, now, { aiFallbackSec, history });
+    for (const [a, b] of pairs) {
+      await this.start("ranked", [a, b], now);
+      (history[pairKey(a.acc, b.acc)] ??= []).push(now);
+    }
+    await this.ctx.storage.put("pairs", history);
     for (const a of ai) await this.start("ranked_ai", [a], now);
     for (const a of timeout) { send(a.ws, { type: "timeout" }); try { a.ws.close(1000, "timeout"); } catch { /* */ } }
     const left = this.entries();

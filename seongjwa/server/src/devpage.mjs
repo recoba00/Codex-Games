@@ -27,9 +27,15 @@ pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220
 <div class="row" style="margin-top:8px"><b>AI 대전(연습)</b><button data-d="easy" class="pr">쉬움</button><button data-d="normal" class="pr">보통</button><button data-d="hard" class="pr">어려움</button><button id="btnBoard">랭킹 보드</button></div>
 <pre id="board" hidden></pre></section>
 <section id="econ" hidden><div class="row"><b>경제</b> <span id="gold" style="color:var(--acc);font-weight:600"></span><span id="econInfo" class="dim"></span>
-<button id="btnEcon">새로고침</button><button id="btnAtt">출석 받기</button><button id="btnMail">우편함</button><button id="btnShop">상점</button><button id="btnInv">보관함</button>
+<button id="btnEcon">새로고침</button><button id="btnAtt">출석 받기</button><button id="btnMail">우편함</button><button id="btnShop">상점</button><button id="btnInv">보관함</button><button id="btnRoad">랭크 로드</button>
 <input id="newName" placeholder="새 닉네임(2~12자)" size="14"><button id="btnName">닉네임 변경</button></div>
 <div id="missions" style="margin-top:8px"></div><div id="econBox" style="margin-top:8px"></div></section>
+<section id="social" hidden><div class="row"><b>친구</b> <span id="fcode" class="dim"></span>
+<input id="fAdd" placeholder="친구 코드 ASTRA-XXXX" size="16"><button id="btnFAdd">친구 요청</button>
+<input id="fSearch" placeholder="닉네임 검색" size="10"><button id="btnFSearch">검색</button>
+<button id="btnFRefresh">새로고침</button><button id="btnFRecent">최근 상대</button><button id="btnFRank">친구 랭킹</button><button id="btnHof">명예의 전당</button>
+<label><input type="checkbox" id="fHidden"> 접속 상태 숨기기</label></div>
+<div id="fList" style="margin-top:8px"></div><div id="fBox" style="margin-top:8px"></div></section>
 <section id="room" hidden></section>
 <section><b>로그</b><pre id="log"></pre></section>
 <script>
@@ -38,7 +44,7 @@ var $=function(id){return document.getElementById(id)};
 function log(m){$('log').textContent=new Date().toLocaleTimeString()+' '+m+'\n'+$('log').textContent}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.token?{authorization:'Bearer '+S.token}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function nm(kind,id){var d=S.data&&S.data[kind]&&S.data[kind][id];return d?d.name:id}
-function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;$('econ').hidden=!S.token;if(S.token){loadRank();loadEcon()}$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
+function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;$('econ').hidden=!S.token;$('social').hidden=!S.token;if(S.token){loadRank();loadEcon();loadFriends()}$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
  if(S.token&&!S.data)fetch('/v1/data/live').then(function(r){return r.json()}).then(function(j){S.data=j.data;log('데이터 버전 '+j.version)});
  var code=sessionStorage.getItem('room');if(S.token&&code)connect(code)}
 $('btnLogin').onclick=function(){api('/v1/auth/dev',{devId:$('devId').value.trim().toLowerCase()}).then(function(j){S.token=j.accessToken;S.acc=j.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('로그인 '+(j.replacedSessions?'(다른 기기 세션 종료됨)':''));start()}).catch(function(e){log('로그인 실패: '+e.message)})};
@@ -56,15 +62,15 @@ Array.prototype.forEach.call(document.querySelectorAll('.pr'),function(b){b.oncl
 $('btnBoard').onclick=function(){api('/v1/rank/board').then(function(j){var b=$('board');b.hidden=!b.hidden;b.textContent='시즌 '+j.season.id+'\n'+j.rows.map(function(r){return r.rank+'. '+r.tierName+' '+r.rp+'RP '+r.name}).join('\n')})};
 function connect(code){sessionStorage.setItem('room',code);api('/v1/rooms/'+code+'/ticket',{}).then(function(j){
  var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/rooms/'+code+'/ws?ticket='+encodeURIComponent(j.ticket));S.ws=ws;
- ws.onmessage=function(e){var m=JSON.parse(e.data);if(m.type==='room'){S.st=m;render()}else if(m.type==='error')log('오류: '+m.error+' ('+m.about+')');else if(m.type==='afk_warning')log('⚠ 2턴째 행동 없음: 다음 턴도 없으면 이탈 처리');};
+ ws.onmessage=function(e){var m=JSON.parse(e.data);if(m.type==='room'){S.st=m;render()}else if(m.type==='error')log('오류: '+m.error+' ('+m.about+')');else if(m.type==='emote'){var who=m.seat===(S.st&&S.st.you)?'나':'상대';log('💬 '+who+': '+emoName(m.id));S.lastEmote={who:who,id:m.id,at:Date.now()};if(S.st)render()}else if(m.type==='emote_muted')log('상대 감정표현 끔');else if(m.type==='afk_warning')log('⚠ 2턴째 행동 없음: 다음 턴도 없으면 이탈 처리');};
  ws.onclose=function(e){log('연결 끊김 '+e.code+' '+(e.reason||''));if(e.code===4001)return;setTimeout(function(){if(sessionStorage.getItem('room'))connect(code)},1500)};
  setInterval(function(){if(ws.readyState===1)ws.send('{"type":"ping"}')},20000);
 }).catch(function(e){log('접속 실패: '+e.message);if(e.message==='room_not_found')sessionStorage.removeItem('room')})}
-function leaveRoom(){sessionStorage.removeItem('room');if(S.ws){S.ws.onclose=null;S.ws.close()}S.ws=null;S.st=null;$('room').hidden=true;$('lobby').hidden=false;$('ranked').hidden=false;$('econ').hidden=false;loadRank();loadEcon()}
+function leaveRoom(){sessionStorage.removeItem('room');if(S.ws){S.ws.onclose=null;S.ws.close()}S.ws=null;S.st=null;$('room').hidden=true;$('lobby').hidden=false;$('ranked').hidden=false;$('econ').hidden=false;$('social').hidden=false;loadRank();loadEcon();loadFriends()}
 function send(o){S.ws&&S.ws.readyState===1&&S.ws.send(JSON.stringify(o))}
 function btn(label,fn,on,dis){var b=document.createElement('button');b.textContent=label;if(on)b.className='on';if(dis)b.disabled=true;b.onclick=fn;return b}
 function left(t){return t?Math.max(0,Math.ceil((t-Date.now())/1000))+'초':''}
-function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;$('econ').hidden=true;
+function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;$('econ').hidden=true;$('social').hidden=true;
  var head=document.createElement('div');head.className='row';
  var MODE={friend:'친구방',practice:'AI 대전',ranked:'랭킹전',ranked_ai:'AI 랭킹전'};head.innerHTML='<b>'+MODE[m.mode]+'</b>'+(m.mode==='friend'?' <span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span>':'')+'<span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
  el.appendChild(head);
@@ -111,6 +117,11 @@ function renderBattle(m,el){var b=m.battle;
  ctl.appendChild(btn('액티브',function(){S.sel.active=!S.sel.active;render()},S.sel.active||(sub&&sub.active),!!sub||mine.gauge<100));
  ctl.appendChild(btn('확정',function(){send({type:'act',turn:b.turn,cards:S.sel.cards,spell:S.sel.spell,active:S.sel.active})},false,!!sub));
  ctl.appendChild(btn('타임뱅크 +15초',function(){send({type:'timebank'})},false,m.timebankUsed||!!sub));
+ var em=document.createElement('div');em.className='row';el.appendChild(em);var es=(m.emotes&&m.emotes.set)||EMO;
+ es.forEach(function(id){em.appendChild(btn(emoName(id),function(){send({type:'emote',id:id})},false,m.emotes&&m.emotes.left<=0))});
+ em.appendChild(btn(m.emotes&&m.emotes.mutedOpp?'상대 감정표현 꺼짐':'상대 감정표현 끄기',function(){send({type:'mute_emotes'})},false,m.emotes&&m.emotes.mutedOpp));
+ if(m.emotes)em.appendChild(document.createTextNode(' 남은 '+m.emotes.left+'회 · 3초에 1회'));
+ if(S.lastEmote&&Date.now()-S.lastEmote.at<4000)em.appendChild(document.createTextNode(' · 💬 '+S.lastEmote.who+': '+emoName(S.lastEmote.id)));
  ctl.appendChild(btn('항복',function(){if(confirm('항복할까요?'))send({type:'surrender'})}));
  if(mine.revealed&&mine.revealed.length){var rv=document.createElement('p');rv.className='dim';rv.textContent='통찰로 본 상대 손패: '+mine.revealed.map(function(r){return nm('cards',r.id)}).join(', ');el.appendChild(rv)}
  var p=document.createElement('pre');p.textContent=fmtLog(b.log,m.you);el.appendChild(p)}
@@ -123,6 +134,7 @@ function tick(){var m=S.st;if(!m)return;var t=m.phase==='battle'?m.deadline:m.ph
 var MK={daily:'일일',weekly:'주간',season:'시즌'};
 function loadEcon(){api('/v1/econ').then(function(e){S.econ=e;$('gold').textContent=e.gold.toLocaleString()+' 골드';
  $('econInfo').textContent=' · '+e.name+' · 우편 '+e.mailUnread+' · 출석 '+(e.attendance.claimedToday?'완료':'가능('+e.attendance.nextCycleDay+'일차)')+' · 오늘 '+e.today.wins+'승(승리 골드 '+e.today.winGoldLeft+'회 남음, 첫 승 '+(e.today.firstWinDone?'받음':e.firstWinGold+'골드')+') · AI 대전 인정 '+e.today.aiCounted+'/3';
+ if(e.rankRoad){$('btnRoad').textContent='랭크 로드'+(e.rankRoad.claimable?' ('+e.rankRoad.claimable+'단계 받기)':'');$('btnRoad').className=e.rankRoad.claimable?'on':''}
  $('btnAtt').disabled=e.attendance.claimedToday;$('btnName').textContent='닉네임 변경'+(e.nameChangeGold?' ('+e.nameChangeGold+'골드)':' (무료)');
  if(e.recovered&&e.recovered.length)log('결제 확인된 주문 '+e.recovered.length+'건 → 우편 지급');
  var box=$('missions');box.innerHTML='';
@@ -144,5 +156,34 @@ $('btnShop').onclick=function(){api('/v1/shop').then(function(j){var b=$('econBo
   if(o.priceKrw)r.appendChild(btn('₩'+o.priceKrw.toLocaleString(),function(){api('/v1/shop/orders',{offerId:o.offer,price:o.priceKrw}).then(function(x){log('주문 '+x.order+' ('+x.provider+')');return api('/v1/shop/orders/'+x.order+'/finalize',{})}).then(function(x){log('결제 완료 → 지급 '+x.item);$('btnShop').onclick()}).catch(function(e){log('결제 실패: '+e.message)})},false,o.owned))})})};
 $('btnInv').onclick=function(){api('/v1/inventory').then(function(j){var b=$('econBox');b.innerHTML='<b>보관함</b>';var pre=document.createElement('pre');
  pre.textContent=j.items.map(function(i){return i.kind+' · '+i.name+(i.character?' ('+i.character+')':'')+' · '+i.source}).join('\n')+'\n장착: '+JSON.stringify(j.equipped);b.appendChild(pre)})};
+var EMO=['EMOTE_HELLO','EMOTE_NICE','EMOTE_OOPS','EMOTE_THINK'],EMN={EMOTE_HELLO:'안녕',EMOTE_NICE:'좋은 수',EMOTE_OOPS:'이런',EMOTE_THINK:'고민 중'};
+function emoName(id){return EMN[id]||id}
+var STN={online:'🟢 온라인',away:'🟡 자리 비움',in_game:'🔵 게임 중',offline:'⚪ 오프라인'};
+function fe(e){return ({friend_not_found:'그런 코드/계정 없음',already_friends:'이미 친구',friend_blocked:'차단 관계라 불가',friend_limit:'친구 50명 한도',friend_in_game:'친구가 게임 중',not_friend:'친구가 아님',invite_limit:'초대는 1분에 5번까지',friend_code_invalid:'코드 형식 오류(ASTRA-XXXX)',block_limit:'차단 100명 한도',invite_expired:'초대 만료'}[e.message]||e.message)}
+function fAct(path,body,msg){return api(path,body).then(function(j){if(msg)log(msg);loadFriends();return j}).catch(function(e){log('친구: '+fe(e))})}
+function loadFriends(){api('/v1/friends').then(function(j){$('fcode').textContent='내 코드 '+j.code;var L=$('fList');L.innerHTML='';
+ j.incoming.forEach(function(r){var d=document.createElement('div');d.className='row';d.textContent='받은 요청: '+r.name+' ';d.appendChild(btn('수락',function(){fAct('/v1/friends/respond',{id:r.id,accept:true},r.name+'와 친구')},true));d.appendChild(btn('거절',function(){fAct('/v1/friends/respond',{id:r.id,accept:false})}));L.appendChild(d)});
+ j.invites.forEach(function(r){var d=document.createElement('div');d.className='row';d.textContent='📨 '+r.name+'의 친구방 초대 ('+r.room+') ';d.appendChild(btn('참가',function(){api('/v1/friends/invite/answer',{id:r.id}).then(function(a){return api('/v1/rooms/'+a.room+'/join',{}).then(function(){connect(a.room)})}).catch(function(e){log('초대 참가 실패: '+fe(e))})},true));L.appendChild(d)});
+ j.friends.forEach(function(f){var d=document.createElement('div');d.className='row';d.textContent=(STN[f.status]||f.status)+' '+f.name+' ';
+  d.appendChild(btn('초대',function(){api('/v1/rooms',{options:{bans:$('optBans').checked,turnSec:Number($('optTurn').value)}}).then(function(r){return api('/v1/friends/invite',{friend:f.id,room:r.code}).then(function(){log(f.name+'에게 방 '+r.code+' 초대');connect(r.code)})}).catch(function(e){log('초대 실패: '+fe(e))})},false,f.status==='in_game'));
+  d.appendChild(btn('삭제',function(){if(confirm(f.name+' 친구 삭제?'))fAct('/v1/friends/remove',{id:f.id},'친구 삭제')}));
+  d.appendChild(btn('차단',function(){if(confirm(f.name+' 차단?'))fAct('/v1/friends/block',{id:f.id,on:true},'차단')}));L.appendChild(d)});
+ if(!j.friends.length)L.insertAdjacentHTML('beforeend','<span class=dim>친구 없음. 다른 계정의 친구 코드를 넣어 보세요.</span>');
+ if(j.outgoing.length)L.insertAdjacentHTML('beforeend','<div class=dim>보낸 요청: '+j.outgoing.map(function(r){return r.name}).join(', ')+'</div>');
+ j.blocked.forEach(function(b){var d=document.createElement('div');d.className='row dim';d.textContent='차단: '+b.name+' ';d.appendChild(btn('해제',function(){fAct('/v1/friends/block',{id:b.id,on:false},'차단 해제')}));L.appendChild(d)})}).catch(function(e){log('친구 목록 실패: '+e.message)})}
+function userRows(title,users){var b=$('fBox');b.innerHTML='<b>'+title+'</b>';users.forEach(function(u){var d=document.createElement('div');d.className='row';d.textContent=u.name+(u.mode?' · '+u.mode:'')+(u.friend?' (친구)':'')+' ';if(!u.friend&&!u.me)d.appendChild(btn('친구 요청',function(){fAct('/v1/friends/request',{id:u.id},u.name+'에게 요청')}));b.appendChild(d)});if(!users.length)b.insertAdjacentHTML('beforeend',' <span class=dim>없음</span>')}
+$('btnFAdd').onclick=function(){fAct('/v1/friends/request',{code:$('fAdd').value.trim()}).then(function(j){if(j)log(j.status==='accepted'?'서로 요청 → 바로 친구':'요청 보냄')})};
+$('btnFSearch').onclick=function(){api('/v1/friends/search?q='+encodeURIComponent($('fSearch').value.trim())).then(function(j){userRows('검색 결과',j.users)}).catch(function(e){log(fe(e))})};
+$('btnFRefresh').onclick=loadFriends;
+$('btnFRecent').onclick=function(){api('/v1/friends/recent').then(function(j){userRows('최근 대전 상대',j.users)})};
+$('btnFRank').onclick=function(){api('/v1/rank/friends').then(function(j){var b=$('fBox');b.innerHTML='<b>친구 랭킹</b>';var pre=document.createElement('pre');pre.textContent=j.rows.map(function(r,i){return (i+1)+'. '+r.name+(r.me?' (나)':'')+' · '+(r.tierName||r.tier)+' '+r.rp+'RP'}).join('\n');b.appendChild(pre)})};
+$('btnHof').onclick=function(){api('/v1/hall-of-fame').then(function(j){var b=$('fBox');b.innerHTML='<b>명예의 전당</b>';var pre=document.createElement('pre');pre.textContent=j.rows.map(function(r){return '시즌 '+r.season+' #'+r.rank+' '+r.name+' '+r.rp+'RP'}).join('\n')||'아직 없음(시즌이 끝나면 레전드 최종 순위)';b.appendChild(pre)})};
+$('fHidden').onchange=function(){api('/v1/presence',{hidden:$('fHidden').checked}).then(function(){log($('fHidden').checked?'접속 상태 숨김(친구에게 오프라인)':'접속 상태 공개')})};
+$('btnRoad').onclick=function(){var e=S.econ&&S.econ.rankRoad;var b=$('econBox');b.innerHTML='<b>랭크 로드</b> <span class=dim>이번 시즌 첫 도달 단계마다 1회 · 다음 '+(e&&e.nextRewardTier||'-')+(e&&e.rpToNext?' ('+e.rpToNext+'RP 남음)':'')+' · 수량은 개발 가정값(기획 확인 중)</span>';
+ if(e&&e.claimable)b.appendChild(btn('받기 ('+e.claimable+'단계)',function(){api('/v1/rankroad/claim',{}).then(function(j){log('랭크 로드 '+j.tiers.length+'단계 +'+j.gold+'골드');loadEcon();setTimeout(function(){$('btnRoad').onclick()},300)}).catch(function(er){log(er.message)})},true));
+ var pre=document.createElement('pre');pre.textContent=(e?e.steps:[]).map(function(x){return (x.claimed?'[받음] ':x.reached?'[가능] ':'[ ] ')+x.name+' · '+x.gold+'골드'+(x.items.length?' + '+x.items.join(','):'')}).join('\n');b.appendChild(pre)};
+setInterval(function(){if(S.token&&!document.hidden)api('/v1/presence',{away:false}).catch(function(){})},60000);
+document.addEventListener('visibilitychange',function(){if(S.token)api('/v1/presence',{away:document.hidden}).catch(function(){})});
+setInterval(function(){if(S.token&&!S.st&&!document.hidden)loadFriends()},30000);
 setInterval(tick,500);start();
 </script></body></html>`;

@@ -7,8 +7,21 @@ export function searchRange(waitSec, { aiFallbackSec, wideAfterFallback }) {
   return QUEUE_RULES.steps.find(([t]) => waitSec < t)[1];
 }
 
+// 승점 몰아주기 방지(상세 13): 같은 두 계정은 24시간 안에 2번까지만 맺고, 3번째부터 피한다
+export const PAIR_WINDOW_MS = 24 * 3600 * 1000;
+export const PAIR_LIMIT = 2;
+export const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+export function pairBlocked(history, a, b, now) {
+  return (history?.[pairKey(a, b)] ?? []).filter((t) => now - t < PAIR_WINDOW_MS).length >= PAIR_LIMIT;
+}
+export function prunePairs(history, now) {
+  const out = {};
+  for (const [k, ts] of Object.entries(history ?? {})) { const keep = ts.filter((t) => now - t < PAIR_WINDOW_MS); if (keep.length) out[k] = keep; }
+  return out;
+}
+
 // 순수 매칭 함수: entries → { pairs:[[a,b]], ai:[a], timeout:[a] }
-export function matchTick(entries, now, { aiFallbackSec }) {
+export function matchTick(entries, now, { aiFallbackSec, history = {} }) {
   const ready = entries.filter((e) => now >= e.notBefore).sort((a, b) => a.since - b.since);  // 오래 기다린 사람 먼저
   const used = new Set();
   const pairs = [], ai = [], timeout = [];
@@ -18,7 +31,7 @@ export function matchTick(entries, now, { aiFallbackSec }) {
     if (used.has(a.acc)) continue;
     let best = null;
     for (const b of ready) {
-      if (b === a || used.has(b.acc)) continue;
+      if (b === a || used.has(b.acc) || pairBlocked(history, a.acc, b.acc, now)) continue;
       const diff = Math.abs(a.mmr - b.mmr);
       if (diff <= Math.max(range(a), range(b)) && (!best || diff < Math.abs(a.mmr - best.mmr))) best = b;
     }

@@ -10,7 +10,7 @@ export async function econLoad(env, data, account, season) {
   const tier = raw.tier ?? 1;
   let state = roll(raw.state, { account, now: Date.now(), seasonId: season.id, cfg });
   state = applyTier(state, raw.tier ?? 0, cfg);
-  return { raw, cfg, season, tier, tierName: tierName(data, tier), state };
+  return { raw, cfg, season, tier, tierName: tierName(data, tier), state, best: raw.best ?? raw.tier ?? 0, rp: raw.rp ?? 0 };
 }
 
 // fn(state, ctx) → { state, gold, reason, detail, result }. 버전 충돌이면 다시 읽고 다시 계산(최대 3회)
@@ -19,10 +19,11 @@ export async function econMutate(env, data, account, ref, fn, season) {
     const ctx = await econLoad(env, data, account, season);
     const out = fn(ctx.state, ctx);
     try {
-      const res = await rpc(env, "econ_commit", {
+      const args = {
         p_account: account, p_ref: typeof ref === "function" ? ref(out, ctx.state) : ref, p_expected_version: ctx.raw.version, p_state: out.state,
         p_gold_delta: out.gold ?? 0, p_reason: out.reason, p_detail: out.detail ?? {}
-      });
+      };
+      const res = out.items?.length ? await rpc(env, "econ_commit_items", { ...args, p_items: out.items }) : await rpc(env, "econ_commit", args);
       return { ...out, duplicate: res.status === "duplicate", balance: res.gold ?? ctx.raw.gold, view: econView(out.state, ctx.cfg, Date.now()) };
     } catch (error) {
       if (error.message !== "econ_conflict" || attempt === 2) throw error;
@@ -40,7 +41,7 @@ export async function settleEconomy(env, data, job) {
     const r = await econMutate(env, data, p.acc, `match:${job.matchId}`, (state, ctx) => {
       const res = applyMatch(state, {
         mode: job.mode, result: p.result, character: p.character, faction: ch.faction,
-        exclusive: p.stats?.exclusive ?? 0, spells: p.stats?.spells ?? 0, tier: ctx.tier, tierMult: firstWinMult(ctx.tierName)
+        exclusive: p.stats?.exclusive ?? 0, spells: p.stats?.spells ?? 0, tier: ctx.tier, tierMult: firstWinMult(ctx.tierName, ctx.cfg)
       }, ctx.cfg);
       return { state: res.state, gold: res.gold, reason: "match", detail: { mode: job.mode, result: p.result, parts: res.parts, counted: res.counted }, result: res };
     }, season);
