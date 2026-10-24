@@ -121,7 +121,7 @@ test("이월 실드는 1턴만, 연쇄 이월 없음. 아우렐 50%는 새 실�
   au.energy = 5;
   const def = give(st, 0, "C06");  // 철벽 DEF×3.5 ×1.2 = 231
   play(st, { cards: [def] }, pass);
-  assert.equal(au.shield.carried, Math.round(Math.round(55 * 3.5 * 1.2) * 0.5));  // 다음 턴으로 50% 이월
+  assert.equal(au.shield.carried, Math.round(Math.round(au.def * 3.5 * 1.2) * 0.5));  // 다음 턴으로 50% 이월
   st.players.forEach((p) => { p.idle = -99; });
   play(st, pass, pass);
   assert.equal(au.shield.carried, 0, "이월분은 다시 이월되지 않음");

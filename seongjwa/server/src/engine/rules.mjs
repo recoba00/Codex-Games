@@ -68,5 +68,5 @@ export const CHARACTER_PARAM_DEFAULTS = Object.freeze({
   TE: { flood: 0.2, ebb: 0.2, activeTurns: 2 },
   UM: { passiveCritBonus: 15, passiveHpBelow: 0.5, activePct: 0.35 },
   SI: { passiveDraw: 1, activeEnergyDown: 1, activeSeal: 1 },
-  MO: { passiveReduce: 0.15, activePerDebuff: 0.04, activeMaxDebuffs: 5 }
+  MO: { passiveReduce: 0.15, activePerDebuff: 0.06, activeMaxDebuffs: 5 }  // 영혼 수확 6% (기획답변 9차, 총괄 4장)
 });
