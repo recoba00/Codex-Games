@@ -54,7 +54,8 @@ class Client {
   async until(pred, ms = 10000) {
     const end = Date.now() + ms;
     while (Date.now() < end) { if (this.state && pred(this.state)) return this.state; await sleep(40); }
-    throw new Error(`${this.name}: 조건 시간 초과 ${JSON.stringify(this.state)?.slice(0, 300)}`);
+    const st = this.state ?? {};
+    throw new Error(`${this.name}: 조건 시간 초과 phase=${st.phase} deadline=${(st.phaseDeadline ?? 0) - (st.now ?? 0)}ms prep=${JSON.stringify(st.prep ?? {}).slice(0, 200)} events=${JSON.stringify(this.events.slice(-4)).slice(0, 300)}`);
   }
   async event(pred, ms = 5000) {
     const end = Date.now() + ms;
