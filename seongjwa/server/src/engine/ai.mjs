@@ -56,7 +56,7 @@ function score(state, seat, cand, pred, level, weights = {}) {
   const defs = ids.map((id) => state.cards[id]);
   const hpRatio = me.hp / me.maxHp;
   let buff = defs.filter((_, i) => ids[i] === "C16").reduce((a, c) => a + c.coef, 0);
-  if (me.char === "TE" && state.turn % 2 === 1) buff += 0.2;
+  if (me.char === "TE" && state.turn % 2 === 1) buff += me.cp.passiveFlood;
   const weak = within(me.st.weak, state.turn) ? 0.8 : 1;
   const critMult = 1 + (me.crit / 100) * (state.rules.crit_mult - 1);
 
@@ -64,16 +64,17 @@ function score(state, seat, cand, pred, level, weights = {}) {
   let dmg = 0;
   defs.forEach((c, i) => {
     if (c.kind !== "attack") return;
-    const hits = c.hits * (within(me.st.inferno, state.turn) ? 2 : 1);
+    const inf = within(me.st.inferno, state.turn);
+    const hits = c.hits * (inf ? me.cp.activeHits : 1) * (inf ? me.cp.activeHitMult : 1);
     dmg += me.atk * c.coef * hits * (1 + buff) * weak * defRed(o.def, c.pierce) * critMult * rush;
     if (ids[i] === "SL02" && me.spd > o.spd) dmg *= 1.2;
   });
   dmg *= 1 - pred.counter * 0.6 - pred.guard * 0.5;
   if (cand.active) {
-    if (me.char === "UM") dmg += (o.maxHp - o.hp) * 0.35 * rush;
-    if (me.char === "AU") dmg += (me.shield.carried + me.shield.norm + me.shield.full) * 1.5 * rush;
-    if (me.char === "IG") dmg += o.st.burn.length * o.maxHp * 0.03 * 2 * 2;
-    if (me.char === "MO") dmg += Math.min(5, me.debuffsLanded) * o.maxHp * 0.04 * rush;
+    if (me.char === "UM") dmg += (o.maxHp - o.hp) * me.cp.activePct * rush;
+    if (me.char === "AU") dmg += (me.shield.carried + me.shield.norm + me.shield.full) * me.cp.activeMult * rush;
+    if (me.char === "IG") dmg += o.st.burn.length * o.maxHp * state.rules.burn_pct * 2 * me.cp.activeMult;
+    if (me.char === "MO") dmg += Math.min(me.cp.activeMaxDebuffs, me.debuffsLanded) * o.maxHp * me.cp.activePerDebuff * rush;
   }
   let v = (dmg / o.maxHp) * 100;
   if (dmg >= o.hp + o.shield.carried + o.shield.norm + o.shield.full) v += 60;  // 이번 턴 처치 가능
@@ -82,7 +83,7 @@ function score(state, seat, cand, pred, level, weights = {}) {
   const incoming = pred.atk * o.atk * 1.6 * defRed(me.def) * rush;
   let saved = 0;
   defs.forEach((c, i) => {
-    if (c.kind === "defense") saved += Math.min(incoming, me.def * c.coef * (me.char === "AU" ? 1.2 : 1));
+    if (c.kind === "defense") saved += Math.min(incoming, me.def * c.coef * (me.char === "AU" ? 1 + me.cp.passiveShieldBonus : 1));
     if (c.kind === "counter") saved += pred.atk * o.atk * 1.4 * defRed(me.def) * rush + (ids[i] === "C07" ? pred.atk * me.atk * 0.8 * defRed(o.def) : 0);
     if (ids[i] === "C13" && hpRatio < 0.7) saved += me.maxHp * c.coef;
   });

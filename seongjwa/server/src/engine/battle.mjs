@@ -1,7 +1,7 @@
 // 동시 턴 전투 엔진 (서버 권위). 순수 함수 + 직렬화 가능한 상태(JSON)라 DO 저장소에 그대로 넣는다.
 // 근거: 총괄 5장(스펠), 6장(덱·에너지·처리 순서·피해 공식·판당 시간 장치), 12장(예외), 상세 02(키워드·피해 계산 순서).
 // 수치는 데이터 스냅샷(cards·spells·characters·settings)에서 읽고, 코드에는 규칙(무엇을 하는지)만 있다.
-import { buildRules, CARD_PARAM_DEFAULTS, CHARACTER_PARAM_DEFAULTS } from "./rules.mjs";
+import { buildRules, CARD_PARAM_DEFAULTS, characterParams } from "./rules.mjs";
 
 export const SPELL = Object.freeze({ GUARD: "SP01", MIRROR: "SP02", CLEANSE: "SP03", HEAL: "SP04", SEAL: "SP05", CHARGE: "SP06", INSIGHT: "SP07", EXHAUST: "SP08" });
 const DEBUFFS = ["burn", "mark", "weak", "activeSeal", "skillBlock", "handSeal", "energyDown"];
@@ -77,7 +77,7 @@ export function createBattle({ seed, data, players, rules: overrides = {} }) {
     }
     state.players.push({
       char: p.characterId,
-      cp: { ...(CHARACTER_PARAM_DEFAULTS[p.characterId] ?? {}), ...(ch.passive_params ?? {}), ...(ch.active_params ?? {}) },
+      cp: characterParams(p.characterId, ch),
       maxHp: ch.hp, hp: ch.hp, atk: ch.atk, def: ch.def, spd: ch.spd, crit: ch.crit,
       deck: shuffle(state, deckIds.map((id) => ({ uid: ++state.uid, id }))),
       hand: [], discard: [],
@@ -185,7 +185,7 @@ function isEbb(state, p) {
 function receivedMult(state, attacker, target, isAttack) {
   let m = 1;
   if (isAttack && attacker.exhausted) m *= 1 - attacker.exhausted;
-  if (isEbb(state, target)) m *= 1 - target.cp.ebb;
+  if (isEbb(state, target)) m *= 1 - target.cp.passiveEbb;
   if (target.char === "MO" && within(attacker.st.weak, state.turn)) m *= 1 - target.cp.passiveReduce;
   if (within(target.st.inferno, state.turn)) m *= 1 + target.cp.activeTakenUp;
   return m;
@@ -227,7 +227,7 @@ function strike(state, attacker, target, { coef, hits = 1, pierce = 0, attackCar
   let atk = attacker.atk;
   if (attacker.char === "PY") atk *= 1 + attacker.cp.passiveAtkPer10 * Math.floor((1 - ctx.hpAt[attacker.seat] / attacker.maxHp) * 10);
   let buff = attackCard ? attacker.attackBuff : 0;
-  if (attackCard && isFlood(state, attacker)) buff += attacker.cp.flood;
+  if (attackCard && isFlood(state, attacker)) buff += attacker.cp.passiveFlood;
   let mult = (1 + buff) * extraMult;
   if (within(attacker.st.weak, state.turn)) mult *= 0.8;
   const defense = 100 / (100 + target.def * (1 - pierce));
@@ -275,10 +275,10 @@ function beginTurn(state) {
 
 // ---------- 제출 (총괄 6장: 카드 최대 3장, 스펠 1개, 액티브) ----------
 export function cardCost(state, p, cardIds) {
-  let free = false;
+  let free = p.char === "SL" ? (p.cp?.passiveFreeCards ?? 1) : 0;
   return cardIds.map((id) => {
     const c = state.cards[id];
-    if (p.char === "SL" && !free && c.cost === 1) { free = true; return 0; }  // 순풍: 매 턴 첫 1E 카드 0
+    if (free > 0 && c.cost === 1) { free -= 1; return 0; }  // 순풍: 매 턴 처음 내는 1E 카드 0
     return c.cost;
   });
 }
@@ -527,7 +527,9 @@ export function resolveTurn(state) {
     let extra = 1;
     if (c.id === "SL02" && p.speed > o.speed) extra *= prm.fasterMult;
     if (c.id === "SI02" && o.silencedNow) extra *= 1 + prm.vsSilenced;
-    const hits = card.hits * (within(p.st.inferno, state.turn) ? 2 : 1);
+    const inf = within(p.st.inferno, state.turn);
+    if (inf) extra *= p.cp.activeHitMult;
+    const hits = card.hits * (inf ? p.cp.activeHits : 1);
     const hpDmg = strike(state, p, o, { coef: card.coef, hits, pierce: card.pierce, extraMult: extra, ctx });
     if (hpDmg > 0) {
       if (c.id === "IG02") applyDebuff(state, p, o, "burn", () => addBurn(state, o, prm.burnOnHpHit));
@@ -615,7 +617,7 @@ function useActive(state, p, o) {
       p.revealed = [];
       shuffle(state, o.deck);
       draw(state, o, n);
-      o.st.noCarry = { from: state.turn + 1, to: state.turn + 1 };
+      o.st.noCarry = { from: state.turn + 1, to: state.turn + cp.activeNoCarryTurns };
       break;
     }
     case "TE": p.st.greatTide = { from: state.turn + 1, to: state.turn + cp.activeTurns }; break;

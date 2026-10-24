@@ -12,6 +12,8 @@
 오류가 하나라도 있으면 SQL을 쓰지 않고 종료 코드 1.
 """
 import argparse
+import json
+import os
 import re
 import sys
 
@@ -22,6 +24,8 @@ LEGACY_CHARACTER_IDS = {
     "아우렐": "AU", "피로스": "PY", "이그니스": "IG", "셀레네": "SE", "테티스": "TE",
     "모르테": "MO", "실피": "SL", "움브라": "UM", "실렌티아": "SI",
 }
+# 기획답변 10차: 시트 `캐릭터`의 `패시브 수치`·`액티브 수치` 열(키=값;키=값). 키 목록·기본값은 엔진에서 뽑은 kit_keys.json
+KIT_KEYS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "kit_keys.json"), encoding="utf-8"))
 # 기획답변 3
 OFFER = {"본편 포함": "included", "유료 추가": "addon"}
 # 기획답변 5
@@ -110,10 +114,60 @@ def read_characters(wb, legacy):
         a_name, a_text = split_skill(row[h["액티브"]], where + " 액티브")
         if not 2 <= len(name) <= 8:
             err(f"{where}: 이름 2~8자 위반")
+        kit = {slot: read_kit(row[h[col]] if col in h else MISSING, cid, slot, where + " " + col, txt)
+               for slot, col, txt in (("passive", "패시브 수치", p_text), ("active", "액티브 수치", a_text))}
         out[cid] = dict(id=cid, name=name, job=norm(row[h["직업"]]), role=norm(row[h["역할"]]),
+                        passive_params=kit["passive"], active_params=kit["active"],
                         faction=norm(row[h["진영"]]), rarity=norm(row[h["등급"]]), offer=offer,
                         hp=row[h["HP"]], atk=row[h["ATK"]], def_=row[h["DEF"]], spd=row[h["SPD"]], crit=row[h["CRIT(%)"]],
                         passive_name=p_name, passive_text=p_text, active_name=a_name, active_text=a_text)
+    return out
+
+
+MISSING = object()
+
+
+def kit_number_forms(v):
+    """문구에서 찾을 숫자 표기: 0.06 → 6%, 1.5 → 150%·1.5, 2 → 2"""
+    forms = set()
+    if v != int(v) or v < 1:
+        forms.add(f"{round(v * 100):g}%")
+    if v == int(v):
+        forms.add(str(int(v)))
+    else:
+        forms.add(f"{v:g}")
+    return forms
+
+
+def read_kit(raw, cid, slot, where, text):
+    """'active_turns=2;active_taken_up=0.15' → dict. 열이 없거나 비면 {} (엔진 기본값 사용)"""
+    known = KIT_KEYS.get(cid, {}).get(slot, {})
+    if raw is MISSING:
+        return {}  # 열 자체가 없음(구버전 시트) → 엔진 기본값
+    raw = norm(raw)
+    if not raw:
+        if known:
+            warnings.append(f"{where} 비어 있음 → 엔진 기본값 {known}")
+        return {}
+    out = {}
+    for part in filter(None, (x.strip() for x in raw.split(";"))):
+        m = re.fullmatch(r"([a-z][a-z0-9_]*)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)", part)
+        if not m:
+            err(f"{where}: 형식 오류 '{part}' (키=값, 영문 snake_case 키, 숫자 값)")
+            continue
+        k, v = m.group(1), float(m.group(2))
+        if k not in known:
+            other = KIT_KEYS.get(cid, {}).get("active" if slot == "passive" else "passive", {})
+            err(f"{where}: 알 수 없는 키 '{k}'" + (" (다른 열의 키)" if k in other else f" (가능: {', '.join(known) or '없음'})"))
+            continue
+        if k in out:
+            err(f"{where}: 키 '{k}' 중복")
+        out[k] = int(v) if v == int(v) else v
+        if not any(re.search(r"(?<![0-9.])" + re.escape(f) + r"(?![0-9])", text or "") for f in kit_number_forms(v)) and v != known[k]:
+            warnings.append(f"{where}: {k}={out[k]} 이 스킬 문구에 없음 (수치 열이 기준) → '{text}'")
+    for k in known:
+        if k not in out:
+            warnings.append(f"{where}: '{k}' 없음 → 엔진 기본값 {known[k]}")
     return out
 
 
@@ -280,9 +334,10 @@ def emit(chars, cards, spells, settings, presets, tables, based_on, note):
                 "  delete from public.spells where version_id = v;", "  delete from public.settings where version_id = v;"]
     for c in chars.values():
         out.append("  insert into public.characters (version_id,id,name,job,role,faction,rarity,offer,hp,atk,def,spd,crit,"
-                   "passive_name,passive_text,active_name,active_text) values (v," + ",".join(lit(c[k]) for k in (
+                   "passive_name,passive_text,active_name,active_text,passive_params,active_params) values (v," + ",".join(lit(c[k]) for k in (
                        "id", "name", "job", "role", "faction", "rarity", "offer", "hp", "atk", "def_", "spd", "crit",
-                       "passive_name", "passive_text", "active_name", "active_text")) + ");")
+                       "passive_name", "passive_text", "active_name", "active_text"))
+                   + f",{lit(json.dumps(c['passive_params'], ensure_ascii=False))}::jsonb,{lit(json.dumps(c['active_params'], ensure_ascii=False))}::jsonb);")
     for k in cards.values():
         out.append("  insert into public.cards (version_id,id,name,kind,phase,owner_character,cost,coef,hits,pierce,effect_text)"
                    " values (v," + ",".join(lit(k[x]) for x in (

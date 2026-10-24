@@ -1,0 +1,83 @@
+{
+  "AU": {
+    "passive": {
+      "passive_shield_bonus": 0.2,
+      "passive_carry": 0.5
+    },
+    "active": {
+      "active_mult": 1.5
+    }
+  },
+  "PY": {
+    "passive": {
+      "passive_atk_per10": 0.04
+    },
+    "active": {
+      "active_turns": 2,
+      "active_taken_up": 0.15,
+      "active_hits": 2,
+      "active_hit_mult": 1
+    }
+  },
+  "IG": {
+    "passive": {
+      "passive_chance": 0.25
+    },
+    "active": {
+      "active_mult": 2
+    }
+  },
+  "SE": {
+    "passive": {
+      "passive_regen": 0.03,
+      "passive_shield_cap": 0.1
+    },
+    "active": {
+      "active_lookback": 2
+    }
+  },
+  "SL": {
+    "passive": {
+      "passive_free_cards": 1
+    },
+    "active": {
+      "active_no_carry_turns": 1
+    }
+  },
+  "TE": {
+    "passive": {
+      "passive_flood": 0.2,
+      "passive_ebb": 0.2
+    },
+    "active": {
+      "active_turns": 2
+    }
+  },
+  "UM": {
+    "passive": {
+      "passive_crit_bonus": 15,
+      "passive_hp_below": 0.5
+    },
+    "active": {
+      "active_pct": 0.35
+    }
+  },
+  "SI": {
+    "passive": {
+      "passive_draw": 1
+    },
+    "active": {
+      "active_energy_down": 1,
+      "active_seal": 1
+    }
+  },
+  "MO": {
+    "passive": {
+      "passive_reduce": 0.15
+    },
+    "active": {
+      "active_per_debuff": 0.06,
+      "active_max_debuffs": 5
+    }
+  }
+}

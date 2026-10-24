@@ -2,16 +2,23 @@
 // 사용: node tools/simulate.mjs [판수/조합=20] [데이터 JSON=test/fixtures/data_v1.json] > report.md
 import { readFileSync } from "node:fs";
 import { chooseAction, chooseLoadout, remember } from "../src/engine/ai.mjs";
-import { createBattle, presetDeck, resolveTurn, submit } from "../src/engine/battle.mjs";
+import { cardCost, createBattle, presetDeck, resolveTurn, submit } from "../src/engine/battle.mjs";
 
 const per = Number(process.argv[2] ?? 20);
 const DATA = JSON.parse(readFileSync(process.argv[3] ?? new URL("../test/fixtures/data_v1.json", import.meta.url)));
 // 진단 옵션(환경 변수): SIM_SURVIVAL=AI 생존 가치 비중(기본 1), SIM_SLOTS=덱 유형 제한("1,2" = 공세·균형),
-// SIM_ATK_COEF=공용 공격 카드 계수 배율, SIM_HP=전 캐릭터 HP 배율
+// SIM_ATK_COEF=공용 공격 카드 계수 배율, SIM_HP=전 캐릭터 HP 배율,
+// SIM_CP=스킬 수치 덮어쓰기 JSON(시트 `패시브 수치`·`액티브 수치` 키) 예: '{"PY":{"active_turns":1,"passive_atk_per10":0.03}}'
 const opt = { survival: Number(process.env.SIM_SURVIVAL ?? 1), slots: (process.env.SIM_SLOTS ?? "1,2,3").split(",").map(Number),
   atkCoef: Number(process.env.SIM_ATK_COEF ?? 1), hp: Number(process.env.SIM_HP ?? 1) };
 for (const [id, c] of Object.entries(DATA.cards)) if (c.kind === "attack" && !c.owner_character) c.coef = Number(c.coef) * opt.atkCoef;
 for (const c of Object.values(DATA.characters)) c.hp = Math.round(c.hp * opt.hp);
+const cpOver = JSON.parse(process.env.SIM_CP ?? "{}");
+for (const [id, kv] of Object.entries(cpOver)) DATA.characters[id].active_params = { ...(DATA.characters[id].active_params ?? {}), ...kv };
+if (Object.keys(cpOver).length) opt.cp = cpOver;
+// 실피 진단(기획답변 10차): 순풍 발동·절약 에너지·회오리 사용
+const leftAll = { n: 0, e: 0 };
+const sl = { capped: 0, left2: 0, left: 0, turns: 0, had1E: 0, fired: 0, saved: 0, fullGauge: 0, used: 0, games: 0 };
 const CHARS = Object.keys(DATA.characters);
 const STYLE = { 1: "공세", 2: "균형", 3: "수비" };
 let seed = 20261023;
@@ -31,6 +38,19 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
   while (!st.result) {
     for (const s of [0, 1]) {
       const act = chooseAction(st, s, { difficulty: "hard", random: r, memory: mem[s], weights: { survival: opt.survival } }).action;
+      const me = st.players[s];
+      const spent = cardCost(st, me, act.cards.map((uid) => me.hand.find((h) => h.uid === uid).id)).reduce((x, y) => x + y, 0);
+      leftAll.n += 1; leftAll.e += Math.max(0, me.energy - spent);
+      if (me.char === "SL" && a !== b) {
+        sl.left += Math.max(0, me.energy - spent);
+        if (me.energy - spent >= 2) { sl.left2 += 1; if (act.cards.length === st.rules.cards_per_turn_max) sl.capped += 1; }
+        sl.turns += 1;
+        if (me.hand.some((h) => st.cards[h.id].cost === 1 && !me.sealed.includes(h.uid))) sl.had1E += 1;
+        const ids = act.cards.map((uid) => me.hand.find((h) => h.uid === uid).id);
+        const free = cardCost(st, me, ids).filter((v, i) => v === 0 && st.cards[ids[i]].cost === 1).length;
+        if (free) { sl.fired += 1; sl.saved += free; }
+        if (me.gauge >= st.rules.gauge_max) { sl.fullGauge += 1; if (act.active) sl.used += 1; }
+      }
       for (const uid of act.cards) { kinds[st.cards[st.players[s].hand.find((h) => h.uid === uid).id].kind] = (kinds[st.cards[st.players[s].hand.find((h) => h.uid === uid).id].kind] ?? 0) + 1; }
       submit(st, s, act);
     }
@@ -38,6 +58,7 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
     remember(st, 0, mem[0]); remember(st, 1, mem[1]);
   }
   games += 1; turns += st.result.turn;
+  if (a !== b) sl.games += ids.filter((c) => c === "SL").length;
   reasons[st.result.reason] = (reasons[st.result.reason] ?? 0) + 1;
   const score = st.result.outcome === "a" ? [1, 0] : st.result.outcome === "b" ? [0, 1] : [0.5, 0.5];
   if (st.result.outcome === "draw") draws += 1;
@@ -63,4 +84,11 @@ out.push("", "| 덱 | 승률 | 판수 |", "| --- | --- | --- |");
 for (const k of Object.keys(deck).sort()) out.push(`| ${k} | ${pct(deck[k])}% | ${deck[k].n} |`);
 out.push("", "## 상성표 (행 캐릭터가 열 캐릭터를 상대로 이긴 비율, 0번 자리 기준)", "", `| | ${CHARS.join(" | ")} |`, `| --- |${CHARS.map(() => " --- |").join("")}`);
 for (const a of CHARS) out.push(`| ${a} | ${CHARS.map((b) => (a === b ? "-" : `${pct(pair[`${a}>${b}`] ?? { w: 0, n: 0 })}`)).join(" | ")} |`);
+if (sl.turns) {
+  const p1 = (x, y) => `${Math.round((100 * x) / Math.max(1, y))}%`;
+  out.push("", "## 실피 진단 (미러전 제외)", "",
+    `- 실피 턴 ${sl.turns}: 손에 1E 카드 있음 ${p1(sl.had1E, sl.turns)}, 순풍 발동 ${p1(sl.fired, sl.turns)} (1E 보유 턴 대비 ${p1(sl.fired, sl.had1E)}), 턴당 절약 에너지 ${(sl.saved / sl.turns).toFixed(2)}, 턴당 남긴 에너지 ${(sl.left / sl.turns).toFixed(2)} (전체 평균 ${(leftAll.e / leftAll.n).toFixed(2)})`,
+    `- 2E 이상 남긴 턴 ${p1(sl.left2, sl.turns)}, 그중 카드 3장 한도에 걸린 턴 ${p1(sl.capped, sl.left2)}`,
+    `- 회오리: 게이지 가득 찬 턴 ${sl.fullGauge} 중 사용 ${sl.used} (${p1(sl.used, sl.fullGauge)}), 판당 사용 ${(sl.used / Math.max(1, sl.games)).toFixed(2)}회`);
+}
 console.log(out.join("\n"));

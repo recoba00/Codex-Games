@@ -61,12 +61,23 @@ export const CARD_PARAM_DEFAULTS = Object.freeze({
 
 export const CHARACTER_PARAM_DEFAULTS = Object.freeze({
   AU: { passiveShieldBonus: 0.2, passiveCarry: 0.5, activeMult: 1.5 },
-  PY: { passiveAtkPer10: 0.04, activeTurns: 2, activeTakenUp: 0.15 },
+  PY: { passiveAtkPer10: 0.04, activeTurns: 2, activeTakenUp: 0.15, activeHits: 2, activeHitMult: 1 },  // 업화: 공격 카드 타수×activeHits, 피해×activeHitMult
   IG: { passiveChance: 0.25, activeMult: 2 },
   SE: { passiveRegen: 0.03, passiveShieldCap: 0.1, activeLookback: 2 },
-  SL: { activeNoCarry: 1 },
-  TE: { flood: 0.2, ebb: 0.2, activeTurns: 2 },
+  SL: { passiveFreeCards: 1, activeNoCarryTurns: 1 },  // 순풍: 매 턴 처음 내는 1E 카드 N장 0E / 회오리: 상대 이월 0 N턴
+  TE: { passiveFlood: 0.2, passiveEbb: 0.2, activeTurns: 2 },
   UM: { passiveCritBonus: 15, passiveHpBelow: 0.5, activePct: 0.35 },
   SI: { passiveDraw: 1, activeEnergyDown: 1, activeSeal: 1 },
   MO: { passiveReduce: 0.15, activePerDebuff: 0.06, activeMaxDebuffs: 5 }  // 영혼 수확 6% (기획답변 9차, 총괄 4장)
 });
+
+// 시트 `캐릭터`의 `패시브 수치`·`액티브 수치` 열(기획답변 10차): 키는 snake_case(passive_atk_per10), 엔진은 camelCase.
+export const toCamel = (k) => String(k).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+export const toSnake = (k) => String(k).replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+export function characterParams(id, ch = {}) {
+  const out = { ...(CHARACTER_PARAM_DEFAULTS[id] ?? {}) };
+  for (const src of [ch.passive_params, ch.active_params]) {
+    for (const [k, v] of Object.entries(src ?? {})) if (Number.isFinite(Number(v))) out[toCamel(k)] = Number(v);
+  }
+  return out;
+}
