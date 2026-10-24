@@ -35,6 +35,7 @@ class Client {
     this.state = null; this.events = [];
     this.ws = new WebSocket(`ws://127.0.0.1:${API_PORT}/v1/rooms/${code}/ws?ticket=${encodeURIComponent(t.ticket)}`);
     this.ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === "room") this.state = m; else this.events.push(m); };
+    this.ws.onclose = (e) => this.events.push({ type: "closed", code: e.code, reason: e.reason, at: Date.now() });
     await new Promise((res, rej) => { this.ws.onopen = res; this.ws.onerror = rej; });
     await this.until((s) => s);
   }
