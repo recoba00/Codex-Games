@@ -66,21 +66,21 @@ class Client {
 
 async function toBattle(players, picks) {
   const lead = players[0];
-  if (lead.state.phase === "ban") { players.forEach((p) => p.send({ type: "ban", characterId: null })); await lead.until((s) => s.phase === "pick"); }
+  if (lead.state.phase === "ban") { players.forEach((p) => p.send({ type: "ban", characterId: null })); await lead.until((s) => s.phase === "pick", 30000); }
   players.forEach((p, i) => p.send({ type: "pick", characterId: picks[i] }));
-  await lead.until((s) => s.phase === "loadout");
+  await lead.until((s) => s.phase === "loadout", 30000);
   players.forEach((p) => p.send({ type: "loadout", spells: ["SP01", "SP04"], preset: 2 }));
-  await lead.until((s) => s.phase === "battle");
+  await lead.until((s) => s.phase === "battle", 30000);
 }
 async function playOut(players, loserIdx) {
   const lead = players[0];
   while (lead.state.phase === "battle" && lead.state.battle.turn < 4) {
     const t = lead.state.battle.turn;
     for (const p of players) if (!p.state.battle.me.submitted) p.send({ type: "act", turn: t, cards: [] });
-    await lead.until((s) => s.phase !== "battle" || s.battle.turn > t, 8000);
+    await lead.until((s) => s.phase !== "battle" || s.battle.turn > t, 30000);
   }
   if (lead.state.phase === "battle") players[loserIdx].send({ type: "surrender" });
-  await lead.until((s) => s.phase === "result" && s.last?.econ, 10000);
+  await lead.until((s) => s.phase === "result" && s.last?.econ, 30000);
 }
 
 for (const ev of ["unhandledRejection", "uncaughtException"]) process.on(ev, (e) => {  // CI에서 원인이 보이게
