@@ -82,6 +82,11 @@ async function playOut(players, loserIdx) {
   await lead.until((s) => s.phase === "result" && s.last?.econ, 10000);
 }
 
+for (const ev of ["unhandledRejection", "uncaughtException"]) process.on(ev, (e) => {  // CI에서 원인이 보이게
+  console.error(ev, e?.message ?? e);
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=ops live test (${ev})::${String(e?.message ?? e).replace(/\n/g, " ").slice(0, 600)}`);
+  process.exitCode = 1;
+});
 const steps = [];
 const step = (s) => { steps.push(s); console.log(`ok - ${s}`); };
 const events = (acc, name) => sql("select * from public.events where account_id = $1 and ($2::text is null or name = $2) order by id", [acc, name ?? null]);
@@ -132,6 +137,9 @@ try {
   assert.ok(found.wait_sec >= 0 && found.range >= 100);
   step(`판 이벤트(밴·픽·스펠·턴 요약·판 결과)·매칭 이벤트(탐색 시작·상대 확정, 대기 ${found.wait_sec}초) 서버 기록`);
 
+  // 같은 DB로 다시 돌려도 되게 시험 단어 정리(로컬 반복 실행용)
+  await sql("update public.banned_words set removed_at = now() where removed_at is null and word in ('나쁜말', '멍청이', '바보', 'ㅂㅅ')");
+  await sql("update public.allowed_words set removed_at = now() where removed_at is null and word in ('멍청이왕국', '바보온달')");
   // 3) 백오피스 지표·금칙어: 관리자 → 지표 화면 값, 금칙어 추가 → 닉네임 변경 거부 → 걸린 닉네임 → 강제 변경
   const boot = `BOOT-${tag}`;
   await sql("insert into public.staff_invites (code_hash, role, expires_at) values ($1, 'admin', now() + interval '1 day')", [createHash("sha256").update(boot).digest("hex")]);
