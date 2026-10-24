@@ -24,7 +24,8 @@ async function fetchLive(env, fetcher) {
 }
 
 export async function getLive(env, fetcher = fetch, now = Date.now()) {
-  if (live && now - live.fetchedAt < LIVE_TTL_MS && snapshots.has(live.version)) return snapshots.get(live.version);
+  const ttl = Number(env?.LIVE_TTL_MS ?? LIVE_TTL_MS);  // 시험 환경은 짧게(배포 직후 확인)
+  if (live && now - live.fetchedAt < ttl && snapshots.has(live.version)) return snapshots.get(live.version);
   if (!inflight) {
     inflight = fetchLive(env, fetcher)
       .then((version) => { live = { version, fetchedAt: now }; return snapshots.get(version); })

@@ -11,6 +11,7 @@ import { cancelOrder, finishOrder, recoverOrders, startOrder } from "./payments.
 import { handleBo, runCron } from "./bo/api.mjs";
 import { claimRankRoad, rankRoadView } from "./season.mjs";
 import { pairRule } from "./queue-logic.mjs";
+import { assetManifest } from "./assets.mjs";
 import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
 
@@ -41,6 +42,8 @@ const STATUS = {
   mission_claimed: 409, mission_not_done: 409, nothing_to_claim: 409, reroll_used: 409, order_closed: 409, too_many_orders: 429,
   payment_unavailable: 503, payment_pending: 409, payment_failed: 402, steam_txn_failed: 502, item_not_owned: 403,
   friend_not_found: 404, already_friends: 409, friend_blocked: 403, friend_limit: 409, friend_in_game: 409, invite_expired: 410, not_friend: 403, invite_limit: 429, block_limit: 409,
+  asset_not_webp: 400, asset_too_large: 413, asset_spec: 422, asset_region: 422, asset_slot_invalid: 400, asset_kind_invalid: 400, asset_skin_invalid: 400,
+  asset_char_invalid: 400, asset_full_missing: 409, storage_failed: 502, state_invalid: 409,
   name_banned: 422, provider_taken: 409, provider_invalid: 400, choice_invalid: 400, account_not_active: 409, link_unavailable: 503, events_invalid: 400, confirm_required: 400,
   forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
@@ -55,7 +58,7 @@ async function readJson(request) {
 
 // 지표 로그(상세 12): 클라이언트가 보내는 이벤트. 판·매칭 이벤트는 서버가, 골드·결제·신고·보상은 원본 표가 기준이라 받지 않는다
 export const CLIENT_EVENTS = new Set(["session_start", "session_end", "tutorial_step", "card_detail_open", "shop_view", "item_preview",
-  "settings_change", "disconnect", "reconnect", "purchase_start", "purchase_fail"]);
+  "settings_change", "disconnect", "reconnect", "purchase_start", "purchase_fail", "asset_download"]);  // asset_download { bytes, files }: 저장소 전송량 추정(기획답변 18차)
 const PLATFORMS = new Set(["android", "ios", "steam"]), DEVICES = new Set(["phone", "tablet", "desktop"]);
 export function clientEvents(input, acc, now = Date.now()) {
   const list = Array.isArray(input?.events) ? input.events : [];
@@ -74,6 +77,8 @@ export function clientEvents(input, acc, now = Date.now()) {
   }
   return { rows, platform, device, appVer };
 }
+
+const originOf = (u) => { try { return new URL(String(u)).origin; } catch { return ""; } };  // 에셋 미리보기(저장소 주소)
 
 function deviceId(input) {
   const value = String(input.deviceId ?? "");
@@ -114,7 +119,7 @@ export async function handle(request, env) {
   switch (route) {
     case "GET /bo":  // 백오피스 화면(직원 로그인 필요, 상세 14)
       return new Response(BO_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-frame-options": "DENY",
-        "content-security-policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'" } });
+        "content-security-policy": `default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob: https: ${originOf(env.SUPABASE_URL)}; connect-src 'self'; frame-ancestors 'none'` } });
 
     case "GET /v1/lobby":  // 로비 배너(최대 5)·공지 팝업(상세 05)
       return json({ ok: true, ...(await rpc(env, "lobby_content", {})) }, 200, { "cache-control": "public, max-age=60" });
@@ -448,6 +453,11 @@ export async function handle(request, env) {
     case "GET /v1/inventory": {
       const claims = await authenticate(request, env);
       return json({ ok: true, ...(await rpc(env, "inventory_list", { p_account: claims.sub })) });
+    }
+
+    case "GET /v1/assets": {  // 게임이 받는 이미지 목록(라이브 데이터 기준). 파일명이 내용 해시라 바뀐 것만 내려받으면 됨
+      const { version, snapshot: data } = await pinLive(env);
+      return json({ ok: true, version, ...assetManifest(data, env) }, 200, { "cache-control": "public, max-age=60" });
     }
 
     // ---------- 지표 로그(상세 12) ----------

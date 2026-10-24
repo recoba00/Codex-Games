@@ -80,6 +80,11 @@ jobs:
         run: npm run test:live:social
       - name: Live test on local Workers runtime + Postgres (metrics events, banned words, account link/delete, purge cron)
         run: npm run test:live:ops
+      - name: Live test on local Workers runtime + Postgres + browser (asset upload, regions, storage stub)
+        run: |
+          npm i --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+          npm run test:live:assets
 
   deploy:
     name: Deploy to Cloudflare
@@ -126,6 +131,22 @@ jobs:
           node -e 'require("fs").writeFileSync(process.env.RUNNER_TEMP + "/s.json", JSON.stringify({ SUPABASE_SERVICE_KEY: process.env.KEY, TOKEN_SECRET: process.env.TOK }))'
           npx wrangler secret bulk "$RUNNER_TEMP/s.json"
           rm -f "$RUNNER_TEMP/s.json"
+      - name: Smoke test (asset storage bucket, service key)
+        env:
+          KEY: ${{ secrets.SEONGJWA_SUPABASE_SERVICE_KEY }}
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const url = readFileSync("wrangler.jsonc", "utf8").match(/"SUPABASE_URL"\s*:\s*"([^"]+)"/)[1].replace(/\/$/, "");
+            const key = process.env.KEY, h = { apikey: key, ...(key.startsWith("eyJ") ? { authorization: "Bearer " + key } : {}) };
+            const body = readFileSync("test/fixtures/assets/face.webp");
+            const put = await fetch(url + "/storage/v1/object/assets/smoke/ci-check.webp", { method: "POST", headers: { ...h, "content-type": "image/webp", "x-upsert": "true" }, body });
+            if (!put.ok) { console.log("::error::storage upload " + put.status + " " + (await put.text()).slice(0, 200)); process.exit(1); }
+            const get = await fetch(url + "/storage/v1/object/public/assets/smoke/ci-check.webp");
+            console.log({ upload: put.status, publicGet: get.status, cors: get.headers.get("access-control-allow-origin"), bytes: (await get.arrayBuffer()).byteLength });
+            if (!get.ok) process.exit(1);
+            await fetch(url + "/storage/v1/object/assets/smoke/ci-check.webp", { method: "DELETE", headers: h });
+          '
       - name: Smoke test (deployed worker)
         env:
           BASE: https://seongjwa.recoba00.workers.dev
@@ -150,6 +171,7 @@ jobs:
             echo "friends:"; curl -fsS "$BASE/v1/friends" -H "authorization: Bearer $tok" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);if(!j.ok||!/^ASTRA-/.test(j.code))process.exit(1);console.log({code:j.code,friends:j.friends.length})})'
             echo "account:"; curl -fsS "$BASE/v1/account" -H "authorization: Bearer $tok" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);if(!j.ok)process.exit(1);console.log({status:j.status,logins:j.logins})})'
             echo "events:"; curl -fsS -X POST "$BASE/v1/events" -H "authorization: Bearer $tok" -H 'content-type: application/json' -d '{"platform":"steam","device":"desktop","appVer":"smoke","events":[{"name":"session_start","props":{"smoke":true}}]}'; echo
+            echo "assets:"; curl -fsS "$BASE/v1/assets" | head -c 300; echo
             echo "hall of fame:"; curl -fsS "$BASE/v1/hall-of-fame" | head -c 200; echo
             echo "backoffice page:"; curl -fsS -o /dev/null -w "%{http_code}\n" "$BASE/bo"
             echo "backoffice api (no login → 401):"; test "$(curl -s -o /dev/null -w "%{http_code}" "$BASE/bo/v1/me")" = "401" && echo ok

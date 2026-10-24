@@ -7,6 +7,7 @@ import { importWorkbook } from "./importer.mjs";
 import { readXlsx } from "./xlsx.mjs";
 import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
+import { ART, SLOTS, assetPath, checkRegions, checkUpload, publicBase, slotOf, storagePut, webpInfo } from "../assets.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -269,7 +270,80 @@ export async function handleBo(request, env, url) {
       return json({ ok: true });
     }
 
-    case "GET /dashboard": { const st = await staffOf(request, env); allow(st, "dashboard"); return json({ ok: true, ...(await rpc(env, "bo_dashboard", {})) }); }
+    case "GET /dashboard": { const st = await staffOf(request, env); allow(st, "dashboard"); return json({ ok: true, ...(await rpc(env, "bo_dashboard", {})), assetUsage: await assetUsage(env) }); }
+
+    // ---------- 에셋 등록(상세 14·10, 기획답변 18·19차) ----------
+    case "GET /assets": {  // ?version=N (없으면 편집 중인 최신 초안, 없으면 라이브 보기)
+      const st = await staffOf(request, env); allow(st, "data_view");
+      const vs = await rpc(env, "bo_versions", { p_limit: 30 });
+      const drafts = vs.versions.filter((v) => v.status === "draft" && ["editing", "rejected"].includes(v.state)).map((v) => ({ id: v.id, note: v.note, by: v.created_login, basedOn: v.based_on }));
+      const version = Number(url.searchParams.get("version")) || drafts[0]?.id || vs.live;
+      const data = await rpc(env, "bo_version_data", { p_version: version });
+      const { snapshot: live } = await pinLive(env);
+      return json({ ok: true, version, live: vs.live, editable: drafts.some((d) => d.id === version), drafts, base: publicBase(env),
+        spec: { art: ART, slots: SLOTS, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), faceMaxKb: Number(live?.settings?.asset_face_max_kb ?? 100) },
+        characters: Object.entries(data.characters ?? {}).map(([id, c]) => ({ id, name: c.name, faction: c.faction })),
+        assets: data.tables?.assets ?? {}, art: data.tables?.art ?? {}, usage: await assetUsage(env) });
+    }
+    case "POST /assets/draft": {
+      const st = await staffOf(request, env); allow(st, "data_edit");
+      const b = await body(request);
+      return json({ ok: true, version: await rpc(env, "bo_asset_draft", { p_staff: st.id, p_note: String(b.note ?? "").slice(0, 200) }) });
+    }
+    case "POST /assets/upload": {  // 본문 = 압축한 WebP. ?version&kind=slot|full|thumb|face&slot=ID 또는 &char=AU&skin=000
+      const st = await staffOf(request, env); allow(st, "data_edit");
+      const version = Number(url.searchParams.get("version"));
+      const kind = url.searchParams.get("kind");
+      const bytes = new Uint8Array(await request.arrayBuffer());
+      const slot = kind === "slot" ? slotOf(url.searchParams.get("slot")) : null;
+      if (kind === "slot" && !slot) throw new Error("asset_slot_invalid");
+      const ch = url.searchParams.get("char"), skin = url.searchParams.get("skin") ?? "000";
+      if (kind !== "slot") {
+        if (!["full", "thumb", "face"].includes(kind)) throw new Error("asset_kind_invalid");
+        if (!/^\d{3}$/.test(skin)) throw new Error("asset_skin_invalid");
+        const data = await rpc(env, "bo_version_data", { p_version: version });
+        if (!data.characters?.[ch]) throw new Error("asset_char_invalid");
+      }
+      const info = webpInfo(bytes);
+      checkUpload(kind, info, bytes.length, slot);
+      const prefix = kind === "slot" ? `slots/${slot.id}` : `art/${ch}_${skin}_${kind}`;
+      const path = assetPath(prefix, [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map((x) => x.toString(16).padStart(2, "0")).join(""));
+      await storagePut(env, path, bytes);
+      const value = { path, w: info.w, h: info.h, bytes: bytes.length, alpha: info.alpha, at: new Date().toISOString() };
+      const target = kind === "slot" ? ["assets", ["slots", slot.id]] : ["art", [ch, skin, kind]];
+      await rpc(env, "bo_asset_set", { p_staff: st.id, p_version: version, p_table: target[0], p_path: target[1], p_value: value,
+        p_action: kind === "slot" ? "슬롯 파일 교체" : `캐릭터 이미지 교체(${kind})`, p_detail: { path, bytes: bytes.length, w: info.w, h: info.h } });
+      const { snapshot: live } = await pinLive(env);
+      const capKb = kind === "face" ? Number(live?.settings?.asset_face_max_kb ?? 100) : kind === "full" ? Number(live?.settings?.asset_full_max_kb ?? 1024) : null;
+      const warnings = capKb && bytes.length > capKb * 1024 ? [`${kind} ${Math.round(bytes.length / 1024)}KB — 목표 ${capKb}KB 초과(상세 14)`] : [];
+      return json({ ok: true, path, url: publicBase(env) + path, ...value, warnings });
+    }
+    case "POST /assets/regions": {  // { version, char, skin, card:{x,y,w,h}, face:{x,y,w,h} } 비율 좌표
+      const st = await staffOf(request, env); allow(st, "data_edit");
+      const b = await body(request);
+      const version = Number(b.version), skin = String(b.skin ?? "000");
+      const data = await rpc(env, "bo_version_data", { p_version: version });
+      const full = data.tables?.art?.[b.char]?.[skin]?.full;
+      if (!full) throw new Error("asset_full_missing");
+      const r = checkRegions(full, b.card, b.face);
+      await rpc(env, "bo_asset_set", { p_staff: st.id, p_version: version, p_table: "art", p_path: [b.char, skin, "card"], p_value: r.card, p_action: "카드 영역 지정", p_detail: r.card });
+      await rpc(env, "bo_asset_set", { p_staff: st.id, p_version: version, p_table: "art", p_path: [b.char, skin, "faceRect"], p_value: r.face, p_action: "얼굴 영역 지정", p_detail: r.face });
+      return json({ ok: true, ...r });
+    }
+    case "POST /assets/remove": {  // { version, slot } 슬롯 파일 빼기(게임 내장 기본 이미지로) 또는 { version, char, skin, kind: "face"|"skin" }
+      const st = await staffOf(request, env); allow(st, "data_edit");
+      const b = await body(request);
+      const version = Number(b.version);
+      if (b.slot) {
+        if (!slotOf(b.slot)) throw new Error("asset_slot_invalid");
+        await rpc(env, "bo_asset_set", { p_staff: st.id, p_version: version, p_table: "assets", p_path: ["slots", b.slot], p_value: null, p_action: "슬롯 파일 빼기(내장 기본 이미지)", p_detail: {} });
+      } else {
+        if (!["face", "skin"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
+        const path = b.kind === "face" ? [b.char, b.skin, "face"] : [b.char, b.skin];
+        await rpc(env, "bo_asset_set", { p_staff: st.id, p_version: version, p_table: "art", p_path: path, p_value: null, p_action: b.kind === "face" ? "얼굴 파일 빼기(영역으로 잘라 씀)" : "스킨 이미지 빼기", p_detail: {} });
+      }
+      return json({ ok: true });
+    }
     case "GET /audit": {
       const st = await staffOf(request, env); allow(st, "audit");
       const before = url.searchParams.get("before");
@@ -469,4 +543,16 @@ export function characterWinRates(data, rows) {
   }
   return Object.values(out).map((x) => ({ ...x, winPct: x.games ? Math.round((1000 * x.wins) / x.games) / 10 : null }))
     .sort((a, b) => order(a.group) - order(b.group) || b.games - a.games);
+}
+
+// 저장소 사용량과 무료 한도 대비 비율(기획답변 18차: 80%에서 경고). 한도는 설정값 storage_quota_mb·transfer_quota_mb(없으면 무료 플랜 1GB·5GB)
+export async function assetUsage(env) {
+  const u = await rpc(env, "bo_asset_usage", {}).catch(() => null);
+  if (!u) return null;
+  const set = (await pinLive(env).catch(() => ({ snapshot: {} }))).snapshot?.settings ?? {};
+  const storageQ = Number(set.storage_quota_mb ?? 1024) * 1048576, transferQ = Number(set.transfer_quota_mb ?? 5120) * 1048576;
+  const pct = (v, q) => Math.round((1000 * v) / q) / 10;
+  const out = { storage: { ...u.storage, quota: storageQ, pct: pct(u.storage.bytes, storageQ) }, download: { ...u.download, quota: transferQ, pct: pct(u.download.bytes, transferQ) } };
+  out.warn = out.storage.pct >= 80 || out.download.pct >= 80;
+  return out;
 }

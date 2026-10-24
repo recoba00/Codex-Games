@@ -11,6 +11,7 @@ const snapshot = JSON.parse(readFileSync(new URL("../fixtures/data_v1.json", imp
 snapshot.settings.ai_fallback_sec = Number(process.env.FAKE_AI_FALLBACK_SEC ?? 3);
 const sha = createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
 export const saved = [];
+export const storage = new Map();
 
 let fns = null;
 async function functions() {
@@ -73,12 +74,35 @@ async function saveMatch(row) {
 export function startPgRest(port) {
   const server = createServer((req, res) => {
     let raw = "";
-    req.on("data", (c) => { raw += c; });
+    const chunks = [];
+    req.on("data", (c) => { raw += c; chunks.push(c); });
     req.on("end", async () => {
       const url = new URL(req.url, "http://x");
+      // Storage 대역(에셋): 업로드는 메모리에, 공개 주소로 내려받기(CORS 허용)
+      const so = url.pathname.match(/^\/storage\/v1\/object\/(public\/)?assets\/(.+)$/);
+      if (so && req.method === "POST" && !so[1]) {
+        if (!req.headers.apikey) return reply(res, 401, { message: "no key" });
+        storage.set(so[2], { body: Buffer.concat(chunks), type: req.headers["content-type"] });
+        return reply(res, 200, { Key: `assets/${so[2]}` });
+      }
+      if (so && req.method === "GET" && so[1]) {
+        const f = storage.get(so[2]);
+        if (!f) return reply(res, 404, { message: "not found" });
+        res.writeHead(200, { "content-type": f.type, "access-control-allow-origin": "*" });
+        return res.end(f.body);
+      }
       const body = raw ? JSON.parse(raw) : {};
       const m = url.pathname.match(/^\/rest\/v1\/rpc\/([a-z_]+)$/);
       if (m) { const r = await callRpc(m[1], body); return reply(res, r.status, r.body); }
+      if (process.env.PGREST_REAL_LIVE && url.pathname === "/rest/v1/data_live") {  // 실제 DB의 라이브 버전(에셋 시험)
+        const r = await pool.query("select l.version_id, v.snapshot, v.snapshot_sha256 from public.data_live l join public.data_versions v on v.id = l.version_id");
+        return reply(res, 200, r.rows.map((x) => ({ version_id: Number(x.version_id), data_versions: { id: Number(x.version_id), snapshot: x.snapshot, snapshot_sha256: x.snapshot_sha256 } })));
+      }
+      if (process.env.PGREST_REAL_LIVE && url.pathname === "/rest/v1/data_versions") {
+        const id = Number((url.searchParams.get("id") ?? "").replace("eq.", ""));
+        const r = await pool.query("select id, snapshot, snapshot_sha256 from public.data_versions where id = $1 and status = 'published'", [id]);
+        return reply(res, 200, r.rows.map((x) => ({ ...x, id: Number(x.id) })));
+      }
       if (url.pathname === "/rest/v1/data_live") return reply(res, 200, [{ version_id: 1, data_versions: { id: 1, snapshot, snapshot_sha256: sha } }]);
       if (url.pathname === "/rest/v1/match_results" && req.method === "POST") {
         if (saved.some((r) => r.id === body.id)) return reply(res, 409, { message: "duplicate" });
