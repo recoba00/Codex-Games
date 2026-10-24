@@ -4,8 +4,8 @@ import { test } from "node:test";
 import { importWorkbook } from "../src/bo/importer.mjs";
 import { readXlsx } from "../src/bo/xlsx.mjs";
 
-// 백오피스 업로드 경로(JS 리더 + JS 가져오기)가 Python 도구로 만든 라이브 데이터 v7과 같은 결과를 내는지 확인한다.
-const XLSX = new URL("../../data/balance_v7.xlsx", import.meta.url);
+// 백오피스 업로드 경로(JS 리더 + JS 가져오기)가 라이브 데이터(테스트 픽스처)와 같은 결과를 내는지 확인한다.
+const XLSX = new URL("../../data/balance_v8.xlsx", import.meta.url);
 const FIX = JSON.parse(readFileSync(new URL("./fixtures/data_v1.json", import.meta.url)));
 const sheetsP = readXlsx(readFileSync(XLSX));
 
@@ -17,11 +17,12 @@ test("xlsx 리더: 시트 12개, 수식 셀은 저장된 결과값", async () =>
   assert.ok(Math.abs(row[1] - 1311.4285714) < 1e-3, "수식 결과값");
 });
 
-test("가져오기: 오류·검수 차단 0건, 데이터 v7과 같은 값", async () => {
+test("가져오기: 오류·검수 차단·경고 0건, 라이브 데이터와 같은 값", async () => {
   const r = importWorkbook(await sheetsP);
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.blocks, []);
-  assert.deepEqual(r.summary, { characters: 9, cards: 34, spells: 8, settings: 35, presets: 27, tables: ["rank_tiers", "leaver"] });
+  assert.deepEqual(r.warnings, []);
+  assert.deepEqual(r.summary, { characters: 9, cards: 34, spells: 8, settings: 44, presets: 27, tables: ["missions", "rank_tiers", "leaver"] });
   const d = r.data;
   for (const [id, c] of Object.entries(FIX.characters)) {
     for (const k of ["name", "job", "role", "faction", "rarity", "offer", "hp", "atk", "def", "spd", "crit", "passive_name", "passive_text", "active_name", "active_text", "passive_params", "active_params"]) {
@@ -55,4 +56,17 @@ test("가져오기 검증: 형식 오류는 errors, 스탯 예산·범위는 blo
   assert.ok(r.errors.some((e) => e.includes("알 수 없는 키 'oops'")), r.errors.join("\n"));
   assert.ok(r.blocks.some((e) => e.startsWith("AU HP 2000 범위")), r.blocks.join("\n"));
   assert.ok(r.blocks.some((e) => e.startsWith("AU 스탯 예산")));
+});
+
+test("경제 시트: E열 키는 설정으로, 미션 표는 tables.missions로 (기획답변 13차)", async () => {
+  const r = importWorkbook(await sheetsP);
+  assert.deepEqual([r.data.settings.econ_practice_win_gold.value, r.data.settings.econ_attend_cum28_gold.value], [15, 3000]);
+  const m = r.data.tables.missions;
+  assert.deepEqual([m.daily.length, m.weekly.length, m.season.length], [5, 5, 10]);
+  assert.deepEqual(m.weekly.find((x) => x.id === "W02"), { id: "W02", name: "진영 3개 모두로 1승", metric: "faction_wins", target: 1, aux: { factions: 3 }, scope: "ranked_ai", gold: 200 });
+  const s = structuredClone(await sheetsP);
+  const row = s["경제"].find((x) => x?.[1] === "D02");
+  row[3] = "winz"; row[6] = "everyone";
+  const bad = importWorkbook(s);
+  assert.ok(bad.errors.some((e) => e.includes("조건 종류 'winz'")) && bad.errors.some((e) => e.includes("범위 'everyone'")), bad.errors.join("\n"));
 });

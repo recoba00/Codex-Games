@@ -9,7 +9,7 @@ import { pool, startPgRest } from "./pg-rest.mjs";
 const DB_PORT = 54361, API_PORT = 8831;
 const API = `http://127.0.0.1:${API_PORT}`;
 const here = new URL("../../", import.meta.url).pathname;
-const XLSX = readFileSync(new URL("../../../data/balance_v7.xlsx", import.meta.url));
+const XLSX = readFileSync(new URL("../../../data/balance_v8.xlsx", import.meta.url));
 const db = await startPgRest(DB_PORT);
 writeFileSync(`${here}.dev.vars`, `SUPABASE_URL=http://127.0.0.1:${DB_PORT}\nSUPABASE_SERVICE_KEY=sb_secret_local\nTOKEN_SECRET=local-test-secret-local-test-secret-123\n`);
 const wr = spawn("npx", ["wrangler", "dev", "--port", String(API_PORT), "--ip", "127.0.0.1", "--test-scheduled", "--var", "DEV_LOGIN:1"], { cwd: here, stdio: ["ignore", "pipe", "pipe"] });
@@ -64,7 +64,7 @@ try {
   step("초대 코드 가입(한 번만)·로그인·역할 권한, 직원 토큰과 플레이어 토큰 분리");
 
   // 2) xlsx 업로드 → 검증 → 검수(자기 승인 금지) → 배포 → 두 번째 버전 예약(크론) → 롤백
-  const up = await ok(call(`/bo/v1/data/import?note=${encodeURIComponent("v7 기준 업로드 시험")}&file=balance_v7.xlsx`, XLSX, planner, true));
+  const up = await ok(call(`/bo/v1/data/import?note=${encodeURIComponent("v7 기준 업로드 시험")}&file=balance_v8.xlsx`, XLSX, planner, true));
   assert.deepEqual([up.validation.errors.length, up.validation.blocks.length, up.validation.summary.characters], [0, 0, 9]);
   const v1 = up.version;
   await err(call("/bo/v1/data/import?note=x", XLSX, ops, true), "forbidden", 403);

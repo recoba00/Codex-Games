@@ -5,6 +5,7 @@
 //   blocks   — 상세 14 자동 검증 중 검수 요청을 막는 것(스탯 예산·범위). 초안 저장은 된다.
 //   warnings — 알림만(스킬 문구 숫자 불일치, 스펠 개수 등).
 import { CHARACTER_PARAM_DEFAULTS, toSnake } from "../engine/rules.mjs";
+import { METRICS, SCOPES } from "../economy.mjs";
 
 const OFFER = { "본편 포함": "included", "유료 추가": "addon" };
 const KIND = { "면역": "immune", "방어": "defense", "반격": "counter", "침묵": "silence", "방해": "disrupt", "스킬": "skill", "공격": "attack" };
@@ -72,6 +73,66 @@ export function importWorkbook(sheets) {
       if (!(isNum(val) || typeof val === "boolean")) err(`설정값 ${r}행 ${key}: 값이 숫자가 아님 → ${JSON.stringify(val)}`);
       settings[key] = { value: val, unit: "단위" in h ? norm(cell(row, h["단위"])) : "",
         desc: [norm(cell(row, h["항목"])), "설명" in h ? norm(cell(row, h["설명"])) : ""].filter(Boolean).join(" ") };
+    }
+  }
+
+  // ---------- 경제: E열 키(설정값과 같은 방식) + 미션 표 (기획답변 13차) ----------
+  const tables = {};
+  if (!sheets["경제"]) warnings.push("시트 `경제` 없음 → 경제 수치·미션은 서버 기본값");
+  else {
+    const rows = sheets["경제"];
+    const hr = rows.findIndex((row) => ["종류", "ID", "이름", "조건 종류", "목표"].every((x) => (row ?? []).map(norm).includes(x)));
+    // E열 키: 미션 표 위쪽에서 영문 키 모양인 칸만(같은 열의 한글 비고는 건너뜀)
+    for (let r = 0; r < (hr < 0 ? rows.length : hr); r += 1) {
+      const row = rows[r] ?? [];
+      const raw = cell(row, 4);
+      if (typeof raw !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(raw.trim())) continue;
+      const key = raw.trim();
+      const where = `경제 ${r + 1}행 '${norm(cell(row, 0))}'`;
+      if (!/^[a-z][a-z0-9_]{1,63}$/.test(key)) { err(`${where}: 키 형식 오류(영문 소문자 snake_case) → '${key}'`); continue; }
+      if (key in settings) { err(`${where}: 키 중복 ${key} (설정값 시트와 겹침)`); continue; }
+      const val = cell(row, 1);
+      if (!isNum(val)) { err(`${where} ${key}: 값이 숫자가 아님 → ${JSON.stringify(val)}`); continue; }
+      settings[key] = { value: val, unit: norm(cell(row, 2)), desc: [norm(cell(row, 0)), norm(cell(row, 3))].filter(Boolean).join(" ") };
+    }
+    if (hr < 0) warnings.push("경제: 미션 표 헤더(종류·ID·이름·조건 종류·목표)를 찾지 못함 → 서버 기본 미션");
+    else {
+      const h = {};
+      rows[hr].map(norm).forEach((x, i) => { if (x && !(x in h)) h[x] = i; });
+      const KINDS = { "일일": "daily", "주간": "weekly", "시즌": "season" };
+      const TIERS = ["bronze", "silver", "gold", "platinum", "diamond", "master"];
+      const missions = { daily: [], weekly: [], season: [] };
+      const ids = new Set();
+      for (let r = hr + 1; r < rows.length; r += 1) {
+        const row = rows[r] ?? [];
+        const kind = KINDS[norm(cell(row, h["종류"]))];
+        if (!kind) { if (/^[DWS]\d{2}$/.test(norm(cell(row, h.ID)))) err(`경제 ${r + 1}행: 미션 종류 오류 → '${norm(cell(row, h["종류"]))}'`); continue; }  // 검산 행 등은 ID 칸이 비어 건너뜀
+        const id = norm(cell(row, h.ID)), where = `경제 ${r + 1}행 미션 ${id}`;
+        if (!/^[DWS]\d{2}$/.test(id) || id[0] !== { daily: "D", weekly: "W", season: "S" }[kind]) err(`${where}: ID 형식 오류(일일 Dnn·주간 Wnn·시즌 Snn)`);
+        if (ids.has(id)) err(`${where}: ID 중복`);
+        ids.add(id);
+        const metric = norm(cell(row, h["조건 종류"])), scope = norm(cell(row, h["범위"]));
+        if (!METRICS.includes(metric)) err(`${where}: 조건 종류 '${metric}' (가능: ${METRICS.join(", ")})`);
+        if (!SCOPES.includes(scope)) err(`${where}: 범위 '${scope}' (가능: ${SCOPES.join(", ")})`);
+        const target = cell(row, h["목표"]), gold = cell(row, h["골드"]);
+        if (!isInt(target) || target < 1) err(`${where}: 목표가 1 이상 정수가 아님 → ${JSON.stringify(target)}`);
+        if (!isInt(gold) || gold < 0) err(`${where}: 골드가 0 이상 정수가 아님 → ${JSON.stringify(gold)}`);
+        const aux = {};
+        for (const part of norm(cell(row, h["보조값"])).split(/[;,]/).map((x) => x.trim()).filter(Boolean)) {
+          const m = part.match(/^([a-z_]+)\s*=\s*([a-z0-9_]+)$/);
+          if (!m) { err(`${where}: 보조값 형식 오류 '${part}' (키=값)`); continue; }
+          aux[m[1]] = /^\d+$/.test(m[2]) ? Number(m[2]) : m[2];
+        }
+        if (metric === "faction_wins" && !isInt(aux.factions)) err(`${where}: faction_wins는 보조값 factions=N 필요`);
+        if (metric === "char_wins" && !isInt(aux.chars)) err(`${where}: char_wins는 보조값 chars=N 필요`);
+        if (metric === "tier_reach" && !TIERS.includes(aux.tier)) err(`${where}: tier_reach는 보조값 tier=${TIERS.join("|")} 필요`);
+        missions[kind].push({ id, name: norm(cell(row, h["이름"])), metric, target, aux, scope, gold });
+      }
+      const dailyCount = settings.econ_daily_count?.value ?? 3;
+      if (missions.daily.length < dailyCount) err(`경제 미션: 일일 후보 ${missions.daily.length}개 < 하루 ${dailyCount}개`);
+      if (missions.daily.length === dailyCount) warnings.push("경제 미션: 일일 후보가 하루 개수와 같아 '하루 1개 교체'를 할 수 없음");
+      if (!missions.weekly.length || !missions.season.length) warnings.push("경제 미션: 주간 또는 시즌 미션이 없음");
+      tables.missions = missions;
     }
   }
 
@@ -212,7 +273,6 @@ export function importWorkbook(sheets) {
   }
 
   // ---------- 표: 랭크_승점, 이탈패널티 ----------
-  const tables = {};
   {
     const rows = need("랭크_승점");
     const [r0, h] = headerIndex(rows, ["순번", "단계", "누적 RP 시작", "기준 MMR", "패배 감소 배율", "하한선", "AI 대체"], "랭크_승점");

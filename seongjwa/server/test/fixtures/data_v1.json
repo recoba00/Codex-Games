@@ -1,14 +1,14 @@
 {
 "cards": {
 "C01": {
-"coef": 1.0,
+"coef": 1,
 "cost": 1,
 "hits": 1,
 "kind": "attack",
 "name": "베기",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×1.0",
 "owner_character": null
 },
@@ -20,7 +20,7 @@
 "name": "강타",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×1.8",
 "owner_character": null
 },
@@ -32,7 +32,7 @@
 "name": "연속 찌르기",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×0.6 3회. 타격마다 실드 차감",
 "owner_character": null
 },
@@ -49,14 +49,14 @@
 "owner_character": null
 },
 "C05": {
-"coef": 2.0,
+"coef": 2,
 "cost": 1,
 "hits": 1,
 "kind": "defense",
 "name": "막기",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "실드 DEF×2.0 (이번 턴)",
 "owner_character": null
 },
@@ -68,7 +68,7 @@
 "name": "철벽",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "실드 DEF×3.5 (이번 턴)",
 "owner_character": null
 },
@@ -80,7 +80,7 @@
 "name": "받아치기",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "상대 공격 카드 1장 무효 + ATK×0.8 반격",
 "owner_character": null
 },
@@ -92,7 +92,7 @@
 "name": "봉인",
 "phase": 2,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "상대 이번 턴 스킬·액티브 무효, 다음 턴 액티브 봉인",
 "owner_character": null
 },
@@ -104,7 +104,7 @@
 "name": "쉿",
 "phase": 2,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "상대 다음 턴 스킬 봉쇄(이번 턴 효과 없음)",
 "owner_character": null
 },
@@ -116,19 +116,19 @@
 "name": "정신 집중",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "이번 턴 + 다음 턴 디버프 면역",
 "owner_character": null
 },
 "C11": {
-"coef": 1.0,
+"coef": 1,
 "cost": 2,
 "hits": 1,
 "kind": "immune",
 "name": "신성 결계",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "이번 턴 디버프 면역 + 디버프 해제 + 실드 DEF×1.0",
 "owner_character": null
 },
@@ -140,7 +140,7 @@
 "name": "약화",
 "phase": 2,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "상대 다음 턴 ATK −20%",
 "owner_character": null
 },
@@ -152,31 +152,31 @@
 "name": "응급 처치",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "최대 HP 12% 회복",
 "owner_character": null
 },
 "C14": {
-"coef": 25.0,
+"coef": 25,
 "cost": 1,
 "hits": 1,
 "kind": "skill",
 "name": "집중",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "스킬 게이지 +25",
 "owner_character": null
 },
 "C15": {
-"coef": 2.0,
+"coef": 2,
 "cost": 1,
 "hits": 1,
 "kind": "skill",
 "name": "전술 드로우",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "카드 2장 드로우",
 "owner_character": null
 },
@@ -188,7 +188,7 @@
 "name": "분노",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "공격 강화: 이번 턴 공격 피해 +30%",
 "owner_character": null
 },
@@ -200,7 +200,7 @@
 "name": "일출의 방패",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "실드 DEF×2.5, 이 실드는 다음 턴 100% 이월",
 "owner_character": "AU"
 },
@@ -212,19 +212,19 @@
 "name": "정오의 결의",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "현재 실드 +30%, 게이지 +20",
 "owner_character": "AU"
 },
 "IG01": {
-"coef": 2.0,
+"coef": 2,
 "cost": 2,
 "hits": 1,
 "kind": "counter",
 "name": "화염 결계",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "상대 공격 카드 1장 무효 + 작열 2스택",
 "owner_character": "IG"
 },
@@ -236,7 +236,7 @@
 "name": "불티 세례",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×0.5 3회, HP 피해가 들어가면 작열 1스택",
 "owner_character": "IG"
 },
@@ -248,43 +248,43 @@
 "name": "저주의 손길",
 "phase": 2,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "상대 약화 2턴(ATK −20%)",
 "owner_character": "MO"
 },
 "MO02": {
-"coef": 2.0,
+"coef": 2,
 "cost": 2,
 "hits": 1,
 "kind": "defense",
 "name": "망령 갑주",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "실드 DEF×2.0, 약화 상태 상대에게 맞으면 실드 +50%",
 "owner_character": "MO"
 },
 "PY01": {
-"coef": 2.0,
+"coef": 2,
 "cost": 2,
 "hits": 1,
 "kind": "attack",
 "name": "불꽃 일격",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×2.0, 자신 최대 HP 5% 소모",
 "owner_character": "PY"
 },
 "PY02": {
-"coef": 35.0,
+"coef": 35,
 "cost": 1,
 "hits": 1,
 "kind": "skill",
 "name": "연소",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "자신 최대 HP 8% 소모, 게이지 +35",
 "owner_character": "PY"
 },
@@ -296,7 +296,7 @@
 "name": "달의 기도",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "이번·다음 턴 회복량 +50%, 게이지 +15",
 "owner_character": "SE"
 },
@@ -308,19 +308,19 @@
 "name": "월광 일섬",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×1.2, 준 HP 피해의 30% 회복",
 "owner_character": "SE"
 },
 "SI01": {
-"coef": 30.0,
+"coef": 30,
 "cost": 2,
 "hits": 1,
 "kind": "silence",
 "name": "마나 붕괴",
 "phase": 2,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "봉인 효과 + 상대 게이지 −30",
 "owner_character": "SI"
 },
@@ -332,19 +332,19 @@
 "name": "어둠 화살",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×0.9, 침묵 상태 상대에게 +50%",
 "owner_character": "SI"
 },
 "SL01": {
-"coef": 1.0,
+"coef": 1,
 "cost": 1,
 "hits": 1,
 "kind": "skill",
 "name": "산들바람",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "1장 드로우, 게이지 +20",
 "owner_character": "SL"
 },
@@ -356,7 +356,7 @@
 "name": "칼바람",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×0.7, 이번 턴 내 SPD가 더 높으면 ×1.5",
 "owner_character": "SL"
 },
@@ -368,7 +368,7 @@
 "name": "밀물 찌르기",
 "phase": 4,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "ATK×1.3, 밀물(홀수) 턴이면 게이지 +20",
 "owner_character": "TE"
 },
@@ -380,7 +380,7 @@
 "name": "썰물 방벽",
 "phase": 1,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "실드 DEF×1.5, 썰물(짝수) 턴이면 ×2",
 "owner_character": "TE"
 },
@@ -392,19 +392,19 @@
 "name": "그림자 표식",
 "phase": 2,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "표식: 2턴간 받는 치명 피해 +20%, 처형 계수 +10%p",
 "owner_character": "UM"
 },
 "UM02": {
-"coef": 25.0,
+"coef": 25,
 "cost": 1,
 "hits": 1,
 "kind": "skill",
 "name": "그림자 걸음",
 "phase": 3,
 "params": {},
-"pierce": 0.0,
+"pierce": 0,
 "effect_text": "다음 턴 SPD +30, 게이지 +25",
 "owner_character": "UM"
 }
@@ -412,7 +412,7 @@
 "spells": {
 "SP01": {
 "name": "수호",
-"value": 1.0,
+"value": 1,
 "params": {},
 "cooldown": 5,
 "effect_text": "이번 턴 받는 모든 피해 0(지속 피해 포함)"
@@ -447,14 +447,14 @@
 },
 "SP06": {
 "name": "충전",
-"value": 2.0,
+"value": 2,
 "params": {},
 "cooldown": 5,
 "effect_text": "이번 턴 에너지 +N"
 },
 "SP07": {
 "name": "통찰",
-"value": 2.0,
+"value": 2,
 "params": {},
 "cooldown": 4,
 "effect_text": "즉시 N장 드로우 + 상대 손패 1장 공개"
@@ -679,6 +679,206 @@
 }
 ],
 "mmr_start": 800
+},
+"missions": {
+"daily": [
+{
+"id": "D01",
+"name": "랭킹전 3판",
+"metric": "games",
+"target": 3,
+"aux": {},
+"scope": "ranked",
+"gold": 100
+},
+{
+"id": "D02",
+"name": "2승",
+"metric": "wins",
+"target": 2,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 100
+},
+{
+"id": "D03",
+"name": "전용 카드 5장 사용",
+"metric": "signature_cards",
+"target": 5,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 100
+},
+{
+"id": "D04",
+"name": "스펠 3회 사용",
+"metric": "spells",
+"target": 3,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 100
+},
+{
+"id": "D05",
+"name": "4판 플레이",
+"metric": "games",
+"target": 4,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 100
+}
+],
+"weekly": [
+{
+"id": "W01",
+"name": "랭킹전 15판",
+"metric": "games",
+"target": 15,
+"aux": {},
+"scope": "ranked",
+"gold": 200
+},
+{
+"id": "W02",
+"name": "진영 3개 모두로 1승",
+"metric": "faction_wins",
+"target": 1,
+"aux": {
+"factions": 3
+},
+"scope": "ranked_ai",
+"gold": 200
+},
+{
+"id": "W03",
+"name": "친구와 1판",
+"metric": "friend_games",
+"target": 1,
+"aux": {},
+"scope": "friend",
+"gold": 200
+},
+{
+"id": "W04",
+"name": "10승",
+"metric": "wins",
+"target": 10,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 200
+},
+{
+"id": "W05",
+"name": "전용 카드 30장 사용",
+"metric": "signature_cards",
+"target": 30,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 200
+}
+],
+"season": [
+{
+"id": "S01",
+"name": "골드 티어 도달",
+"metric": "tier_reach",
+"target": 1,
+"aux": {
+"tier": "gold"
+},
+"scope": "any",
+"gold": 500
+},
+{
+"id": "S02",
+"name": "캐릭터 5명으로 각 3승",
+"metric": "char_wins",
+"target": 3,
+"aux": {
+"chars": 5
+},
+"scope": "ranked_ai",
+"gold": 500
+},
+{
+"id": "S03",
+"name": "30승",
+"metric": "wins",
+"target": 30,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 500
+},
+{
+"id": "S04",
+"name": "랭킹전 60판",
+"metric": "games",
+"target": 60,
+"aux": {},
+"scope": "ranked",
+"gold": 500
+},
+{
+"id": "S05",
+"name": "진영 3개 모두로 각 5승",
+"metric": "faction_wins",
+"target": 5,
+"aux": {
+"factions": 3
+},
+"scope": "ranked_ai",
+"gold": 500
+},
+{
+"id": "S06",
+"name": "친구와 5판",
+"metric": "friend_games",
+"target": 5,
+"aux": {},
+"scope": "friend",
+"gold": 500
+},
+{
+"id": "S07",
+"name": "전용 카드 100장 사용",
+"metric": "signature_cards",
+"target": 100,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 500
+},
+{
+"id": "S08",
+"name": "스펠 60회 사용",
+"metric": "spells",
+"target": 60,
+"aux": {},
+"scope": "ranked_ai",
+"gold": 500
+},
+{
+"id": "S09",
+"name": "캐릭터 9명으로 각 1승",
+"metric": "char_wins",
+"target": 1,
+"aux": {
+"chars": 9
+},
+"scope": "ranked_ai",
+"gold": 500
+},
+{
+"id": "S10",
+"name": "플래티넘 도달",
+"metric": "tier_reach",
+"target": 1,
+"aux": {
+"tier": "platinum"
+},
+"scope": "any",
+"gold": 500
+}
+]
 }
 },
 "presets": {
@@ -1169,7 +1369,16 @@
 "ai_subopt_gold_plat": 0.05,
 "reconnect_grace_sec": 60,
 "season_early_win_mult": 1.5,
-"ai_subopt_bronze_silver": 0.15
+"ai_subopt_bronze_silver": 0.15,
+"econ_win_gold": 30,
+"econ_win_daily_cap": 10,
+"econ_attend_week_sum": 1400,
+"econ_attend_day7_bonus": 1000,
+"season_days": 28,
+"econ_attend_cum28_gold": 3000,
+"econ_season_mission_gold": 500,
+"econ_practice_win_gold": 15,
+"econ_practice_daily_games": 3
 },
 "characters": {
 "AU": {

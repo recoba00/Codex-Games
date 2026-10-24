@@ -1,57 +1,48 @@
 // 경제 규칙(순수 함수): 판 보상·일일 첫 승·미션·출석. DB 반영은 econ-db.mjs.
-// 근거: 상세 05(미션 종류·개수·갱신 05:00·인정 범위·하루 1회 교체·출석), 상세 06(골드 획득처·상한),
-//       시트 `경제`(승리 30·하루 10승·미션 300/1,000·출석 1,400+1,000), 시트 `랭크보상`(첫 승 100 × 티어 배율).
-// 데이터 settings(econ_* 키)·tables.missions가 있으면 그 값을 쓴다(상세 14 원격 데이터 원칙).
+// 근거: 상세 05(미션·갱신 05:00·인정 범위·하루 1회 교체·출석), 상세 06(골드 획득처·상한), 총괄 8장(모드별 보상),
+//       시트 `경제`(E열 키, 미션 표 40~65행), 시트 `랭크보상`(첫 승 100 × 티어 배율), 기획답변 13차.
+// 데이터 settings(econ_* 키)·tables.missions가 있으면 그 값을 쓴다(재배포 없이 변경).
 
 export const ECON_DEFAULTS = Object.freeze({
-  econ_win_gold: 30,              // 시트 경제: 승리 골드
-  econ_win_gold_daily_wins: 10,   // 하루 10승까지
-  econ_first_win_gold: 100,       // 시트 랭크보상: 일일 첫 승 기본
-  econ_ai_daily_count: 3,         // 상세 05: AI 대전은 하루 3판까지 인정
-  econ_attend_daily_gold: 200,    // 시트 경제: 출석 7일 합 1,400
-  econ_attend_day7_bonus: 1000,   // 7일째 보너스
-  econ_attend_total_days: 28,     // 상세 05: 누적 28일 보상
-  econ_attend_total_gold: 3000,
-  econ_daily_reroll: 1,           // 일일 미션 하루 1개 무료 교체
-  econ_name_change_gold: 4000,    // 상세 05: 닉네임 2회째부터
-  econ_mail_days: 30,             // 우편 보관 30일
-  econ_reset_hour_kst: 5          // 매일 05:00, 주간은 월요일 05:00
+  econ_win_gold: 30,               // 시트 경제 E열
+  econ_win_daily_cap: 10,          // 하루 10승까지(랭킹전·AI 대전 승리 합산)
+  econ_first_win_gold: 100,        // 시트 랭크보상: 일일 첫 승 기본(랭킹전만, 기획답변 13차 A4)
+  econ_practice_win_gold: 15,      // AI 대전 승리 골드(30의 절반, 총괄 8장 "소량")
+  econ_practice_daily_games: 3,    // AI 대전 하루 인정 판수(4판째부터 골드·미션 미인정)
+  econ_attend_week_sum: 1400,      // 출석 7일 합(하루 200)
+  econ_attend_day7_bonus: 1000,    // 7일째 보너스
+  econ_attend_cum28_gold: 3000,    // 누적 28일 출석 보상, 1회만(기획답변 13차 A5)
+  econ_attend_cum_days: 28,
+  econ_daily_count: 3,             // 일일 미션 개수(상세 05)
+  econ_daily_reroll: 1,            // 일일 미션 하루 1개 무료 교체
+  econ_name_change_gold: 4000,     // 닉네임 2회째부터
+  econ_mail_days: 30,              // 우편 보관 30일
+  econ_reset_hour_kst: 5           // 매일 05:00, 주간은 월요일 05:00
 });
 
 // 첫 승 배율(시트 랭크보상): 티어 이름 앞부분으로 찾는다
 export const FIRST_WIN_MULT = Object.freeze({ "브론즈": 1.0, "실버": 1.1, "골드": 1.2, "플래티넘": 1.3, "다이아": 1.4, "마스터": 1.5, "레전드": 1.5 });
+const TIER_WORD = Object.freeze({ bronze: "브론즈", silver: "실버", gold: "골드", platinum: "플래티넘", diamond: "다이아", master: "마스터" });
+const TIER_NO_DEFAULT = Object.freeze({ bronze: 1, silver: 4, gold: 7, platinum: 10, diamond: 13, master: 16 });
 
-// 미션 기본표(상세 05 예시 기반, 개발 가정값 → 기획 확인 요청 13차). scope: ranked=랭킹전만, counted=랭킹전+AI 대전(하루 3판)
-//   metric: play 판수, win 승리, exclusive 전용 카드 사용 장수, spell 스펠 사용, faction_win 서로 다른 진영으로 승리,
-//           friend_play 친구방 판, tier_reach 티어 도달(target=티어 번호), char_wins 캐릭터 N명으로 각 per승
+// 미션 표(시트 `경제` 40~65행과 같은 기본값). 조건 종류(metric)·범위(scope)는 시트 키 그대로.
+//   scope: ranked = 랭킹전·AI 랭킹전 / ranked_ai = + AI 대전(하루 3판) / friend = 친구방 / any = 모든 모드
+//   aux: faction_wins → factions(진영 수), char_wins → chars(캐릭터 수), tier_reach → tier(티어 이름)
+export const METRICS = Object.freeze(["games", "wins", "signature_cards", "spells", "faction_wins", "friend_games", "tier_reach", "char_wins"]);
+export const SCOPES = Object.freeze(["ranked", "ranked_ai", "friend", "any"]);
+const M = (id, name, metric, target, aux, scope, gold) => ({ id, name, metric, target, aux, scope, gold });
 export const MISSION_DEFAULTS = Object.freeze({
-  daily_count: 3,
-  daily: [
-    { id: "D_RANKED3", name: "랭킹전 3판", metric: "play", scope: "ranked", target: 3, gold: 100 },
-    { id: "D_WIN2", name: "2승", metric: "win", scope: "counted", target: 2, gold: 100 },
-    { id: "D_EXCL5", name: "전용 카드 5장 사용", metric: "exclusive", scope: "counted", target: 5, gold: 100 },
-    { id: "D_SPELL3", name: "스펠 3회 사용", metric: "spell", scope: "counted", target: 3, gold: 100 },
-    { id: "D_PLAY4", name: "4판 플레이", metric: "play", scope: "counted", target: 4, gold: 100 }
-  ],
-  weekly: [
-    { id: "W_RANKED15", name: "랭킹전 15판", metric: "play", scope: "ranked", target: 15, gold: 200 },
-    { id: "W_FACTION3", name: "진영 3개 모두로 1승", metric: "faction_win", scope: "counted", target: 3, gold: 200 },
-    { id: "W_FRIEND1", name: "친구와 1판", metric: "friend_play", scope: "friend", target: 1, gold: 200 },
-    { id: "W_WIN10", name: "10승", metric: "win", scope: "counted", target: 10, gold: 200 },
-    { id: "W_EXCL30", name: "전용 카드 30장 사용", metric: "exclusive", scope: "counted", target: 30, gold: 200 }
-  ],
-  season: [
-    { id: "S_TIER_GOLD", name: "골드 티어 도달", metric: "tier_reach", scope: "ranked", target: 7, gold: 500 },
-    { id: "S_CHARS5", name: "캐릭터 5명으로 각 3승", metric: "char_wins", scope: "counted", target: 5, per: 3, gold: 500 },
-    { id: "S_WIN30", name: "30승", metric: "win", scope: "counted", target: 30, gold: 500 },
-    { id: "S_RANKED60", name: "랭킹전 60판", metric: "play", scope: "ranked", target: 60, gold: 500 },
-    { id: "S_FACTION3", name: "진영 3개 모두로 각 5승", metric: "faction_win", scope: "counted", target: 3, per: 5, gold: 500 },
-    { id: "S_FRIEND5", name: "친구와 5판", metric: "friend_play", scope: "friend", target: 5, gold: 500 },
-    { id: "S_EXCL100", name: "전용 카드 100장 사용", metric: "exclusive", scope: "counted", target: 100, gold: 500 },
-    { id: "S_SPELL60", name: "스펠 60회 사용", metric: "spell", scope: "counted", target: 60, gold: 500 },
-    { id: "S_CHARS9", name: "캐릭터 9명으로 각 1승", metric: "char_wins", scope: "counted", target: 9, per: 1, gold: 500 },
-    { id: "S_TIER_PLAT", name: "플래티넘 티어 도달", metric: "tier_reach", scope: "ranked", target: 10, gold: 500 }
-  ]
+  daily: [M("D01", "랭킹전 3판", "games", 3, {}, "ranked", 100), M("D02", "2승", "wins", 2, {}, "ranked_ai", 100),
+    M("D03", "전용 카드 5장 사용", "signature_cards", 5, {}, "ranked_ai", 100), M("D04", "스펠 3회 사용", "spells", 3, {}, "ranked_ai", 100),
+    M("D05", "4판 플레이", "games", 4, {}, "ranked_ai", 100)],
+  weekly: [M("W01", "랭킹전 15판", "games", 15, {}, "ranked", 200), M("W02", "진영 3개 모두로 1승", "faction_wins", 1, { factions: 3 }, "ranked_ai", 200),
+    M("W03", "친구와 1판", "friend_games", 1, {}, "friend", 200), M("W04", "10승", "wins", 10, {}, "ranked_ai", 200),
+    M("W05", "전용 카드 30장 사용", "signature_cards", 30, {}, "ranked_ai", 200)],
+  season: [M("S01", "골드 티어 도달", "tier_reach", 1, { tier: "gold" }, "any", 500), M("S02", "캐릭터 5명으로 각 3승", "char_wins", 3, { chars: 5 }, "ranked_ai", 500),
+    M("S03", "30승", "wins", 30, {}, "ranked_ai", 500), M("S04", "랭킹전 60판", "games", 60, {}, "ranked", 500),
+    M("S05", "진영 3개 모두로 각 5승", "faction_wins", 5, { factions: 3 }, "ranked_ai", 500), M("S06", "친구와 5판", "friend_games", 5, {}, "friend", 500),
+    M("S07", "전용 카드 100장 사용", "signature_cards", 100, {}, "ranked_ai", 500), M("S08", "스펠 60회 사용", "spells", 60, {}, "ranked_ai", 500),
+    M("S09", "캐릭터 9명으로 각 1승", "char_wins", 1, { chars: 9 }, "ranked_ai", 500), M("S10", "플래티넘 도달", "tier_reach", 1, { tier: "platinum" }, "any", 500)]
 });
 
 export function econConfig(data) {
@@ -59,7 +50,17 @@ export function econConfig(data) {
   const cfg = { ...ECON_DEFAULTS };
   for (const k of Object.keys(cfg)) if (s[k] !== undefined && Number.isFinite(Number(s[k]))) cfg[k] = Number(s[k]);
   cfg.missions = data?.tables?.missions ?? MISSION_DEFAULTS;
+  const tiers = data?.tables?.rank_tiers?.tiers ?? [];
+  cfg.tierNo = Object.fromEntries(Object.entries(TIER_WORD).map(([en, ko]) => [en, tiers.find((t) => String(t.name).startsWith(ko))?.no ?? TIER_NO_DEFAULT[en]]));
   return cfg;
+}
+
+// 미션의 완료 기준(진행 표시의 분모)
+export function goalOf(d) {
+  if (d.metric === "faction_wins") return Number(d.aux?.factions ?? 3);
+  if (d.metric === "char_wins") return Number(d.aux?.chars ?? 1);
+  if (d.metric === "tier_reach") return 1;
+  return Number(d.target);
 }
 
 // ---------- 기간: 매일 05:00 KST, 주간 월요일 05:00 KST ----------
@@ -79,96 +80,108 @@ function hash(str) {
   return h >>> 0;
 }
 
-// 계정·날짜로 정해지는 일일 미션 3개(같은 날 다시 불러도 같음)
+// 계정·날짜로 정해지는 일일 미션(같은 날 다시 불러도 같음)
 function pickDaily(account, day, cfg) {
   const pool = cfg.missions.daily;
-  const n = Math.min(cfg.missions.daily_count ?? 3, pool.length);
-  const order = pool.map((m) => ({ id: m.id, k: hash(`${account}|${day}|${m.id}`) })).sort((a, b) => a.k - b.k);
-  return order.slice(0, n).map((x) => ({ id: x.id, p: 0, done: false, claimed: false }));
+  const n = Math.min(cfg.econ_daily_count, pool.length);
+  return pool.map((m) => ({ id: m.id, k: hash(`${account}|${day}|${m.id}`) })).sort((a, b) => a.k - b.k).slice(0, n)
+    .map((x) => ({ id: x.id, p: 0, done: false, claimed: false }));
 }
-
-const fresh = (list) => list.map((m) => ({ id: m.id, p: 0, done: false, claimed: false }));
+const fresh = (id) => ({ id, p: 0, done: false, claimed: false });
+const newBucket = (ids) => ({ list: ids.map(fresh), fw: {}, cw: {} });
+// 미션 표가 바뀌었으면(배포로 ID 추가·삭제) 진행은 같은 ID만 이어 간다
+function syncList(bucket, defs) {
+  const old = Object.fromEntries((bucket.list ?? []).map((m) => [m.id, m]));
+  bucket.list = defs.map((d) => old[d.id] ?? fresh(d.id));
+  bucket.fw ??= {}; bucket.cw ??= {};
+}
 
 // 기간이 바뀌었으면 새 미션·카운터로. 순수 함수: 새 상태를 돌려준다
 export function roll(state, { account, now, seasonId, cfg }) {
   const k = periodKeys(now, cfg);
   const s = structuredClone(state ?? {});
-  if (s.day !== k.day) {
+  const known = (kind) => new Set(cfg.missions[kind].map((m) => m.id));
+  const sameDay = s.day === k.day;
+  if (!sameDay || !s.daily || s.daily.list.some((m) => !known("daily").has(m.id))) {
+    if (!sameDay) s.today = { wins: 0, ai: 0, firstWin: false };
+    s.daily = { ...newBucket([]), list: pickDaily(account, k.day, cfg), rerolls: sameDay ? s.daily?.rerolls ?? 0 : 0 };
     s.day = k.day;
-    s.today = { wins: 0, ai: 0, firstWin: false };
-    s.daily = { list: pickDaily(account, k.day, cfg), rerolls: 0 };
   }
-  if (s.week !== k.week) {
-    s.week = k.week;
-    s.weekly = { list: fresh(cfg.missions.weekly), factions: [] };
-  }
-  if (seasonId != null && s.season !== seasonId) {
-    s.season = seasonId;
-    s.seasonM = { list: fresh(cfg.missions.season), chars: {}, factions: {} };
-  }
+  s.daily.fw ??= {}; s.daily.cw ??= {};
+  if (s.week !== k.week || !s.weekly) { s.week = k.week; s.weekly = newBucket(cfg.missions.weekly.map((m) => m.id)); } else syncList(s.weekly, cfg.missions.weekly);
+  if (seasonId != null && (s.season !== seasonId || !s.seasonM)) { s.season = seasonId; s.seasonM = newBucket(cfg.missions.season.map((m) => m.id)); } else if (s.seasonM) syncList(s.seasonM, cfg.missions.season);
+  s.today ??= { wins: 0, ai: 0, firstWin: false };
   s.att ??= { last: null, count: 0 };
   return s;
 }
 
+const BUCKETS = [["daily", "daily"], ["weekly", "weekly"], ["season", "seasonM"]];
+const bucketOf = (s, kind) => s[BUCKETS.find(([k]) => k === kind)[1]];
 const defOf = (cfg, kind, id) => cfg.missions[kind].find((m) => m.id === id);
 
+function progressOf(d, m, bucket, match) {
+  switch (d.metric) {
+    case "games": case "friend_games": return m.p + 1;
+    case "wins": return m.p + (match.result === "win" ? 1 : 0);
+    case "signature_cards": return m.p + (match.exclusive ?? 0);
+    case "spells": return m.p + (match.spells ?? 0);
+    case "faction_wins": return Object.values(bucket.fw).filter((n) => n >= d.target).length;
+    case "char_wins": return Object.values(bucket.cw).filter((n) => n >= d.target).length;
+    default: return m.p;
+  }
+}
+
 // ---------- 판 결과 반영 ----------
-// match: { mode: ranked|ranked_ai|practice|friend, result: win|loss|draw|leave|drop, character, faction, exclusive, spells, tier }
+// match: { mode: ranked|ranked_ai|practice|friend, result: win|loss|draw|leave|drop, character, faction, exclusive, spells, tier, tierMult }
 export function applyMatch(state, match, cfg) {
   const s = structuredClone(state);
   const ranked = match.mode === "ranked" || match.mode === "ranked_ai";
-  const ai = match.mode === "practice";
+  const practice = match.mode === "practice";
   const friend = match.mode === "friend";
-  let counted = ranked;
-  if (ai) { s.today.ai += 1; counted = s.today.ai <= cfg.econ_ai_daily_count; }
+  let practiceCounted = false;
+  if (practice) { s.today.ai += 1; practiceCounted = s.today.ai <= cfg.econ_practice_daily_games; }
+  const counted = ranked || practiceCounted;
   const win = match.result === "win";
   const out = { gold: 0, parts: [], counted };
 
-  if (counted && win) {  // 승리 골드(하루 10승까지) + 일일 첫 승(티어 배율)
+  // 승리 골드(랭킹전 30·AI 대전 15, 합쳐서 하루 10승까지) + 일일 첫 승(랭킹전만, 티어 배율) — 기획답변 13차 A4
+  if (win && counted) {
     s.today.wins += 1;
-    if (s.today.wins <= cfg.econ_win_gold_daily_wins) { out.gold += cfg.econ_win_gold; out.parts.push({ kind: "win", gold: cfg.econ_win_gold }); }
-    if (!s.today.firstWin) {
+    const g = ranked ? cfg.econ_win_gold : cfg.econ_practice_win_gold;
+    if (s.today.wins <= cfg.econ_win_daily_cap && g > 0) { out.gold += g; out.parts.push({ kind: ranked ? "win" : "practice_win", gold: g }); }
+    if (ranked && !s.today.firstWin) {
       s.today.firstWin = true;
-      const g = Math.round(cfg.econ_first_win_gold * (match.tierMult ?? 1));
-      out.gold += g; out.parts.push({ kind: "first_win", gold: g });
+      const fg = Math.round(cfg.econ_first_win_gold * (match.tierMult ?? 1));
+      out.gold += fg; out.parts.push({ kind: "first_win", gold: fg });
     }
   }
-  if (win && counted) {
-    s.weekly.factions = [...new Set([...(s.weekly.factions ?? []), match.faction])];
-    s.seasonM.chars[match.character] = (s.seasonM.chars[match.character] ?? 0) + 1;
-    s.seasonM.factions[match.faction] = (s.seasonM.factions[match.faction] ?? 0) + 1;
-  }
-  const scopeOk = (sc) => (sc === "ranked" ? ranked : sc === "friend" ? friend : counted);
-  for (const kind of ["daily", "weekly", "season"]) {
-    const bucket = kind === "season" ? s.seasonM : s[kind];
+  const scopeOk = (sc) => (sc === "ranked" ? ranked : sc === "ranked_ai" ? counted : sc === "friend" ? friend : true);
+  for (const [kind] of BUCKETS) {
+    const bucket = bucketOf(s, kind);
+    if (!bucket) continue;
+    if (win && counted) {  // 진영·캐릭터별 승리(기간마다 따로)
+      bucket.fw[match.faction] = (bucket.fw[match.faction] ?? 0) + 1;
+      bucket.cw[match.character] = (bucket.cw[match.character] ?? 0) + 1;
+    }
     for (const m of bucket.list) {
       const d = defOf(cfg, kind, m.id);
       if (!d || m.done || !scopeOk(d.scope)) continue;
-      switch (d.metric) {
-        case "play": m.p += 1; break;
-        case "friend_play": m.p += 1; break;
-        case "win": if (win) m.p += 1; break;
-        case "exclusive": m.p += match.exclusive ?? 0; break;
-        case "spell": m.p += match.spells ?? 0; break;
-        case "faction_win":
-          m.p = d.per ? Object.values(s.seasonM.factions).filter((n) => n >= d.per).length : s.weekly.factions.length; break;
-        case "char_wins": m.p = Object.values(s.seasonM.chars).filter((n) => n >= (d.per ?? 1)).length; break;
-        case "tier_reach": m.p = (match.tier ?? 0) >= d.target ? d.target : 0; break;
-        default: break;
-      }
-      m.p = Math.min(m.p, d.target);
-      if (m.p >= d.target) m.done = true;
+      m.p = d.metric === "tier_reach" ? ((match.tier ?? 0) >= (cfg.tierNo[d.aux?.tier] ?? 99) ? 1 : 0) : progressOf(d, m, bucket, match);
+      m.p = Math.min(m.p, goalOf(d));
+      if (m.p >= goalOf(d)) m.done = true;
     }
   }
   return { state: s, ...out };
 }
 
-// 티어 도달 미션은 판이 아니어도(랭크 화면 진입 등) 현재 티어로 갱신
+// 티어 도달 미션은 판이 아니어도(로비 진입 등) 현재 티어로 갱신
 export function applyTier(state, tier, cfg) {
   const s = structuredClone(state);
-  for (const m of s.seasonM?.list ?? []) {
-    const d = defOf(cfg, "season", m.id);
-    if (d?.metric === "tier_reach" && !m.done && (tier ?? 0) >= d.target) { m.p = d.target; m.done = true; }
+  for (const [kind] of BUCKETS) {
+    for (const m of bucketOf(s, kind)?.list ?? []) {
+      const d = defOf(cfg, kind, m.id);
+      if (d?.metric === "tier_reach" && !m.done && (tier ?? 0) >= (cfg.tierNo[d.aux?.tier] ?? 99)) { m.p = 1; m.done = true; }
+    }
   }
   return s;
 }
@@ -182,7 +195,7 @@ export function firstWinMult(tierName) {
 export function claimMissions(state, kind, id, cfg) {
   if (!["daily", "weekly", "season"].includes(kind)) throw new Error("mission_invalid");
   const s = structuredClone(state);
-  const bucket = kind === "season" ? s.seasonM : s[kind];
+  const bucket = bucketOf(s, kind);
   const targets = bucket.list.filter((m) => (id === "all" ? m.done && !m.claimed : m.id === id));
   if (!targets.length) throw new Error(id === "all" ? "nothing_to_claim" : "mission_invalid");
   let gold = 0;
@@ -190,7 +203,7 @@ export function claimMissions(state, kind, id, cfg) {
     if (!m.done) throw new Error("mission_not_done");
     if (m.claimed) throw new Error("mission_claimed");
     m.claimed = true;
-    gold += defOf(cfg, kind, m.id)?.gold ?? 0;
+    gold += Number(defOf(cfg, kind, m.id)?.gold ?? 0);
   }
   return { state: s, gold, ids: targets.map((m) => m.id) };
 }
@@ -205,39 +218,41 @@ export function rerollDaily(state, id, account, cfg) {
   const pool = cfg.missions.daily.filter((m) => !have.has(m.id));
   if (!pool.length) throw new Error("reroll_empty");
   const pick = pool[hash(`${account}|${s.day}|reroll`) % pool.length];
-  s.daily.list[i] = { id: pick.id, p: 0, done: false, claimed: false };
+  s.daily.list[i] = fresh(pick.id);
   s.daily.rerolls += 1;
   return { state: s, id: pick.id };
 }
 
-// ---------- 출석: 7일 순환(빠져도 이어서), 7일째 보너스, 누적 28일마다 보상 ----------
+// ---------- 출석: 7일 순환(빠져도 이어서), 7일째 보너스, 누적 28일째 1회 ----------
 export function claimAttendance(state, cfg) {
   const s = structuredClone(state);
   if (s.att.last === s.day) throw new Error("attendance_done");
   s.att.last = s.day;
   s.att.count += 1;
   const cycleDay = ((s.att.count - 1) % 7) + 1;
-  let gold = cfg.econ_attend_daily_gold;
-  const parts = [{ kind: "attend", gold }];
+  const daily = Math.round(cfg.econ_attend_week_sum / 7);
+  let gold = daily;
+  const parts = [{ kind: "attend", gold: daily }];
   if (cycleDay === 7) { gold += cfg.econ_attend_day7_bonus; parts.push({ kind: "attend_day7", gold: cfg.econ_attend_day7_bonus }); }
-  if (s.att.count % cfg.econ_attend_total_days === 0) { gold += cfg.econ_attend_total_gold; parts.push({ kind: "attend_total", gold: cfg.econ_attend_total_gold }); }
+  if (s.att.count === cfg.econ_attend_cum_days) { gold += cfg.econ_attend_cum28_gold; parts.push({ kind: "attend_cum", gold: cfg.econ_attend_cum28_gold }); }
   return { state: s, gold, cycleDay, parts };
 }
 
 // 클라이언트에 보여줄 모양(이름·목표·보상 포함)
 export function econView(state, cfg, now) {
   const k = periodKeys(now, cfg);
-  const show = (kind, list) => list.map((m) => {
+  const show = (kind) => (bucketOf(state, kind)?.list ?? []).map((m) => {
     const d = defOf(cfg, kind, m.id) ?? {};
-    return { id: m.id, name: d.name, progress: m.p, target: d.target, gold: d.gold, done: m.done, claimed: m.claimed };
+    return { id: m.id, name: d.name, progress: m.p, target: d.metric ? goalOf(d) : null, gold: d.gold, done: m.done, claimed: m.claimed };
   });
   const count = state.att?.count ?? 0;
-  return {
+  const v = {
     day: state.day, nextReset: k.nextReset, nextWeekly: k.nextWeekly,
-    daily: show("daily", state.daily?.list ?? []), rerollLeft: Math.max(0, cfg.econ_daily_reroll - (state.daily?.rerolls ?? 0)),
-    weekly: show("weekly", state.weekly?.list ?? []), season: show("season", state.seasonM?.list ?? []),
-    attendance: { claimedToday: state.att?.last === state.day, count, nextCycleDay: (count % 7) + 1, untilTotal: cfg.econ_attend_total_days - (count % cfg.econ_attend_total_days) },
-    today: { wins: state.today?.wins ?? 0, winGoldLeft: Math.max(0, cfg.econ_win_gold_daily_wins - (state.today?.wins ?? 0)), firstWinDone: Boolean(state.today?.firstWin), aiCounted: Math.min(state.today?.ai ?? 0, cfg.econ_ai_daily_count) },
-    claimable: ["daily", "weekly"].reduce((n, kd) => n + (state[kd]?.list ?? []).filter((m) => m.done && !m.claimed).length, 0) + (state.seasonM?.list ?? []).filter((m) => m.done && !m.claimed).length
+    daily: show("daily"), rerollLeft: Math.max(0, cfg.econ_daily_reroll - (state.daily?.rerolls ?? 0)),
+    weekly: show("weekly"), season: show("season"),
+    attendance: { claimedToday: state.att?.last === state.day, count, nextCycleDay: (count % 7) + 1, untilCumulative: Math.max(0, cfg.econ_attend_cum_days - count) },
+    today: { wins: state.today?.wins ?? 0, winGoldLeft: Math.max(0, cfg.econ_win_daily_cap - (state.today?.wins ?? 0)), firstWinDone: Boolean(state.today?.firstWin), aiCounted: Math.min(state.today?.ai ?? 0, cfg.econ_practice_daily_games) }
   };
+  v.claimable = [...v.daily, ...v.weekly, ...v.season].filter((m) => m.done && !m.claimed).length;
+  return v;
 }

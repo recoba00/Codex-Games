@@ -133,7 +133,7 @@ try {
   let st = await playMatch([alice, bob], ["AU", "SE"], 1);
   assert.equal(st.last.econ[0].gold, 0, "친구방은 골드 없음");
   e = await ok(alice.get("/v1/econ"));
-  assert.equal(e.weekly.find((m) => m.id === "W_FRIEND1").done, true);
+  assert.equal(e.weekly.find((m) => m.id === "W03").done, true);
   assert.equal(e.today.wins, 0);
   step("친구방 승리: 골드 0, '친구와 1판' 미션 완료, 승리 수 안 셈");
   alice.ws.close(); bob.ws.close();
@@ -155,9 +155,9 @@ try {
   alice.ws.close(); bob.ws.close();
 
   // 4) 미션 받기 + 일일 교체
-  const cl = await ok(alice.post("/v1/missions/claim", { kind: "weekly", id: "W_FRIEND1" }));
+  const cl = await ok(alice.post("/v1/missions/claim", { kind: "weekly", id: "W03" }));
   assert.deepEqual([cl.gold, cl.balance], [200, 530]);
-  assert.equal((await alice.post("/v1/missions/claim", { kind: "weekly", id: "W_FRIEND1" })).body.error, "mission_claimed");
+  assert.equal((await alice.post("/v1/missions/claim", { kind: "weekly", id: "W03" })).body.error, "mission_claimed");
   const unclaimed = e.daily.find((m) => !m.claimed);
   const rr = await ok(alice.post("/v1/missions/reroll", { id: unclaimed.id }));
   assert.notEqual(rr.newId, unclaimed.id);

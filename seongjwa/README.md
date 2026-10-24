@@ -88,7 +88,8 @@ Supabase 테스트 프로젝트 `seongjwa-dev`(서울, 무료)에 마이그레�
 
 - 골드는 `gold_ledger` 장부로만 바뀐다. (계정, ref)가 같으면 한 번만 반영돼 재시도·중복 요청에 안전하다(`match:<판>`, `att:<날짜>`, `mis:…`, `buy:<요청ID>`, `mail:…`).
 - 미션·출석 상태는 `econ_state` 한 행(jsonb, 버전 확인). 계산은 `server/src/economy.mjs`(순수 함수), DB 반영은 `econ-db.mjs`. 기간은 매일 05:00 KST, 주간은 월요일 05:00 KST.
-- 판이 끝나면 방(DO)이 랭크와 같이 경제 작업을 재시도 큐로 처리한다. 랭킹전·AI 대전(하루 3판까지)만 판수·승리 인정, 친구방은 소셜 미션만.
+- 판이 끝나면 방(DO)이 랭크와 같이 경제 작업을 재시도 큐로 처리한다(기획답변 13차): 랭킹전 승리 30골드 + 일일 첫 승(랭킹전만), AI 대전은 하루 3판까지 승리 15골드·첫 승 없음, 친구방은 골드 없이 소셜 미션만. 누적 28일 출석 보상은 1회.
+- 수치·미션은 시트 `경제`가 원본: E열 키(`econ_*`, `season_days`)는 설정으로, 40~65행 미션 표는 `tables.missions`로 들어간다(가져오기 도구가 읽고 검증). 미션 표가 바뀌면 같은 ID 진행은 이어 가고 새 ID는 0부터.
 - API: `GET /v1/econ`(로비: 골드·미션·출석·우편 수, 미지급 결제 복구), `POST /v1/attendance/claim`, `POST /v1/missions/claim|reroll`, `GET /v1/mail`, `POST /v1/mail/claim`, `GET /v1/shop`, `POST /v1/shop/buy`, `POST /v1/shop/orders`, `POST /v1/shop/orders/{id}/finalize|cancel`, `GET /v1/inventory`, `POST /v1/profile/name|equip`.
 - 결제: 테스트 환경은 dev(가짜) 결제. Steam은 `InitTxn` → 오버레이 승인 → 클라이언트 `finalize` → `FinalizeTxn` → 지급. 승인됐는데 확정이 안 온 주문은 다음 `GET /v1/econ` 때 `QueryTxn`으로 확인해 우편 지급. 기본 샌드박스(`STEAM_TXN_SANDBOX=0`일 때만 실결제).
 - 테스트 DB 상품: `supabase/seed/dev_test_catalog.sql`(테스트 환경 전용).
