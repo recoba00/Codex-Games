@@ -5,6 +5,9 @@ import { getLive, pinLive } from "./gamedata.mjs";
 import { aiAllowed, legendCount } from "./rank.mjs";
 import { currentSeason, loadRank, tierName } from "./ranking.mjs";
 import { verifySteamTicket } from "./steam.mjs";
+import { econLoad, econMutate } from "./econ-db.mjs";
+import { claimAttendance, claimMissions, econConfig, econView, firstWinMult, periodKeys, rerollDaily } from "./economy.mjs";
+import { cancelOrder, finishOrder, recoverOrders, startOrder } from "./payments.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
 
 export const ACCESS_TTL_SECONDS = 15 * 60;
@@ -23,6 +26,9 @@ const STATUS = {
   queue_locked: 403, dodge_blocked: 403, difficulty_invalid: 400,
   room_not_found: 404, room_full: 409, not_member: 403, ticket_invalid: 401, room_code_exhausted: 503,
   steam_unavailable: 502, db_error: 502, data_not_published: 503,
+  gold_short: 409, already_owned: 409, price_changed: 409, offer_unavailable: 410, econ_conflict: 409, attendance_done: 409,
+  mission_claimed: 409, mission_not_done: 409, nothing_to_claim: 409, reroll_used: 409, order_closed: 409, too_many_orders: 429,
+  payment_unavailable: 503, payment_pending: 409, payment_failed: 402, steam_txn_failed: 502, item_not_owned: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
 };
 
@@ -206,11 +212,135 @@ export async function handle(request, env) {
       return json({ ok: true, season, rows }, 200, { "cache-control": "public, max-age=30" });
     }
 
+    // ---------- 5단계: 경제·미션·출석·우편·상점 (상세 05·06·07) ----------
+    case "GET /v1/econ": {  // 로비 진입: 골드·미션·출석·받지 않은 우편 수. 미완료 결제가 있으면 확인해 우편 지급(상세 07 흐름 4)
+      const claims = await authenticate(request, env);
+      const { snapshot: data } = await pinLive(env);
+      const ctx = await econLoad(env, data, claims.sub);
+      const recovered = ctx.raw.pending_orders?.length ? await recoverOrders(env, claims.sub, ctx.raw.pending_orders) : [];
+      return json({
+        ok: true, gold: ctx.raw.gold, name: ctx.raw.name, nameChangeGold: ctx.raw.name_changes > 0 ? ctx.cfg.econ_name_change_gold : 0,
+        mailUnread: Number(ctx.raw.mail_unread ?? 0) + recovered.length, tierName: ctx.tierName, firstWinGold: Math.round(ctx.cfg.econ_first_win_gold * firstWinMult(ctx.tierName)),
+        ...econView(ctx.state, ctx.cfg, Date.now()), recovered
+      });
+    }
+
+    case "POST /v1/attendance/claim": {
+      const claims = await authenticate(request, env);
+      const { snapshot: data } = await pinLive(env);
+      const day = periodKeys(Date.now(), econConfig(data)).day;
+      const r = await econMutate(env, data, claims.sub, `att:${day}`, (state, ctx) => {
+        const out = claimAttendance(state, ctx.cfg);
+        return { ...out, reason: "attendance", detail: { day, cycleDay: out.cycleDay, parts: out.parts } };
+      });
+      if (r.duplicate) throw new Error("attendance_done");
+      return json({ ok: true, gold: r.gold, balance: r.balance, cycleDay: r.cycleDay, parts: r.parts, econ: r.view });
+    }
+
+    case "POST /v1/missions/claim": {  // { kind: daily|weekly|season, id: 미션 ID | "all" }
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const kind = String(input.kind ?? ""), id = String(input.id ?? "all");
+      if (!/^[A-Z0-9_]{2,40}$|^all$/.test(id)) throw new Error("mission_invalid");
+      const { snapshot: data } = await pinLive(env);
+      const r = await econMutate(env, data, claims.sub, (out, state) => `mis:${kind}:${kind === "daily" ? state.day : kind === "weekly" ? state.week : state.season}:${out.ids.sort().join(",")}`,
+        (state, ctx) => ({ ...claimMissions(state, kind, id, ctx.cfg), reason: "mission", detail: { kind } }));
+      if (r.duplicate) throw new Error("mission_claimed");
+      return json({ ok: true, gold: r.gold, balance: r.balance, claimed: r.ids, econ: r.view });
+    }
+
+    case "POST /v1/missions/reroll": {  // 일일 미션 하루 1개 무료 교체
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const { snapshot: data } = await pinLive(env);
+      const r = await econMutate(env, data, claims.sub, (out, state) => `reroll:${state.day}:${state.daily.rerolls}`,
+        (state, ctx) => ({ ...rerollDaily(state, String(input.id ?? ""), claims.sub, ctx.cfg), gold: 0, reason: "reroll" }));
+      return json({ ok: true, newId: r.id, econ: r.view });
+    }
+
+    case "GET /v1/mail": {
+      const claims = await authenticate(request, env);
+      return json({ ok: true, mail: await rpc(env, "mail_list", { p_account: claims.sub }) });
+    }
+
+    case "POST /v1/mail/claim": {  // { ids?: [...] } 없으면 모두 받기
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const ids = Array.isArray(input.ids) ? input.ids.map(String) : null;
+      if (ids && (ids.length > 100 || ids.some((x) => !/^[0-9a-f-]{36}$/.test(x)))) throw new Error("mail_invalid");
+      return json({ ok: true, ...(await rpc(env, "mail_claim", { p_account: claims.sub, p_ids: ids })) });
+    }
+
+    case "GET /v1/shop": {
+      const claims = await authenticate(request, env);
+      return json({ ok: true, offers: await rpc(env, "shop_list", { p_account: claims.sub }), note: "능력치 변화 없음" });
+    }
+
+    case "POST /v1/shop/buy": {  // 골드 구매 { offerId, price, requestId(재시도해도 한 번만) }
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      if (!/^[A-Za-z0-9-]{8,64}$/.test(String(input.requestId ?? ""))) throw new Error("request_id_invalid");
+      const r = await rpc(env, "shop_buy_gold", { p_account: claims.sub, p_offer: String(input.offerId ?? ""), p_price: Number(input.price), p_ref: `buy:${input.requestId}` });
+      return json({ ok: true, ...r });
+    }
+
+    case "POST /v1/shop/orders": {  // 현금 주문 시작 { offerId, price } → Steam 오버레이 / dev
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      return json({ ok: true, ...(await startOrder(env, claims.sub, String(input.offerId ?? ""), Number(input.price))) });
+    }
+
+    case "GET /v1/inventory": {
+      const claims = await authenticate(request, env);
+      return json({ ok: true, ...(await rpc(env, "inventory_list", { p_account: claims.sub })) });
+    }
+
+    case "POST /v1/profile/name": {  // 닉네임 2~12자, 첫 변경 무료·이후 골드(상세 05)
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const name = String(input.name ?? "").trim();
+      if (!/^[\p{L}\p{N}_]{2,12}$/u.test(name)) throw new Error("name_invalid");
+      if (!/^[A-Za-z0-9-]{8,64}$/.test(String(input.requestId ?? ""))) throw new Error("request_id_invalid");
+      const { snapshot: data } = await pinLive(env);
+      return json({ ok: true, ...(await rpc(env, "profile_rename", { p_account: claims.sub, p_name: name, p_cost: econConfig(data).econ_name_change_gold, p_ref: `name:${input.requestId}` })) });
+    }
+
+    case "POST /v1/profile/equip": {  // { skins:{AU:id}, cardback, frame, title, emotes:[최대 4] } 가진 것만
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const { snapshot: data } = await pinLive(env);
+      const inv = await rpc(env, "inventory_list", { p_account: claims.sub });
+      const kinds = Object.fromEntries((inv.items ?? []).map((i) => [i.id, i]));
+      const eq = {}, items = [];
+      const need = (id, ok) => { if (!kinds[id] || !ok(kinds[id])) throw new Error("item_not_owned"); items.push(id); return id; };
+      if (input.skins && typeof input.skins === "object") {
+        eq.skins = {};
+        for (const [c, id] of Object.entries(input.skins)) {
+          if (!data.characters?.[c]) throw new Error("character_invalid");
+          if (id) eq.skins[c] = need(String(id), (it) => it.kind.startsWith("skin") && it.character === c);
+        }
+      }
+      for (const [slot, kind] of [["cardback", "cardback"], ["frame", "frame"], ["title", "title"]]) {
+        if (input[slot]) eq[slot] = need(String(input[slot]), (it) => it.kind === kind);
+      }
+      if (input.emotes) {
+        if (!Array.isArray(input.emotes) || input.emotes.length > 4 || new Set(input.emotes).size !== input.emotes.length) throw new Error("emotes_invalid");
+        eq.emotes = input.emotes.map((id) => need(String(id), (it) => it.kind === "emote"));
+      }
+      return json({ ok: true, equipped: await rpc(env, "profile_equip", { p_account: claims.sub, p_equipped: eq, p_items: items }) });
+    }
+
     case "GET /dev":
       if (env.DEV_LOGIN !== "1") throw new Error("not_found");
       return new Response(TEST_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 
     default: {
+      const om = url.pathname.match(/^\/v1\/shop\/orders\/(\d{1,19})\/(finalize|cancel)$/);
+      if (om && request.method === "POST") {  // Steam 승인 콜백 뒤 확정 / 창 닫음
+        const claims = await authenticate(request, env);
+        if (om[2] === "cancel") return json(await cancelOrder(env, claims.sub, om[1]));
+        return json({ ok: true, ...(await finishOrder(env, claims.sub, om[1])) });
+      }
       const m = url.pathname.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/(join|ticket|ws)$/);
       if (!m || !ROOM_CODE.test(m[1])) throw new Error("not_found");
       const [, code, action] = m;

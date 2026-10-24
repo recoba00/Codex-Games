@@ -8,10 +8,12 @@ on:
   push:
     paths:
       - 'seongjwa/server/**'
+      - 'seongjwa/supabase/**'
       - '.github/workflows/seongjwa-server.yml'
   pull_request:
     paths:
       - 'seongjwa/server/**'
+      - 'seongjwa/supabase/**'
       - '.github/workflows/seongjwa-server.yml'
   workflow_dispatch:
     inputs:
@@ -35,7 +37,21 @@ jobs:
   test:
     name: Server Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    services:
+      postgres:  # 경제 통합 테스트용 실제 DB(마이그레이션 적용)
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
     defaults:
       run:
         working-directory: seongjwa/server
@@ -54,6 +70,13 @@ jobs:
         run: npm run test:live
       - name: Live test on local Workers runtime (ranked queue, AI, practice)
         run: npm run test:live:rank
+      - name: Apply DB migrations to test Postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -c "create role anon; create role authenticated; create role service_role;"
+          for f in ../supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+          psql -v ON_ERROR_STOP=1 -q -f ../supabase/tests/step5_check.sql
+      - name: Live test on local Workers runtime + Postgres (economy, missions, mail, shop, payments)
+        run: npm run test:live:econ
 
   deploy:
     name: Deploy to Cloudflare
@@ -117,6 +140,9 @@ jobs:
             echo "rank:"; curl -fsS "$BASE/v1/rank/me" -H "authorization: Bearer $tok"; echo
             echo "queue ticket:"; curl -fsS -X POST "$BASE/v1/queue/ticket" -H "authorization: Bearer $tok" -H 'content-type: application/json' -d '{}' | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);if(!j.ticket)process.exit(1);console.log({tier:j.tierName,rp:j.rp,aiFallback:j.aiFallback})})'
             echo "board:"; curl -fsS "$BASE/v1/rank/board" | head -c 300; echo
+            echo "econ:"; curl -fsS "$BASE/v1/econ" -H "authorization: Bearer $tok" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);if(!j.ok)process.exit(1);console.log({gold:j.gold,daily:j.daily.length,weekly:j.weekly.length,season:j.season.length,mail:j.mailUnread})})'
+            echo "shop:"; curl -fsS "$BASE/v1/shop" -H "authorization: Bearer $tok" | head -c 300; echo
+            echo "inventory:"; curl -fsS "$BASE/v1/inventory" -H "authorization: Bearer $tok" | head -c 300; echo
           fi
       - name: Show deployment
         run: npx wrangler deployments list | head -20   # 배포 주소(…workers.dev)는 위 Deploy worker 단계 로그에 표시

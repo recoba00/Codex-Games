@@ -8,9 +8,11 @@
     "test:live:rank": "node test/live/rank.mjs",
     "simulate": "node tools/simulate.mjs",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test:live:econ": "node test/live/econ.mjs"
   },
   "devDependencies": {
+    "pg": "^8.23.1",
     "wrangler": "^4.45.0"
   }
 }

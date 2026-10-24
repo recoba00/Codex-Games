@@ -10,6 +10,7 @@ import { pinLive } from "./gamedata.mjs";
 import { chooseAction, chooseBan, chooseLoadout, choosePick, remember } from "./engine/ai.mjs";
 import { aiProfileForTier } from "./rank.mjs";
 import { currentSeason, settleMatch } from "./ranking.mjs";
+import { settleEconomy } from "./econ-db.mjs";
 import { sha256Hex } from "./tokens.mjs";
 
 export const PREP = Object.freeze({ ban_sec: 10, pick_sec: 15, loadout_sec: 15, grace_ms: 500 });
@@ -390,6 +391,11 @@ export class FriendRoom extends DurableObject {
     const g = this.room.game;
     resolveTurn(g.battle);
     g.log.push({ t: "turn", turn: g.battle.log[0]?.turn, at: now });
+    g.stats ??= [{ exclusive: 0, spells: 0 }, { exclusive: 0, spells: 0 }];  // 미션용: 전용 카드·스펠 사용(상세 05)
+    for (const e of g.battle.log) {
+      if (e.t === "card" && g.data.cards?.[e.id]?.owner_character) g.stats[e.seat].exclusive += 1;
+      if (e.t === "spell" && !e.void) g.stats[e.seat].spells += 1;
+    }
     const ai = this.room.members.findIndex((m) => m.ai);
     if (ai >= 0) remember(g.battle, ai, g.aiMemory);
     if (g.battle.result) return this.finishGame(now);
@@ -465,6 +471,14 @@ export class FriendRoom extends DurableObject {
       });
       room.ranks.push({ tries: 0, next: now, job: { matchId: g.id, seasonId: room.seasonId, mode, dataVersion: g.dataVersion, players } });
     }
+    if (outcome !== "void") {  // 골드·미션(상세 05·06): 친구방은 소셜 미션만, AI 대전은 하루 3판까지(econ에서 판단)
+      const players = [0, 1].filter((s) => !this.isAi(s) && room.members[s]?.acc).map((s) => {
+        const mine = s === 0 ? "a" : "b";
+        return { seat: s, acc: room.members[s].acc, character: g.picks[s], stats: g.stats?.[s] ?? { exclusive: 0, spells: 0 },
+          result: outcome === "draw" ? "draw" : outcome === mine ? "win" : "loss" };
+      });
+      if (players.length) { room.econs ??= []; room.econs.push({ tries: 0, next: now, job: { matchId: g.id, mode, players } }); }
+    }
     room.lastBattle = view(b, 0);  // 결과 화면용 마지막 로그(0번 시점; 공개 정보만 쓴다)
     room.lastData = g.data;
     room.game = null;
@@ -504,13 +518,25 @@ export class FriendRoom extends DurableObject {
       }
     }
     this.room.ranks = keepRanks;
+    const keepEcon = [];
+    for (const r of this.room.econs ?? []) {
+      if (r.next > now) { keepEcon.push(r); continue; }
+      try {
+        const data = this.room.game?.data ?? this.room.lastData ?? (await pinLive(this.env)).snapshot;
+        const res = await settleEconomy(this.env, data, r.job);
+        if (this.room.last?.id === r.job.matchId) this.room.last.econ = Object.fromEntries(r.job.players.map((p, i) => [p.seat, { gold: res[i].gold, parts: res[i].parts }]));
+      } catch {
+        if (r.tries + 1 < SAVE_MAX_TRIES) keepEcon.push({ ...r, tries: r.tries + 1, next: now + SAVE_RETRY_MS });
+      }
+    }
+    this.room.econs = keepEcon;
   }
 
   // ---------- 알람: 단계 마감·턴 마감·재접속 유예·저장 재시도·방 만료 ----------
   async schedule() {
     const r = this.room;
     if (!r) return;
-    const times = [r.expiresAt, r.phaseDeadline || Infinity, ...r.saves.map((s) => s.next), ...(r.ranks ?? []).map((x) => x.next)];
+    const times = [r.expiresAt, r.phaseDeadline || Infinity, ...r.saves.map((s) => s.next), ...(r.ranks ?? []).map((x) => x.next), ...(r.econs ?? []).map((x) => x.next)];
     const g = r.game;
     if (g && r.phase === "battle") {
       times.push(...g.deadline);

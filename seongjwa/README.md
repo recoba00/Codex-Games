@@ -82,7 +82,16 @@ Supabase 테스트 프로젝트 `seongjwa-dev`(서울, 무료)에 마이그레�
 - RP: `server/src/rank.mjs` 한 곳에서 계산(시트 `랭크_승점` 계산기 값과 테스트로 일치 확인). 연승 보너스, 브론즈 무감점·실버 50%, 골드·다이아 하한선, 새 단계 3판 보호, 시즌 리셋(시트 리셋 열)·초반 ×1.5.
 - 이탈: 60초 유예 초과·AFK = 패배 + 10RP(소켓 비정상 끊김은 하루 첫 1회 면책: 패배만), 브론즈는 단계 시작점 아래로 안 내려감, 최근 7일 누적 단계(경고 → 매칭 지연 → 보상 감소 → 24·72시간 잠금), 정상 5판마다 1회 감면. 닷지 −5RP·5분 제한, 상대는 원래 대기 시각으로 우선 재입장.
 - AI: 후보 조합 → 상대 예측(공개 정보만) → 피해·생존·읽기·자원 점수 → 난이도별 차선(쉬움 30%·보통 15%·어려움 5%). 확정 3~12초. 밴픽·스펠·덱 규칙 포함.
-- 밸런스 시뮬레이션: `npm run simulate -- 20 > report.md` (AI 어려움 대 어려움, 캐릭터·덱·상성표). 최신 결과는 `docs/simulation_v9.md`.
+- 밸런스 시뮬레이션: `npm run simulate -- 20 > report.md` (AI 어려움 대 어려움, 캐릭터·덱·상성표). 최신 결과는 `docs/simulation_v11.md`(동결 기준).
+
+### 경제·상점·우편 (상세 05·06·07, 5단계)
+
+- 골드는 `gold_ledger` 장부로만 바뀐다. (계정, ref)가 같으면 한 번만 반영돼 재시도·중복 요청에 안전하다(`match:<판>`, `att:<날짜>`, `mis:…`, `buy:<요청ID>`, `mail:…`).
+- 미션·출석 상태는 `econ_state` 한 행(jsonb, 버전 확인). 계산은 `server/src/economy.mjs`(순수 함수), DB 반영은 `econ-db.mjs`. 기간은 매일 05:00 KST, 주간은 월요일 05:00 KST.
+- 판이 끝나면 방(DO)이 랭크와 같이 경제 작업을 재시도 큐로 처리한다. 랭킹전·AI 대전(하루 3판까지)만 판수·승리 인정, 친구방은 소셜 미션만.
+- API: `GET /v1/econ`(로비: 골드·미션·출석·우편 수, 미지급 결제 복구), `POST /v1/attendance/claim`, `POST /v1/missions/claim|reroll`, `GET /v1/mail`, `POST /v1/mail/claim`, `GET /v1/shop`, `POST /v1/shop/buy`, `POST /v1/shop/orders`, `POST /v1/shop/orders/{id}/finalize|cancel`, `GET /v1/inventory`, `POST /v1/profile/name|equip`.
+- 결제: 테스트 환경은 dev(가짜) 결제. Steam은 `InitTxn` → 오버레이 승인 → 클라이언트 `finalize` → `FinalizeTxn` → 지급. 승인됐는데 확정이 안 온 주문은 다음 `GET /v1/econ` 때 `QueryTxn`으로 확인해 우편 지급. 기본 샌드박스(`STEAM_TXN_SANDBOX=0`일 때만 실결제).
+- 테스트 DB 상품: `supabase/seed/dev_test_catalog.sql`(테스트 환경 전용).
 
 ## 테스트
 
@@ -92,6 +101,8 @@ npm test             # 엔진·API 단위 테스트(전 캐릭터 조합 243판 
 npm run test:live    # 실제 Workers 런타임(wrangler 로컬)에서 친구방 한 판 통합 테스트, 약 40초
 npm run test:live:rank   # 같은 런타임에서 AI 연습·랭킹전 매칭·AI 전환·닷지·랭크 조회
 LIVE_LONG=1 npm run test:live   # + 60초 재접속 유예 초과 시나리오
+PGHOST=… npm run test:live:econ   # Workers 런타임 + 실제 Postgres(마이그레이션 적용) + 가짜 Steam: 경제·미션·우편·상점·결제 8단계
+psql -f ../supabase/tests/step5_check.sql   # DB 함수 검사(끝에 rollback)
 ```
 
 ## 문서 해석이 필요했던 규칙 (기획 2차 답변으로 확정, 2026-10-23)

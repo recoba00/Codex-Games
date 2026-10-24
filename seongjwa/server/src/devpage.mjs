@@ -26,6 +26,10 @@ pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220
 <div class="row" style="margin-top:8px"><button id="btnQueue">랭킹전 찾기</button><label><input type="checkbox" id="humanOnly"> 사람 상대만 기다리기</label><button id="btnCancelQ" hidden>취소</button><span id="qInfo" class="dim"></span></div>
 <div class="row" style="margin-top:8px"><b>AI 대전(연습)</b><button data-d="easy" class="pr">쉬움</button><button data-d="normal" class="pr">보통</button><button data-d="hard" class="pr">어려움</button><button id="btnBoard">랭킹 보드</button></div>
 <pre id="board" hidden></pre></section>
+<section id="econ" hidden><div class="row"><b>경제</b> <span id="gold" style="color:var(--acc);font-weight:600"></span><span id="econInfo" class="dim"></span>
+<button id="btnEcon">새로고침</button><button id="btnAtt">출석 받기</button><button id="btnMail">우편함</button><button id="btnShop">상점</button><button id="btnInv">보관함</button>
+<input id="newName" placeholder="새 닉네임(2~12자)" size="14"><button id="btnName">닉네임 변경</button></div>
+<div id="missions" style="margin-top:8px"></div><div id="econBox" style="margin-top:8px"></div></section>
 <section id="room" hidden></section>
 <section><b>로그</b><pre id="log"></pre></section>
 <script>
@@ -34,7 +38,7 @@ var $=function(id){return document.getElementById(id)};
 function log(m){$('log').textContent=new Date().toLocaleTimeString()+' '+m+'\n'+$('log').textContent}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.token?{authorization:'Bearer '+S.token}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function nm(kind,id){var d=S.data&&S.data[kind]&&S.data[kind][id];return d?d.name:id}
-function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;if(S.token)loadRank();$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
+function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;$('econ').hidden=!S.token;if(S.token){loadRank();loadEcon()}$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
  if(S.token&&!S.data)fetch('/v1/data/live').then(function(r){return r.json()}).then(function(j){S.data=j.data;log('데이터 버전 '+j.version)});
  var code=sessionStorage.getItem('room');if(S.token&&code)connect(code)}
 $('btnLogin').onclick=function(){api('/v1/auth/dev',{devId:$('devId').value.trim().toLowerCase()}).then(function(j){S.token=j.accessToken;S.acc=j.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('로그인 '+(j.replacedSessions?'(다른 기기 세션 종료됨)':''));start()}).catch(function(e){log('로그인 실패: '+e.message)})};
@@ -56,11 +60,11 @@ function connect(code){sessionStorage.setItem('room',code);api('/v1/rooms/'+code
  ws.onclose=function(e){log('연결 끊김 '+e.code+' '+(e.reason||''));if(e.code===4001)return;setTimeout(function(){if(sessionStorage.getItem('room'))connect(code)},1500)};
  setInterval(function(){if(ws.readyState===1)ws.send('{"type":"ping"}')},20000);
 }).catch(function(e){log('접속 실패: '+e.message);if(e.message==='room_not_found')sessionStorage.removeItem('room')})}
-function leaveRoom(){sessionStorage.removeItem('room');if(S.ws){S.ws.onclose=null;S.ws.close()}S.ws=null;S.st=null;$('room').hidden=true;$('lobby').hidden=false;$('ranked').hidden=false;loadRank()}
+function leaveRoom(){sessionStorage.removeItem('room');if(S.ws){S.ws.onclose=null;S.ws.close()}S.ws=null;S.st=null;$('room').hidden=true;$('lobby').hidden=false;$('ranked').hidden=false;$('econ').hidden=false;loadRank();loadEcon()}
 function send(o){S.ws&&S.ws.readyState===1&&S.ws.send(JSON.stringify(o))}
 function btn(label,fn,on,dis){var b=document.createElement('button');b.textContent=label;if(on)b.className='on';if(dis)b.disabled=true;b.onclick=fn;return b}
 function left(t){return t?Math.max(0,Math.ceil((t-Date.now())/1000))+'초':''}
-function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;
+function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;$('econ').hidden=true;
  var head=document.createElement('div');head.className='row';
  var MODE={friend:'친구방',practice:'AI 대전',ranked:'랭킹전',ranked_ai:'AI 랭킹전'};head.innerHTML='<b>'+MODE[m.mode]+'</b>'+(m.mode==='friend'?' <span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span>':'')+'<span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
  el.appendChild(head);
@@ -69,6 +73,7 @@ function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lob
  if(m.phase==='closed'){row.appendChild(document.createTextNode('판이 취소됨('+(m.notice||'')+')'+(String(m.notice).indexOf('dodge')===0?' · 상대가 밴픽 중 나감, 대기열 우선권 부여':'')+' '));row.appendChild(btn('로비',leaveRoom));return tick()}
  if(m.phase==='lobby'||m.phase==='result'){
   if(m.last)row.appendChild(document.createTextNode('지난 판: '+({a:'0번 승',b:'1번 승',draw:'무승부',void:'결과 없음'}[m.last.outcome])+' ('+m.last.reason+', '+m.last.turn+'턴) · 내 결과: '+(m.last.outcome==='draw'||m.last.outcome==='void'?'-':((m.last.outcome==='a')===(m.you===0)?'승리':'패배'))+' '));
+  if(m.last&&m.last.econ&&m.last.econ[m.you]){var ec=m.last.econ[m.you];row.appendChild(document.createTextNode(' · 골드 +'+ec.gold+(ec.parts&&ec.parts.length?' ('+ec.parts.map(function(x){return ({win:'승리',first_win:'첫 승'}[x.kind]||x.kind)+' '+x.gold}).join(', ')+')':'')+' '))}
   if(m.last&&m.last.rank&&m.last.rank[m.you]){var rk=m.last.rank[m.you];row.appendChild(document.createTextNode(' · RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+' '))}
   if(m.mode==='ranked'||m.mode==='ranked_ai'){row.appendChild(btn('다시 찾기',function(){leaveRoom();queue()}));row.appendChild(btn('로비',leaveRoom));if(m.lastLog){var pl=document.createElement('pre');pl.textContent=fmtLog(m.lastLog,m.you);el.appendChild(pl)}return tick()}
   var me=m.members[m.you];row.appendChild(btn(me&&me.ready?'준비 취소':(m.phase==='result'?'재대결 준비':'준비'),function(){send({type:'ready',ready:!(me&&me.ready),defaults:{preferred:['SE','AU','UM'],spells:['SP01','SP04'],preset:2}})},me&&me.ready));
@@ -115,5 +120,29 @@ function fmtLog(L,you){return (L||[]).map(function(e){var who=e.seat===undefined
  case 'blocked':return who+e.debuff+' 막음(면역)';case 'debuff':return who+e.debuff+' 걸림';case 'void':return who+nm('cards',e.card||'')+' 무효 ('+e.why+')';case 'spell':return who+'스펠 '+nm('spells',e.id)+(e.void?' 무효':'');
  case 'active':return who+'액티브'+(e.void?' 무효(게이지 반환)':'');case 'end':return '■ 종료: '+e.outcome+' ('+e.reason+')';case 'rush':return '★ 폭주 시작';case 'card':return '';default:return who+e.t}}).filter(Boolean).join('\n')}
 function tick(){var m=S.st;if(!m)return;var t=m.phase==='battle'?m.deadline:m.phaseDeadline;var a=$('tl')||$('timer');if(a)a.textContent=left(t)}
+var MK={daily:'일일',weekly:'주간',season:'시즌'};
+function loadEcon(){api('/v1/econ').then(function(e){S.econ=e;$('gold').textContent=e.gold.toLocaleString()+' 골드';
+ $('econInfo').textContent=' · '+e.name+' · 우편 '+e.mailUnread+' · 출석 '+(e.attendance.claimedToday?'완료':'가능('+e.attendance.nextCycleDay+'일차)')+' · 오늘 '+e.today.wins+'승(승리 골드 '+e.today.winGoldLeft+'회 남음, 첫 승 '+(e.today.firstWinDone?'받음':e.firstWinGold+'골드')+') · AI 대전 인정 '+e.today.aiCounted+'/3';
+ $('btnAtt').disabled=e.attendance.claimedToday;$('btnName').textContent='닉네임 변경'+(e.nameChangeGold?' ('+e.nameChangeGold+'골드)':' (무료)');
+ if(e.recovered&&e.recovered.length)log('결제 확인된 주문 '+e.recovered.length+'건 → 우편 지급');
+ var box=$('missions');box.innerHTML='';
+ ['daily','weekly','season'].forEach(function(k){var r=document.createElement('div');r.className='row';r.innerHTML='<b>'+MK[k]+'</b>'+(k==='daily'?' <span class=dim>교체 '+e.rerollLeft+'회</span>':'');
+  e[k].forEach(function(x){var b=btn(x.name+' '+x.progress+'/'+x.target+' · '+x.gold+'G'+(x.claimed?' ✓':''),function(){api('/v1/missions/claim',{kind:k,id:x.id}).then(function(j){log('미션 보상 +'+j.gold);loadEcon()}).catch(function(er){log(er.message)})},x.done&&!x.claimed,!x.done||x.claimed);r.appendChild(b);
+   if(k==='daily'&&!x.claimed&&e.rerollLeft)r.appendChild(btn('↻',function(){api('/v1/missions/reroll',{id:x.id}).then(function(){log('미션 교체');loadEcon()}).catch(function(er){log(er.message)})}))});
+  box.appendChild(r)})}).catch(function(er){log('경제 정보 실패: '+er.message)})}
+$('btnEcon').onclick=loadEcon;
+$('btnAtt').onclick=function(){api('/v1/attendance/claim',{}).then(function(j){log('출석 '+j.cycleDay+'일차 +'+j.gold);loadEcon()}).catch(function(e){log(e.message)})};
+$('btnName').onclick=function(){api('/v1/profile/name',{name:$('newName').value.trim(),requestId:crypto.randomUUID()}).then(function(j){log('닉네임 '+j.name+' (−'+j.cost+'골드)');loadEcon()}).catch(function(e){log('닉네임 변경 실패: '+e.message)})};
+$('btnMail').onclick=function(){api('/v1/mail').then(function(j){var b=$('econBox');b.innerHTML='<b>우편함</b> ';
+ b.appendChild(btn('모두 받기',function(){api('/v1/mail/claim',{}).then(function(r){log('우편 '+r.claimed+'통 받음: 골드 +'+r.gold+(r.items.length?' / 상품 '+r.items.join(','):''));loadEcon();$('btnMail').onclick()})}));
+ var pre=document.createElement('pre');pre.textContent=j.mail.map(function(m){return (m.claimed?'[받음] ':'[ ] ')+m.title+' · '+m.rewards.map(function(r){return r.type==='gold'?r.amount+'골드':r.id}).join(', ')+' · 만료 '+new Date(m.expiresAt).toLocaleDateString()}).join('\n')||'우편 없음';b.appendChild(pre)})};
+$('btnShop').onclick=function(){api('/v1/shop').then(function(j){var b=$('econBox');b.innerHTML='<b>상점</b> <span class=dim>'+j.note+' · 테스트 환경 현금 결제는 가짜(dev)</span>';
+ var r=document.createElement('div');r.className='row';b.appendChild(r);
+ if(!j.offers.length)r.appendChild(document.createTextNode('판매 중인 상품 없음'));
+ j.offers.forEach(function(o){var t=document.createElement('span');t.textContent=o.name+(o.owned?' (보유)':'')+' ';r.appendChild(t);
+  if(o.priceGold)r.appendChild(btn(o.priceGold+'골드',function(){if(!confirm(o.name+'을(를) '+o.priceGold+'골드로 살까요?'))return;api('/v1/shop/buy',{offerId:o.offer,price:o.priceGold,requestId:crypto.randomUUID()}).then(function(x){log('구매 '+o.name+' 잔액 '+x.gold);loadEcon();$('btnShop').onclick()}).catch(function(e){log('구매 실패: '+e.message)})},false,o.owned));
+  if(o.priceKrw)r.appendChild(btn('₩'+o.priceKrw.toLocaleString(),function(){api('/v1/shop/orders',{offerId:o.offer,price:o.priceKrw}).then(function(x){log('주문 '+x.order+' ('+x.provider+')');return api('/v1/shop/orders/'+x.order+'/finalize',{})}).then(function(x){log('결제 완료 → 지급 '+x.item);$('btnShop').onclick()}).catch(function(e){log('결제 실패: '+e.message)})},false,o.owned))})})};
+$('btnInv').onclick=function(){api('/v1/inventory').then(function(j){var b=$('econBox');b.innerHTML='<b>보관함</b>';var pre=document.createElement('pre');
+ pre.textContent=j.items.map(function(i){return i.kind+' · '+i.name+(i.character?' ('+i.character+')':'')+' · '+i.source}).join('\n')+'\n장착: '+JSON.stringify(j.equipped);b.appendChild(pre)})};
 setInterval(tick,500);start();
 </script></body></html>`;
