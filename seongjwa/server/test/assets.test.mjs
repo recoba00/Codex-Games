@@ -20,10 +20,11 @@ test("슬롯 51개(상세 14 표), 규격: 엠블럼 512, 아이콘 256, 카드 
   assert.ok(SLOTS.every((s) => s.w % 4 === 0 && s.h % 4 === 0), "모두 4의 배수");
 });
 
-test("업로드 규격 검사: 전신 9:16·1080~1440·4의 배수, 축소본·얼굴·슬롯은 정확한 크기", () => {
+test("업로드 규격 검사: 전신 9:16·1440 이하(작아도 받음), 축소본·얼굴·슬롯은 정확한 크기", () => {
   checkUpload("full", webpInfo(f("full_1080.webp")), 10000);
   assert.throws(() => checkUpload("full", webpInfo(f("full_bad.webp")), 10000), (e) => e.message === "asset_spec" && /9:16/.test(e.extra.detail));
-  assert.throws(() => checkUpload("full", { w: 2160, h: 3840 }, 10), (e) => /1080~1440/.test(e.extra.detail));
+  assert.throws(() => checkUpload("full", { w: 2160, h: 3840 }, 10), (e) => /1440 이하/.test(e.extra.detail));
+  checkUpload("full", { w: 720, h: 1280 }, 10);  // 작아도 비율만 맞으면 받음
   checkUpload("thumb", webpInfo(f("thumb.webp")), 10);
   checkUpload("face", webpInfo(f("face.webp")), 10);
   checkUpload("slot", webpInfo(f("tier_vp8.webp")), 10, slotOf("TIER_GOLD"));

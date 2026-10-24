@@ -114,17 +114,21 @@ function drawTo(img,w,h){var c=document.createElement('canvas');c.width=w;c.heig
 function alphaCheck(cv,need){var g=cv.getContext('2d'),W=cv.width,H=cv.height;
  if(need===false){var d=g.getImageData(0,0,W,H).data,step=Math.max(4,Math.floor(d.length/4/4000))*4;for(var i=3;i<d.length;i+=step)if(d[i]<255)return '배경 슬롯은 불투명이어야 해요(투명 픽셀 있음)';return null}
  var cs=[[0,0],[W-8,0],[0,H-8],[W-8,H-8]];for(var k=0;k<4;k++){var p=g.getImageData(cs[k][0],cs[k][1],8,8).data,clear=false;for(var j=3;j<p.length;j+=4)if(p[j]<250){clear=true;break}if(!clear)return '모서리가 투명하지 않아요(체크무늬가 박힌 이미지는 안 돼요)'}return null}
-/* 규격 맞추기: kind=full(9:16, 1080~1440 너비, 큰 건 1440×2560으로), slot/face(정해진 크기, 같은 비율이면 줄임) */
+/* 규격 맞추기: kind=full(9:16 비율만 맞으면 받음, 큰 건 1440×2560으로), slot/face(정해진 크기, 같은 비율이면 줄임) */
 function prepare(file,kind,slot){var A=T.ad.spec.art;return loadImg(URL.createObjectURL(file)).then(function(img){var W=img.naturalWidth,H=img.naturalHeight,tw,th,need;
- if(kind==='full'){if(W*16!==H*9)throw new Error('전신은 9:16이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<A.full.min[0])throw new Error('전신은 최소 '+A.full.min.join('×')+' (올린 파일 '+W+'×'+H+')');
-  tw=Math.min(W,A.full.max[0]);th=tw*16/9;if(tw%4||th%4)throw new Error('전신 가로·세로는 4의 배수여야 해요 ('+tw+'×'+th+')');need=true}
+ var warn=[];
+ if(kind==='full'){if(Math.abs(W/H-9/16)>0.01*9/16)throw new Error('전신은 9:16 비율이어야 해요 (올린 파일 '+W+'×'+H+')');
+  /* 비율만 맞으면 받는다(사용자 요청): 너비는 36의 배수로 맞춰 정확히 9:16·4의 배수, 큰 건 1440×2560으로 줄임. 작거나 투명하지 않으면 경고만 */
+  tw=Math.max(36,Math.floor(Math.min(W,A.full.max[0])/36)*36);th=tw*16/9;need=null;
+  if(W<A.full.min[0])warn.push('권장 최소 '+A.full.min.join('×')+'보다 작아 큰 화면에서 흐릴 수 있어요');}
  else{var ex=kind==='face'?A.face.exact:[slot.w,slot.h];if(W*ex[1]!==H*ex[0])throw new Error('비율이 달라요: '+ex[0]+'×'+ex[1]+' 비율이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<ex[0])throw new Error('최소 '+ex[0]+'×'+ex[1]+'이어야 해요 (올린 파일 '+W+'×'+H+')');tw=ex[0];th=ex[1];need=kind==='face'?true:slot.alpha}
- var cv=drawTo(img,tw,th),bad=alphaCheck(cv,need);if(bad)throw new Error(bad);
+ var cv=drawTo(img,tw,th);if(need===null){if(alphaCheck(cv,true))warn.push('배경이 투명하지 않아요(상세 10 권장: 투명 배경)')}else{var bad=alphaCheck(cv,need);if(bad)throw new Error(bad)}
  var q=(kind==='full'||kind==='face'||(slot&&slot.alpha===false))?0.9:1;
- return {img:img,cv:cv,kind:kind,slot:slot,w:tw,h:th,orig:file.size,origW:W,origH:H,q:q,src:URL.createObjectURL(file)}})}
+ return {img:img,cv:cv,kind:kind,slot:slot,w:tw,h:th,orig:file.size,origW:W,origH:H,q:q,warn:warn,src:URL.createObjectURL(file)}})}
 function compress(P){return toWebp(P.cv,P.q).then(function(b){P.blob=b;P.url=URL.createObjectURL(b);if(P.kind!=='full')return P;var A=T.ad.spec.art.thumb.exact;return toWebp(drawTo(P.img,A[0],A[1]),0.85).then(function(t){P.thumb=t;return P})})}
 function compareBox(P){var cap=P.kind==='full'?T.ad.spec.fullMaxKb:P.kind==='face'?T.ad.spec.faceMaxKb:null,over=cap&&P.blob.size>cap*1024;
  return '<div class="card" style="margin-top:12px"><h3>압축 확인 — 사람이 승인해야 저장돼요</h3><div class="small">원본 '+P.origW+'×'+P.origH+' '+kb(P.orig)+' → WebP '+P.w+'×'+P.h+' <b>'+kb(P.blob.size)+'</b> (−'+Math.max(0,Math.round((1-P.blob.size/P.orig)*100))+'%)'+(P.thumb?' · 밴픽 축소본 '+kb(P.thumb.size):'')+(over?' <span class="tag bad">목표 '+cap+'KB 초과</span>':'')+'</div>'
+ +((P.warn||[]).length?'<div class="small" style="margin-top:6px">'+P.warn.map(function(w){return '<span class="tag warn">'+esc(w)+'</span>'}).join(' ')+'</div>':'')
  +'<div class="row" style="margin:8px 0"><label class="small">품질 <select id="aQ">'+[0.75,0.8,0.85,0.9,0.95,1].map(function(q){return '<option value="'+q+'"'+(q===P.q?' selected':'')+'>'+(q===1?'최고(무손실에 가까움)':Math.round(q*100))+'</option>'}).join('')+'</select></label><span class="small muted">확대 비교(가운데 부분 2배): 왼쪽 원본, 오른쪽 압축</span></div>'
  +'<div class="row"><canvas id="cmpA" width="240" height="240" style="border:1px solid var(--line);max-width:48%"></canvas><canvas id="cmpB" width="240" height="240" style="border:1px solid var(--line);max-width:48%"></canvas></div>'
  +'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aOk">승인·저장</button><button class="btn sm" id="aNo">취소</button></div></div>'}
@@ -195,7 +199,7 @@ V.assetChar=function(){T.ach=T.ach||ssGet('bo_ach');T.askin=T.askin||ssGet('bo_a
  +'<div class="card" style="margin-bottom:14px"><h3>스킨 '+T.askin+' 이미지</h3><div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">전신(9:16)</div>'+aImg(cur.full,220)+'</div><div><div class="small muted">밴픽 축소본</div>'+aImg(cur.thumb,110)+'</div><div><div class="small muted">얼굴 파일(선택)</div>'+aImg(cur.face,80,true)+'</div></div>'
  +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+'</div>'
  +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+'</div>':'')
- +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경(상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
+ +'<p class="small muted" style="margin:6px 0 0">전신은 9:16 비율이면 올릴 수 있어요. 권장 1440×2560(최소 1080×1920)·투명 배경(상세 10)이 아니면 경고만 보여요. 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
  +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button></div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
 V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var cur=((d.art[T.ach]||{})[T.askin])||{},ch='&char='+T.ach+'&skin='+T.askin;
  $('view').onclick=function(e){var s=e.target.closest('[data-askin]');if(s){T.askin=s.dataset.askin;ssSet('bo_askin',T.askin);render()}};
