@@ -35,6 +35,15 @@ begin
   assert (r->>'added')::integer = 2 and r->'skipped' = '["바 보"]' and jsonb_array_length(r->'invalid') = 2, 'bulk ' || r::text;
   r := public.names_check('["멍청이123", "ㅂㅅ", "ㅂㅅ왕", "평범"]');
   assert jsonb_array_length(r->0->'hits') = 1 and jsonb_array_length(r->1->'hits') = 1 and jsonb_array_length(r->2->'hits') = 0 and jsonb_array_length(r->3->'hits') = 0, 'names check';
+  -- 허용 단어: 빼고 남은 글자로 검사(기획답변 19차)
+  perform public.bo_words_bulk(ad, '[{"word":"성기"},{"word":"닥쳐"}]'::jsonb, '');
+  assert public.bo_allowed_bulk(ad, '["성기사", "성 기 사", "!!"]'::jsonb, '')->>'added' = '1', 'allow bulk';
+  r := public.names_check('["성기사", "성기사성기", "태양의성기사"]');
+  assert jsonb_array_length(r->0->'hits') = 0 and jsonb_array_length(r->1->'hits') = 1 and jsonb_array_length(r->2->'hits') = 0, 'allow ' || r::text;
+  perform public.bo_word_match(ad, (select id from public.banned_words where word = '닥쳐' and removed_at is null), 'exact', '오탐');
+  assert jsonb_array_length(public.name_matches('닥쳐요정')) = 0 and jsonb_array_length(public.name_matches('닥쳐')) = 1, 'match change';
+  perform public.bo_allowed_remove(ad, (select id from public.allowed_words where word = '성기사'), '시험');
+  assert jsonb_array_length(public.name_matches('성기사')) = 1, 'allow removed';
   perform public.bo_word_remove(ad, wid, '테스트 끝');
   assert jsonb_array_length(public.name_matches('바보123')) = 0, 'removed';
   assert (select count(*) from public.audit_log where target = '금칙어') >= 2, 'audit';

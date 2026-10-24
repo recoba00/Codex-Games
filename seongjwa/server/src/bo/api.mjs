@@ -232,6 +232,29 @@ export async function handleBo(request, env, url) {
       const items = words.map((word) => ({ word, kind: b.kind, match: b.match, lang: b.lang }));
       return json({ ok: true, ...(await rpc(env, "bo_words_bulk", { p_staff: st.id, p_items: items, p_note: String(b.note ?? "").slice(0, 200) })) });
     }
+    // 허용 단어(예외): 관리자만(기획답변 19차)
+    case "GET /words/allowed": { const st = await staffOf(request, env); allow(st, "users"); return json({ ok: true, words: await rpc(env, "bo_allowed", { p_q: url.searchParams.get("q") ?? "" }) }); }
+    case "POST /words/allowed": {  // { text: "성기사, 시발점\n…", note }
+      const st = await staffOf(request, env); allow(st, "staff");
+      const b = await body(request);
+      const words = [...new Set(String(b.text ?? "").split(/[,\n\r]+/).map((x) => x.trim()).filter(Boolean))];
+      if (!words.length || words.length > 500) throw new Error("value_invalid");
+      return json({ ok: true, ...(await rpc(env, "bo_allowed_bulk", { p_staff: st.id, p_words: words, p_note: String(b.note ?? "").slice(0, 200) })) });
+    }
+    case "POST /words/allowed/remove": {
+      const st = await staffOf(request, env); allow(st, "staff");
+      const b = await body(request);
+      if (!String(b.reason ?? "").trim()) throw new Error("reason_required");
+      await rpc(env, "bo_allowed_remove", { p_staff: st.id, p_id: Number(b.id), p_reason: String(b.reason).slice(0, 200) });
+      return json({ ok: true });
+    }
+    case "POST /words/match": {  // { id, match: contains|prefix|exact, reason } 오탐이면 일치로
+      const st = await staffOf(request, env); allow(st, "users");
+      const b = await body(request);
+      if (!String(b.reason ?? "").trim()) throw new Error("reason_required");
+      await rpc(env, "bo_word_match", { p_staff: st.id, p_id: Number(b.id), p_match: String(b.match ?? ""), p_reason: String(b.reason).slice(0, 200) });
+      return json({ ok: true });
+    }
     case "POST /words/check": {  // { names: [...] } 여러 닉네임 한 번에 미리 검사(오탐 점검)
       const st = await staffOf(request, env); allow(st, "users");
       const b = await body(request);

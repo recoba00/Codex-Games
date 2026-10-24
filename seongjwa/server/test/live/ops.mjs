@@ -155,6 +155,12 @@ try {
   assert.deepEqual([bulk.added, bulk.skipped], [3, ["나쁜말"]]);
   const chk = await ok(call("/bo/v1/words/check", { names: "멍청이왕, 평범한이름\n바 보" }, admin));
   assert.deepEqual(chk.results.map((r) => r.hits.length > 0), [true, false, true]);
+  assert.equal((await ok(call("/bo/v1/words/allowed", { text: "멍청이왕국, 바보온달", note: "예외" }, admin))).added, 2);
+  const chk2 = await ok(call("/bo/v1/words/check", { names: ["멍청이왕국", "멍청이왕국멍청이", "바보온달"] }, admin));
+  assert.deepEqual(chk2.results.map((r) => r.hits.length > 0), [false, true, false]);
+  const bid = (await ok(call("/bo/v1/words?q=ㅂㅅ", undefined, admin))).words[0].id;
+  await ok(call("/bo/v1/words/match", { id: bid, match: "exact", reason: "오탐" }, admin));
+  assert.equal((await ok(call("/bo/v1/words/allowed", undefined, admin))).words.length >= 2, true);
   await err(call("/bo/v1/words/remove", { id: wid }, admin), "reason_required");
   await ok(call("/bo/v1/words/remove", { id: wid, reason: "테스트 끝" }, admin));
   assert.equal((await ok(call(`/bo/v1/words/test?name=${encodeURIComponent("나쁜말쟁이")}`, undefined, admin))).hits.length, 0, "삭제 뒤엔 통과");
