@@ -70,3 +70,20 @@ test("경제 시트: E열 키는 설정으로, 미션 표는 tables.missions로 
   const bad = importWorkbook(s);
   assert.ok(bad.errors.some((e) => e.includes("조건 종류 'winz'")) && bad.errors.some((e) => e.includes("범위 'everyone'")), bad.errors.join("\n"));
 });
+
+test("변경표: 경제 키 추가는 설정 행, 미션 표는 미션 행 단위, 값 변경은 항목 단위", async () => {
+  const { diffData } = await import("../src/bo/api.mjs");
+  const v8 = structuredClone(FIX);
+  const v7 = structuredClone(FIX);
+  for (const k of Object.keys(v7.settings)) if (/^econ_|^season_days$/.test(k)) delete v7.settings[k];
+  delete v7.tables.missions;
+  const d = diffData(v7, v8);
+  assert.equal(d.filter((x) => x.kind === "settings" && x.change === "added").length, 9);
+  assert.deepEqual(d.filter((x) => x.kind === "tables").map((x) => x.id).slice(0, 2), ["missions.daily.D01", "missions.daily.D02"]);
+  assert.equal(d.filter((x) => x.kind === "tables" && x.change === "added").length, 20);
+  const v9 = structuredClone(v8);
+  v9.tables.missions.weekly[1].gold = 250;
+  v9.characters.AU.hp = 1210;
+  assert.deepEqual(diffData(v8, v9).map((x) => [x.kind, x.id, x.field, x.from, x.to]),
+    [["characters", "AU", "hp", 1200, 1210], ["tables", "missions.weekly.W02", "gold", 200, 250]]);
+});

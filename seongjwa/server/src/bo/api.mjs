@@ -68,19 +68,34 @@ const reasonOf = (input, min = 2) => { const r = String(input.reason ?? "").trim
 
 // ---------- 데이터 비교(라이브 대비 변경) ----------
 const ENT = ["characters", "cards", "spells", "settings", "presets", "tables"];
+// 표(tables)는 행 단위로 편다: id가 있는 객체 배열은 "missions.weekly.W02"처럼 행마다, 나머지는 키마다
+function flattenTables(t = {}) {
+  const out = {};
+  const walk = (prefix, v) => {
+    if (Array.isArray(v) && v.length && v.every((x) => x && typeof x === "object" && ("id" in x || "no" in x || "count" in x))) {
+      for (const x of v) out[`${prefix}.${x.id ?? x.no ?? x.count}`] = x;
+    } else if (v && typeof v === "object" && !Array.isArray(v) && Object.values(v).some((x) => x && typeof x === "object")) {
+      for (const [k, x] of Object.entries(v)) walk(`${prefix}.${k}`, x);
+    } else out[prefix] = v;
+  };
+  for (const [name, body] of Object.entries(t)) walk(name, body);
+  return out;
+}
+
 export function diffData(a = {}, b = {}) {
   const out = [];
   for (const kind of ENT) {
-    const A = a[kind] ?? {}, B = b[kind] ?? {};
+    const A = kind === "tables" ? flattenTables(a.tables) : a[kind] ?? {};
+    const B = kind === "tables" ? flattenTables(b.tables) : b[kind] ?? {};
     for (const id of new Set([...Object.keys(A), ...Object.keys(B)])) {
-      if (!(id in A)) { out.push({ kind, id, change: "added" }); continue; }
-      if (!(id in B)) { out.push({ kind, id, change: "removed" }); continue; }
+      if (!(id in A)) { out.push({ kind, id, change: "added", to: B[id] }); continue; }
+      if (!(id in B)) { out.push({ kind, id, change: "removed", from: A[id] }); continue; }
       const x = A[id], y = B[id];
       if (JSON.stringify(x) === JSON.stringify(y)) continue;
-      if (x && y && typeof x === "object" && !Array.isArray(x) && kind !== "tables") {
+      if (x && y && typeof x === "object" && !Array.isArray(x)) {
         const fields = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter((f) => JSON.stringify(x[f]) !== JSON.stringify(y[f]));
         for (const f of fields) out.push({ kind, id, field: f, from: x[f] ?? null, to: y[f] ?? null });
-      } else out.push({ kind, id, change: "changed", from: kind === "tables" ? undefined : x, to: kind === "tables" ? undefined : y });
+      } else out.push({ kind, id, change: "changed", from: x, to: y });
     }
   }
   return out;

@@ -111,9 +111,10 @@ function valBox(va){if(!va||!va.summary)return '';var s=va.summary;
  return '<ul class="checks">'+(va.errors||[]).map(function(x){return '<li class="no">'+esc(x)+'</li>'}).join('')+(va.blocks||[]).map(function(x){return '<li class="no">[검수 차단] '+esc(x)+'</li>'}).join('')+(va.warnings||[]).map(function(x){return '<li class="wn">'+esc(x)+'</li>'}).join('')
  +(!(va.errors||[]).length&&!(va.blocks||[]).length?'<li>자동 검증 통과 · 캐릭터 '+s.characters+' · 카드 '+s.cards+' · 스펠 '+s.spells+' · 설정 '+s.settings+' · 추천덱 '+s.presets+' · 표 '+(s.tables||[]).join(',')+'</li>':'')+'</ul>'}
 var KIND={characters:'캐릭터',cards:'카드',spells:'스펠',settings:'설정',presets:'추천덱',tables:'표'};
-function short(v){var s=typeof v==='object'?JSON.stringify(v):String(v);return s.length>80?s.slice(0,80)+'…':s}
+function short(v){if(v&&typeof v==='object'&&v.name&&v.metric)return v.name+' · '+v.metric+' '+v.target+(v.aux&&Object.keys(v.aux).length?' ('+Object.keys(v.aux).map(function(k){return k+'='+v.aux[k]}).join(',')+')':'')+' · '+v.scope+' · '+v.gold+'G';
+ var s=typeof v==='object'?JSON.stringify(v):String(v);return s.length>120?s.slice(0,120)+'…':s}
 function diffBox(diff){if(!diff)return '';if(!diff.length)return '<p class="muted small">라이브와 차이 없음</p>';
- return table(['구분','ID','항목','라이브','초안'],diff.slice(0,300).map(function(x){return '<tr><td>'+KIND[x.kind]+'</td><td>'+esc(x.id)+'</td><td>'+esc(x.field||({added:'추가',removed:'삭제',changed:'변경'})[x.change])+'</td><td class="wrap muted">'+esc(x.from===undefined?'':short(x.from))+'</td><td class="wrap"><b>'+esc(x.to===undefined?'':short(x.to))+'</b></td></tr>'}))+(diff.length>300?'<p class="small muted">… '+diff.length+'건 중 300건</p>':'')}
+ return table(['구분','ID','항목','이전','이후'],diff.slice(0,300).map(function(x){return '<tr><td>'+KIND[x.kind]+'</td><td>'+esc(x.id)+'</td><td>'+esc(x.field||({added:'추가',removed:'삭제',changed:'변경'})[x.change])+'</td><td class="wrap muted">'+esc(x.from===undefined?'':short(x.from))+'</td><td class="wrap"><b>'+esc(x.to===undefined?'':short(x.to))+'</b></td></tr>'}))+(diff.length>300?'<p class="small muted">… '+diff.length+'건 중 300건</p>':'')}
 V.data=function(){return api('/data/versions').then(function(d){T.cache.versions=d;var P=T.perms,live=d.live;
  var rows=d.versions.map(function(v){var a=[];
   if(P.data_edit&&(v.state==='editing'||v.state==='rejected'))a.push('<button class="btn sm pri" data-act="request" data-v="'+v.id+'">검수 요청</button>');
@@ -121,7 +122,8 @@ V.data=function(){return api('/data/versions').then(function(d){T.cache.versions
   if(P.data_deploy&&(v.state==='approved'||v.state==='scheduled'))a.push('<input type="datetime-local" id="at'+v.id+'" class="small"><button class="btn sm" data-act="schedule" data-v="'+v.id+'">예약</button>'+(v.state==='scheduled'?'<button class="btn sm" data-act="unschedule" data-v="'+v.id+'">예약 취소</button>':'')+'<button class="btn sm pri" data-act="publish" data-v="'+v.id+'">지금 배포</button>');
   if(P.data_edit&&['editing','rejected','review','approved'].indexOf(v.state)>=0)a.push('<button class="btn sm" data-act="discard" data-v="'+v.id+'">폐기</button>');
   if(P.data_deploy&&v.status==='published'&&v.id!==live)a.push('<button class="btn sm bad" data-act="rollback" data-v="'+v.id+'">이 버전으로 롤백</button>');
-  a.push('<button class="btn sm" data-act="diff" data-v="'+v.id+'">라이브 대비</button>');
+  if(v.based_on)a.push('<button class="btn sm" data-act="diff" data-v="'+v.id+'" data-base="'+v.based_on+'">기준 v'+v.based_on+' 대비</button>');
+  if(v.id!==live)a.push('<button class="btn sm" data-act="diff" data-v="'+v.id+'">라이브 대비</button>');
   var vv=v.validation||{};
   return '<tr><td><b>v'+v.id+'</b>'+(v.based_on?'<div class="small muted">기준 v'+v.based_on+'</div>':'')+'</td><td>'+stTag(v,live)+(v.kind==='rollback'?' <span class="tag">롤백</span>':'')+'</td><td class="wrap">'+esc(v.note)+(v.reject_reason?'<div class="small" style="color:var(--bad)">반려: '+esc(v.reject_reason)+'</div>':'')
   +((vv.blocks||[]).length?'<div class="small" style="color:var(--bad)">검수 차단 '+vv.blocks.length+'건</div>':'')+((vv.warnings||[]).length?'<div class="small" style="color:var(--warn)">경고 '+vv.warnings.length+'건</div>':'')+'</td>'
@@ -137,7 +139,7 @@ V.data.bind=function(){var up=$('upGo');
     toast('초안 v'+j.version+' 저장');V.data().then(function(h){$('view').innerHTML=h;V.data.bind();$('upOut').innerHTML='<b>초안 v'+j.version+'</b>'+valBox(j.validation)+'<div class="hr"></div><b>라이브 대비 변경 '+j.diff.length+'건</b>'+diffBox(j.diff)})})
    .catch(fail).then(function(){up.disabled=false})};
  $('view').onclick=function(e){var b=e.target.closest('button[data-act]');if(!b)return;var v=Number(b.dataset.v),act=b.dataset.act,p;
-  if(act==='diff'){api('/data/diff?version='+v).then(function(j){var o=$('diffOut');o.hidden=false;o.innerHTML='<h3>v'+v+' ↔ 라이브 v'+j.base+' 변경 '+j.diff.length+'건</h3>'+diffBox(j.diff);o.scrollIntoView({behavior:'smooth'})}).catch(fail);return}
+  if(act==='diff'){var bs=b.dataset.base;api('/data/diff?version='+v+(bs?'&base='+bs:'')).then(function(j){var o=$('diffOut');o.hidden=false;o.innerHTML='<h3>v'+j.base+' → v'+v+' 변경 '+j.diff.length+'건'+(bs?' (기준 버전 대비)':' (라이브 대비)')+'</h3>'+diffBox(j.diff);o.scrollIntoView({behavior:'smooth'})}).catch(fail);return}
   if(act==='publish'){if(!confirm('v'+v+'를 지금 라이브로 배포할까요? 다음 판부터 적용돼요.'))return;p=api('/data/publish',{version:v})}
   else if(act==='rollback'){var r=prompt('v'+v+' 내용으로 롤백(새 버전으로 기록). 사유(5자 이상):');if(!r)return;p=api('/data/rollback',{target:v,reason:r})}
   else{var body={version:v,action:act};
