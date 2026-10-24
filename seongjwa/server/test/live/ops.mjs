@@ -194,6 +194,7 @@ try {
   const del = await ok(c.post("/v1/account/delete", { confirm: true }));
   assert.ok(Date.parse(del.deletionAt) > Date.now() + 13 * 86400000);
   assert.equal((await call("/v1/auth/refresh", { refreshToken: c.refresh })).status, 401, "삭제 요청하면 세션 종료(갱신 불가)");
+  await err(c.post("/v1/profile/name", { name: "남은토큰" }), "session_ended");  // 끝난 세션의 15분 토큰으로 상태 변경 불가
   const back = await ok(call("/v1/auth/dev", { devId: c.name }));
   assert.equal(back.restoredFromDeletion, true);
   c.token = back.accessToken;

@@ -115,10 +115,16 @@ async function issueSession(env, provider, providerUid, platform, device) {
   };
 }
 
+// 상태를 바꾸는 요청(POST)은 세션이 아직 살아 있는지도 본다(로그아웃·다른 기기 로그인·계정 삭제 직후 15분 토큰 재사용 차단).
+// 1분마다 오는 하트비트·이벤트·로그아웃은 토큰 검사만(DB 왕복 절약).
+const SESSION_CHECK_SKIP = new Set(["/v1/presence", "/v1/events", "/v1/auth/logout"]);
 async function authenticate(request, env) {
   const header = request.headers.get("authorization") ?? "";
   if (!header.startsWith("Bearer ")) throw new Error("auth_required");
-  return verifyAccess(env.TOKEN_SECRET, header.slice(7));
+  const claims = await verifyAccess(env.TOKEN_SECRET, header.slice(7));
+  if (request.method === "POST" && !SESSION_CHECK_SKIP.has(new URL(request.url).pathname)
+      && (await rpc(env, "auth_session_active", { p_session: claims.sid })) !== true) throw new Error("session_ended");
+  return claims;
 }
 
 export async function handle(request, env) {
@@ -645,6 +651,7 @@ export const app = {
     } catch (error) {
       const code = error instanceof Error ? error.message : "internal_error";
       const known = STATUS[code] ?? (/^[a-z_]+$/.test(code) ? 400 : 500);
+      if (known === 500) console.error("internal_error", new URL(request.url).pathname, code.slice(0, 300));
       return json({ ok: false, error: known === 500 ? "internal_error" : code, ...(error.extra ?? {}) }, known);
     }
   }
