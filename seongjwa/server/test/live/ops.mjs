@@ -107,7 +107,7 @@ try {
   a.send({ type: "pick", characterId: "AU" });
   await a.until((s) => s.phase === "loadout");
   a.send({ type: "loadout", spells: ["SP01", "SP04"], preset: 2 });
-  await a.until((s) => s.phase === "battle");
+  await a.until((s) => s.phase === "battle", 30000);  // 스펠·덱 단계는 시간이 다 되면 자동 확정(15초)
   while (a.state.phase === "battle" && a.state.battle.turn < 4) { const t = a.state.battle.turn; const me = a.state.battle.me, cd = me.hand.find((h) => h.cost <= me.energy && !h.sealed); a.send({ type: "act", turn: t, cards: cd ? [cd.uid] : [] }); await a.until((s) => s.phase !== "battle" || s.battle.turn > t, 30000); }
   a.send({ type: "surrender" });
   await a.until((s) => s.phase === "result").catch((e) => { console.error(JSON.stringify(a.events.slice(-3))); throw e; });
