@@ -30,6 +30,7 @@ textarea{resize:vertical;min-height:56px;width:100%}
 .btn{font:inherit;font-size:14px;border-radius:8px;padding:7px 12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;white-space:nowrap}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.bad{color:var(--bad)}.btn[disabled]{opacity:.45;cursor:not-allowed}.btn.sm{padding:3px 8px;font-size:12px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.tw{overflow-x:auto}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.agrid.sm{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}button.card.acard{width:100%;text-align:center;cursor:pointer;font:inherit;color:inherit;border:1px solid var(--line)}button.card.acard:hover{border-color:var(--accent)}
 @media(max-width:700px){.tw table,.tw tbody,.tw tr,.tw td{display:block;width:auto}.tw tr:first-child{display:none}.tw tr{border-bottom:1px solid var(--line);padding:10px 0}.tw td{border:none!important;padding:3px 0!important}.tw td[data-l]:before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}}
 table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
 th{color:var(--muted);font-weight:500;background:var(--panel2);position:sticky;top:0}td.wrap{white-space:normal;min-width:200px}
@@ -84,8 +85,8 @@ var MENU=[['운영',[['dashboard','대시보드','dashboard'],['metrics','지표
  ['게임 데이터',[['data','데이터 배포(xlsx)','data_view'],['characters','캐릭터','data_view'],['cards','전투카드','data_view'],['spells','스펠','data_view'],['settings','설정값','data_view'],['assets','에셋 등록','data_view']]],
  ['운영 도구',[['shop','상점·상품','shop'],['events','배너·공지·우편','events'],['users','유저 조회·제재','users'],['reports','신고','users'],['words','금칙어·닉네임','users']]],
  ['배포·관리',[['audit','감사 로그','audit'],['staff','권한 관리','dashboard']]]];
-function shell(inner){var nav='<div class="brand">성좌 결투 BO</div>'+MENU.map(function(g){return '<div class="grp">'+g[0]+'</div>'+g[1].map(function(m){return '<button data-k="'+m[0]+'" '+(T.route===m[0]?'aria-current="page"':'')+(T.perms[m[2]]?'':' disabled title="권한 없음"')+'>'+m[1]+'</button>'}).join('')}).join('');
- var opts=MENU.reduce(function(a,g){return a.concat(g[1])},[]).filter(function(m){return T.perms[m[2]]}).map(function(m){return '<option value="'+m[0]+'" '+(T.route===m[0]?'selected':'')+'>'+m[1]+'</option>'}).join('');
+function shell(inner){var nav='<div class="brand">성좌 결투 BO</div>'+MENU.map(function(g){return '<div class="grp">'+g[0]+'</div>'+g[1].map(function(m){return '<button data-k="'+m[0]+'" '+((T.route===m[0]||(m[0]==='assets'&&/^asset[A-Z]/.test(T.route)))?'aria-current="page"':'')+(T.perms[m[2]]?'':' disabled title="권한 없음"')+'>'+m[1]+'</button>'}).join('')}).join('');
+ var opts=MENU.reduce(function(a,g){return a.concat(g[1])},[]).filter(function(m){return T.perms[m[2]]}).map(function(m){return '<option value="'+m[0]+'" '+((T.route===m[0]||(m[0]==='assets'&&/^asset[A-Z]/.test(T.route)))?'selected':'')+'>'+m[1]+'</option>'}).join('');
  return '<div class="app"><nav class="side" id="side">'+nav+'</nav><div class="main"><div class="top"><h1>성좌 결투 백오피스 <span class="tag ok">테스트 서버</span>'+(T.solo?' <span class="tag warn" title="관리자가 자기 초안도 승인할 수 있음(상세 14)">1인 운영 모드</span>':'')+'</h1><span class="sp"></span><span class="small muted">'+esc(T.me.name)+' ('+esc(T.me.login)+') · <b>'+ROLE[T.me.role]+'</b></span><button class="btn sm" id="btnOut">로그아웃</button></div><div class="mnav"><select id="mnav">'+opts+'</select></div><div class="content" id="view">'+inner+'</div></div></div>'}
 function go(k){T.route=k;history.replaceState(null,'','#'+k);render()}
 function render(){var root=$('root');
@@ -147,45 +148,77 @@ function regionEditor(img,W,H,R){var host=$('aReg');if(!host)return;var cardH=(W
  var drag=false;function mv(e){if(!drag)return;var r=full.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;R.face.x=x-R.face.w/2;R.face.y=y-R.face.h/2;clampFace();draw()}
  full.onpointerdown=function(e){drag=true;full.setPointerCapture(e.pointerId);mv(e)};full.onpointermove=mv;full.onpointerup=function(){drag=false};
  clampFace();draw()}
-V.assets=function(){return api('/assets'+(T.av?'?version='+T.av:'')).then(function(d){T.ad=d;var P=T.perms,ed=d.editable&&P.data_edit;T.ach=T.ach&&d.characters.some(function(c){return c.id===T.ach})?T.ach:(d.characters[0]||{}).id;T.askin=T.askin||'000';
- var cur=(d.art[T.ach]||{})[T.askin]||{},groups={};d.spec.slots.forEach(function(s){(groups[s.group]=groups[s.group]||[]).push(s)});
- var img=function(f,h){return f&&f.path?'<img src="'+esc(d.base+f.path)+'" style="height:'+h+'px;background:repeating-conic-gradient(#8884 0 25%,transparent 0 50%) 0 0/12px 12px;border-radius:4px" loading="lazy">':'<span class="muted small">내장 기본</span>'};
+/* 목록 → 상세: 에셋 등록(목록: 캐릭터 카드·슬롯 카드) → 캐릭터 상세 / 슬롯 상세 */
+function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
+function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
+function assetsLoad(){T.av=T.av||Number(ssGet('bo_av'))||0;return api('/assets'+(T.av?'?version='+T.av:'')).then(function(d){T.ad=d;return d})}
+function aImg(f,h,round){var d=T.ad;return f&&f.path?'<img src="'+esc(d.base+f.path)+'" style="height:'+h+'px;max-width:100%;object-fit:contain;background:repeating-conic-gradient(#8884 0 25%,transparent 0 50%) 0 0/12px 12px;border-radius:'+(round?'50%':'6px')+'" loading="lazy">':'<div class="muted small" style="height:'+h+'px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:6px;min-width:'+Math.round(h*0.6)+'px">내장 기본</div>'}
+function verBar(d){var P=T.perms,ed=d.editable&&P.data_edit;
  var opts=d.drafts.map(function(v){return '<option value="'+v.id+'"'+(v.id===d.version?' selected':'')+'>v'+v.id+' 초안 · '+esc(v.note)+' ('+esc(v.by||'-')+')</option>'}).join('')+'<option value="'+d.live+'"'+(d.live===d.version?' selected':'')+'>v'+d.live+' 라이브(보기만)</option>';
- return '<h2>에셋 등록</h2><p class="sub">이미지는 브라우저에서 규격·투명을 검사하고 WebP로 압축한 뒤, 사람이 승인해야 저장소(Supabase Storage)에 올라가요. 어떤 파일을 쓰는지와 영역 좌표는 데이터 초안에 들어가서 검수 → 배포 → 롤백을 그대로 따라요(상세 14). 원본은 저장하지 않아요.</p>'
- +'<div class="grid g2" style="margin-bottom:14px"><div class="card"><h3>편집할 버전</h3><div class="row"><select id="aVer">'+opts+'</select>'+(P.data_edit?'<button class="btn sm" id="aNew">에셋용 새 초안(라이브 v'+d.live+' 기준)</button>':'')+'</div><p class="small muted" style="margin:8px 0 0">'+(ed?'v'+d.version+' 초안을 고치는 중. 다 고치면 데이터 배포(xlsx) 메뉴에서 검수 요청 → 승인 → 배포.':'이 버전은 보기만 할 수 있어요. 고치려면 편집 중인 초안을 고르거나 새로 만드세요.')+'</p></div>'
- +'<div class="card"><h3>저장소 사용량</h3>'+usageBox(d.usage)+'</div></div>'
- +'<div class="card" style="margin-bottom:14px"><h3>캐릭터·스킨 이미지</h3><div class="row"><select id="aCh">'+d.characters.map(function(c){return '<option value="'+c.id+'"'+(c.id===T.ach?' selected':'')+'>'+c.id+' '+esc(c.name)+'</option>'}).join('')+'</select><label class="small">스킨 ID <input id="aSkin" value="'+esc(T.askin)+'" size="4" maxlength="3"></label><span class="small muted">000 = 기본 외형</span></div>'
- +'<div class="row" style="margin-top:10px;align-items:flex-end"><div><div class="small muted">전신(9:16)</div>'+img(cur.full,160)+'</div><div><div class="small muted">밴픽 축소본</div>'+img(cur.thumb,80)+'</div><div><div class="small muted">얼굴 파일(선택)</div>'+img(cur.face,64)+'</div>'
- +'<div class="small">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes):'전신 없음')+'<br>카드 영역 '+(cur.card?'지정됨':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'지정됨':'<span class="tag warn">미지정</span>')+'</div></div>'
- +(ed?'<div class="row" style="margin-top:10px"><label class="btn sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full?'<button class="btn sm" id="aRegEdit">영역 지정</button>':'')+'</div>':'')
- +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경(상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p>'
- +'<div id="aPrep"></div><div id="aReg" style="margin-top:12px"></div><div class="row" id="aRegBtns" style="margin-top:8px;display:none"><button class="btn pri sm" id="aRegSave">영역 저장</button></div></div>'
- +'<div class="card"><h3>슬롯 '+d.spec.slots.length+'개</h3><p class="small muted">비어 있으면 게임에 내장된 기본 이미지를 써요. 슬롯 목록을 늘리려면 게임 빌드가 필요하고, 파일 교체는 빌드 없이 돼요(상세 14).</p>'
- +Object.keys(groups).map(function(gname){return '<h3 style="margin-top:12px">'+gname+'</h3>'+table(['슬롯','규격','현재','작업'],groups[gname].map(function(s){var f=(d.assets.slots||{})[s.id];
-  return '<tr><td><b>'+esc(s.name)+'</b><div class="small muted">'+s.id+'</div></td><td class="small">'+s.w+'×'+s.h+' · '+(s.alpha===false?'불투명':s.alpha==='corners'?'모서리 투명':'투명')+'</td><td>'+img(f,48)+(f?'<div class="small muted">'+kb(f.bytes)+'</div>':'')+'</td><td>'+(ed?'<label class="btn sm">올리기<input type="file" data-slot="'+s.id+'" accept="image/png,image/webp" hidden></label>'+(f?' <button class="btn sm" data-sdel="'+s.id+'">빼기</button>':''):'')+'</td></tr>'}))}).join('')+'</div>'})};
-V.assets.bind=function(){var d=T.ad;if(!d)return;var v=$('view');
- $('aVer').onchange=function(e){T.av=Number(e.target.value);render()};
- if($('aNew'))$('aNew').onclick=function(){var note=prompt('초안 메모(감사 로그)','에셋 변경');if(note===null)return;api('/assets/draft',{note:note}).then(function(j){T.av=j.version;toast('v'+j.version+' 초안');render()}).catch(fail)};
- $('aCh').onchange=function(e){T.ach=e.target.value;render()};$('aSkin').onchange=function(e){var s=e.target.value.trim();if(!/^\d{3}$/.test(s)){toast('스킨 ID는 숫자 3자리');e.target.value=T.askin;return}T.askin=s;render()};
- var q=function(kind,extra){return 'version='+d.version+'&kind='+kind+(extra||'')};
- var ask=function(file,kind,slot,onSaved){$('aPrep').innerHTML='<p class="small muted">검사·압축 중…</p>';
-  prepare(file,kind,slot).then(compress).then(function(P){$('aPrep').innerHTML=compareBox(P);drawCompare(P);
-   $('aQ').onchange=function(e){P.q=Number(e.target.value);compress(P).then(function(){$('aPrep').innerHTML=compareBox(P);drawCompare(P);bindCmp()})};
-   function bindCmp(){$('aQ').onchange=function(e){P.q=Number(e.target.value);compress(P).then(function(){$('aPrep').innerHTML=compareBox(P);drawCompare(P);bindCmp()})};
-    $('aNo').onclick=function(){$('aPrep').innerHTML=''};
-    $('aOk').onclick=function(){$('aOk').disabled=true;onSaved(P).then(function(){toast('저장했어요');render()}).catch(function(e){$('aOk').disabled=false;fail(e)})}}
-   bindCmp()}).catch(function(e){$('aPrep').innerHTML='<div class="note">⚠ '+esc(e.message)+'</div>'})};
- var ch=function(){return '&char='+T.ach+'&skin='+T.askin};
- if($('aFull'))$('aFull').onchange=function(e){var f=e.target.files[0];if(!f)return;ask(f,'full',null,function(P){return upload(P.blob,q('full',ch())).then(function(j){if(j.warnings&&j.warnings.length)toast(j.warnings[0]);return upload(P.thumb,q('thumb',ch()))}).then(function(){var cur=(d.art[T.ach]||{})[T.askin]||{};
-   T.regAfter={card:cur.card,face:cur.faceRect}})})};
- if($('aFace'))$('aFace').onchange=function(e){var f=e.target.files[0];if(!f)return;ask(f,'face',null,function(P){return upload(P.blob,q('face',ch()))})};
+ return '<div class="card" style="margin-bottom:14px"><div class="row"><b>편집할 버전</b><select id="aVer">'+opts+'</select>'+(P.data_edit?'<button class="btn sm" id="aNew">에셋용 새 초안(라이브 v'+d.live+' 기준)</button>':'')+'</div><p class="small muted" style="margin:8px 0 0">'+(ed?'v'+d.version+' 초안을 고치는 중이에요. 다 고치면 데이터 배포(xlsx) 메뉴에서 검수 요청 → 승인 → 배포.':'이 버전은 보기만 할 수 있어요. 고치려면 편집 중인 초안을 고르거나 새로 만드세요.')+'</p></div>'}
+function bindVer(){if($('aVer'))$('aVer').onchange=function(e){T.av=Number(e.target.value);ssSet('bo_av',T.av);render()};
+ if($('aNew'))$('aNew').onclick=function(){var note=prompt('초안 메모(감사 로그)','에셋 변경');if(note===null)return;api('/assets/draft',{note:note}).then(function(j){T.av=j.version;ssSet('bo_av',j.version);toast('v'+j.version+' 초안');render()}).catch(fail)}}
+function backBtn(){return '<button class="btn sm" id="aBack" style="margin-bottom:10px">← 에셋 목록</button>'}
+function bindBack(){if($('aBack'))$('aBack').onclick=function(){go('assets')}}
+
+/* 목록 */
+V.assets=function(){return assetsLoad().then(function(d){var tab=T.atab||ssGet('bo_atab')||'chars',groups={};d.spec.slots.forEach(function(s){(groups[s.group]=groups[s.group]||[]).push(s)});
+ var slots=d.assets.slots||{},filled=Object.keys(slots).length;
+ var chars=d.characters.map(function(c){var skins=d.art[c.id]||{},base=skins['000']||{},n=Object.keys(skins).length,ok=base.full&&base.card&&base.faceRect;
+  return '<button class="card acard" data-ach="'+c.id+'"><div style="display:flex;justify-content:center">'+aImg(base.thumb||base.full,150)+'</div><div style="margin-top:8px"><b>'+esc(c.name)+'</b> <span class="small muted">'+c.id+'</span></div><div class="small" style="margin-top:4px">'+(base.full?(ok?'<span class="tag ok">기본 완료</span>':'<span class="tag warn">영역 미지정</span>'):'<span class="tag">이미지 없음</span>')+(n>1?' <span class="tag">스킨 '+(n-1)+'</span>':'')+'</div></button>'}).join('');
+ var slotHtml=Object.keys(groups).map(function(g){return '<h3 style="margin:14px 0 8px">'+g+' <span class="small muted">'+groups[g].filter(function(s){return slots[s.id]}).length+'/'+groups[g].length+'</span></h3><div class="agrid sm">'+groups[g].map(function(s){var f=slots[s.id];
+  return '<button class="card acard" data-aslot="'+s.id+'"><div style="display:flex;justify-content:center">'+aImg(f,64)+'</div><div class="small" style="margin-top:6px"><b>'+esc(s.name)+'</b></div><div class="small muted">'+s.w+'×'+s.h+'</div></button>'}).join('')+'</div>'}).join('');
+ return '<h2>에셋 등록</h2><p class="sub">카드를 눌러 상세 화면에서 이미지를 올려요. 규격·투명 검사 → WebP 압축 → 사람이 승인해야 저장, 바뀐 내용은 데이터 초안에 들어가 검수 → 배포 → 롤백을 따라요(상세 14).</p>'
+ +verBar(d)+'<div class="card" style="margin-bottom:14px"><h3>저장소 사용량</h3>'+usageBox(d.usage)+'</div>'
+ +'<div class="row" style="margin-bottom:12px"><button class="btn sm'+(tab==='chars'?' pri':'')+'" data-atab="chars">캐릭터 '+d.characters.length+'</button><button class="btn sm'+(tab==='slots'?' pri':'')+'" data-atab="slots">슬롯 '+filled+'/'+d.spec.slots.length+'</button></div>'
+ +(tab==='chars'?'<div class="agrid">'+chars+'</div>':slotHtml)})};
+V.assets.bind=function(){bindVer();$('view').onclick=function(e){var t=e.target.closest('[data-atab]'),c=e.target.closest('[data-ach]'),s=e.target.closest('[data-aslot]');
+ if(t){T.atab=t.dataset.atab;ssSet('bo_atab',T.atab);render()}
+ if(c){T.ach=c.dataset.ach;T.askin='000';ssSet('bo_ach',T.ach);ssSet('bo_askin','000');go('assetChar')}
+ if(s){T.aslot=s.dataset.aslot;ssSet('bo_aslot',T.aslot);go('assetSlot')}}};
+
+/* 공통: 파일 고르기 → 검사·압축 → 비교 → 승인 */
+function askUpload(file,kind,slot,onSaved){$('aPrep').innerHTML='<p class="small muted">검사·압축 중…</p>';
+ prepare(file,kind,slot).then(compress).then(function(P){function show(){$('aPrep').innerHTML=compareBox(P);drawCompare(P);
+   $('aQ').onchange=function(e){P.q=Number(e.target.value);compress(P).then(show)};
+   $('aNo').onclick=function(){$('aPrep').innerHTML=''};
+   $('aOk').onclick=function(){$('aOk').disabled=true;onSaved(P).then(function(){toast('저장했어요');render()}).catch(function(e){$('aOk').disabled=false;fail(e)})}}
+  show();$('aPrep').scrollIntoView({block:'nearest'})}).catch(function(e){$('aPrep').innerHTML='<div class="note">⚠ '+esc(e.message)+'</div>'})}
+function upQ(kind,extra){return 'version='+T.ad.version+'&kind='+kind+(extra||'')}
+
+/* 캐릭터 상세 */
+V.assetChar=function(){T.ach=T.ach||ssGet('bo_ach');T.askin=T.askin||ssGet('bo_askin')||'000';return assetsLoad().then(function(d){var c=d.characters.find(function(x){return x.id===T.ach});if(!c){go('assets');return ''}
+ var ed=d.editable&&T.perms.data_edit,skins=d.art[c.id]||{},ids=Object.keys(skins);if(ids.indexOf('000')<0)ids.unshift('000');if(ids.indexOf(T.askin)<0)ids.push(T.askin);ids.sort();
+ var cur=skins[T.askin]||{};
+ return backBtn()+'<h2>'+esc(c.name)+' <span class="small muted">'+c.id+'</span></h2>'+verBar(d)
+ +'<div class="card" style="margin-bottom:14px"><div class="row"><b>스킨</b>'+ids.map(function(s){return '<button class="btn sm'+(s===T.askin?' pri':'')+'" data-askin="'+s+'">'+(s==='000'?'000 기본':s)+(skins[s]&&skins[s].full?'':' ·비어 있음')+'</button>'}).join('')+(ed?'<input id="aSkinNew" placeholder="새 스킨 ID(숫자 3자리)" size="12" maxlength="3"><button class="btn sm" id="aSkinAdd">추가</button>':'')+'</div></div>'
+ +'<div class="card" style="margin-bottom:14px"><h3>스킨 '+T.askin+' 이미지</h3><div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">전신(9:16)</div>'+aImg(cur.full,220)+'</div><div><div class="small muted">밴픽 축소본</div>'+aImg(cur.thumb,110)+'</div><div><div class="small muted">얼굴 파일(선택)</div>'+aImg(cur.face,80,true)+'</div></div>'
+ +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+'</div>'
+ +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+'</div>':'')
+ +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경(상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
+ +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button></div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
+V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var cur=((d.art[T.ach]||{})[T.askin])||{},ch='&char='+T.ach+'&skin='+T.askin;
+ $('view').onclick=function(e){var s=e.target.closest('[data-askin]');if(s){T.askin=s.dataset.askin;ssSet('bo_askin',T.askin);render()}};
+ if($('aSkinAdd'))$('aSkinAdd').onclick=function(){var s=val('aSkinNew');if(!/^\d{3}$/.test(s))return toast('스킨 ID는 숫자 3자리');T.askin=s;ssSet('bo_askin',s);render()};
+ if($('aFull'))$('aFull').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'full',null,function(P){return upload(P.blob,upQ('full',ch)).then(function(j){if(j.warnings&&j.warnings.length)toast(j.warnings[0]);return upload(P.thumb,upQ('thumb',ch))})})};
+ if($('aFace'))$('aFace').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'face',null,function(P){return upload(P.blob,upQ('face',ch))})};
  if($('aFaceDel'))$('aFaceDel').onclick=function(){if(!confirm('얼굴 파일을 빼면 얼굴 영역으로 잘라 써요. 뺄까요?'))return;api('/assets/remove',{version:d.version,char:T.ach,skin:T.askin,kind:'face'}).then(function(){toast('뺐어요');render()}).catch(fail)};
- var openReg=function(){var cur=(d.art[T.ach]||{})[T.askin]||{};if(!cur.full)return;loadImg(d.base+cur.full.path).then(function(img){var R={card:cur.card,face:cur.faceRect};regionEditor(img,cur.full.w,cur.full.h,R);$('aRegBtns').style.display='';
-   $('aRegSave').onclick=function(){api('/assets/regions',{version:d.version,char:T.ach,skin:T.askin,card:R.card,face:R.face}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
- if($('aRegEdit'))$('aRegEdit').onclick=openReg;
- if(T.regAfter){T.regAfter=null;openReg()}
- v.onchange=function(e){var t=e.target;if(t.dataset&&t.dataset.slot&&t.files[0]){var s=d.spec.slots.find(function(x){return x.id===t.dataset.slot});window.scrollTo(0,$('aPrep').getBoundingClientRect().top+window.scrollY-80);ask(t.files[0],'slot',s,function(P){return upload(P.blob,q('slot','&slot='+s.id))})}};
- v.onclick=function(e){var b=e.target.closest('[data-sdel]');if(!b)return;if(!confirm(b.dataset.sdel+' 파일을 빼고 내장 기본 이미지를 쓸까요?'))return;api('/assets/remove',{version:d.version,slot:b.dataset.sdel}).then(function(){toast('뺐어요');render()}).catch(fail)}};
+ if($('aSkinDel'))$('aSkinDel').onclick=function(){if(!confirm('스킨 '+T.askin+' 이미지와 영역을 모두 뺄까요?'))return;api('/assets/remove',{version:d.version,char:T.ach,skin:T.askin,kind:'skin'}).then(function(){T.askin='000';ssSet('bo_askin','000');toast('뺐어요');render()}).catch(fail)};
+ if(cur.full&&$('aReg'))loadImg(d.base+cur.full.path).then(function(img){var R={card:cur.card,face:cur.faceRect};regionEditor(img,cur.full.w,cur.full.h,R);
+  if($('aRegSave'))$('aRegSave').onclick=function(){api('/assets/regions',{version:d.version,char:T.ach,skin:T.askin,card:R.card,face:R.face}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
+
+/* 슬롯 상세 */
+V.assetSlot=function(){T.aslot=T.aslot||ssGet('bo_aslot');return assetsLoad().then(function(d){var s=d.spec.slots.find(function(x){return x.id===T.aslot});if(!s){go('assets');return ''}
+ var ed=d.editable&&T.perms.data_edit,f=(d.assets.slots||{})[s.id],same=d.spec.slots.filter(function(x){return x.group===s.group}),i=same.indexOf(s);
+ return backBtn()+'<h2>'+esc(s.name)+' <span class="small muted">'+s.id+'</span></h2>'+verBar(d)
+ +'<div class="card"><div class="row" style="align-items:flex-start;gap:16px"><div>'+aImg(f,s.w>=s.h?140:220)+'</div><div class="small"><div>규격 <b>'+s.w+'×'+s.h+'</b> · '+(s.alpha===false?'불투명':s.alpha==='corners'?'모서리 투명':'투명')+'</div><div style="margin-top:4px">'+(f?'현재 '+f.w+'×'+f.h+' · '+kb(f.bytes)+' · '+fmt(f.at):'비어 있음 → 게임 내장 기본 이미지')+'</div>'
+ +'<div class="muted" style="margin-top:4px">같은 비율의 큰 이미지는 규격 크기로 줄여 저장해요.</div></div></div>'
+ +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">올리기<input type="file" id="aSlotFile" accept="image/png,image/webp" hidden></label>'+(f?'<button class="btn sm" id="aSlotDel">빼기(내장 기본으로)</button>':'')+'</div>':'')
+ +'<div id="aPrep"></div><div class="row" style="margin-top:12px">'+(i>0?'<button class="btn sm" data-anext="'+same[i-1].id+'">← '+esc(same[i-1].name)+'</button>':'')+'<span class="sp"></span>'+(i<same.length-1?'<button class="btn sm" data-anext="'+same[i+1].id+'">'+esc(same[i+1].name)+' →</button>':'')+'</div></div>'})};
+V.assetSlot.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var s=d.spec.slots.find(function(x){return x.id===T.aslot});
+ $('view').onclick=function(e){var n=e.target.closest('[data-anext]');if(n){T.aslot=n.dataset.anext;ssSet('bo_aslot',T.aslot);render()}};
+ if($('aSlotFile'))$('aSlotFile').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'slot',s,function(P){return upload(P.blob,upQ('slot','&slot='+s.id))})};
+ if($('aSlotDel'))$('aSlotDel').onclick=function(){if(!confirm(s.id+' 파일을 빼고 내장 기본 이미지를 쓸까요?'))return;api('/assets/remove',{version:d.version,slot:s.id}).then(function(){toast('뺐어요');render()}).catch(fail)}};
 
 /* ---------- 지표(상세 12) ---------- */
 function pct(v,lo,hi){if(v==null)return '-';var bad=(lo!=null&&v<lo)||(hi!=null&&v>hi);return '<span class="tag '+(bad?'bad':'ok')+'">'+v+'%</span>'}
