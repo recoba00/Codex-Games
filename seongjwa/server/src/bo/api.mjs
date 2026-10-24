@@ -7,6 +7,7 @@ import { importWorkbook } from "./importer.mjs";
 import { readXlsx } from "./xlsx.mjs";
 import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
+import { cupRewardCfg, cupWindow } from "../cup.mjs";
 import { ART, SLOTS, assetPath, checkRegions, checkUpload, publicBase, slotOf, storagePut, webpInfo } from "../assets.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
@@ -136,7 +137,11 @@ export async function runCron(env) {
       events: await rpc(env, "events_purge", { p_days: Number(set.log_retention_days ?? 90), p_limit: 20000 }).catch(() => null)
     };
   }
-  return { published: done, mailed, seasons: paid, purged };
+  // 챔피언스 컵(상세 08): 지난 주말에 끝나지 않은 참가는 그 성적으로 마감·보상
+  const cupLive = (await pinLive(env).catch(() => ({ snapshot: {} }))).snapshot;
+  const cupClosed = await rpc(env, "cup_close_week", { p_before: cupWindow().week, p_cfg: cupRewardCfg(cupLive) }).catch(() => null);
+  if (purged) purged.rate = await rpc(env, "rate_purge", { p_keep_sec: 3600 }).catch(() => null);
+  return { published: done, mailed, seasons: paid, purged, cupClosed };
 }
 
 export async function handleBo(request, env, url) {
@@ -212,6 +217,18 @@ export async function handleBo(request, env, url) {
       const m = await rpc(env, "bo_metrics", { p_from: from.toISOString(), p_to: toAt.toISOString() });
       const { snapshot: data } = await pinLive(env);
       return json({ ok: true, ...m, characterGroups: characterWinRates(data, m.characters ?? []) });
+    }
+
+    // ---------- 어뷰징 의심(상세 13 자동 탐지 → 사람이 판단) ----------
+    case "GET /suspects": {
+      const st = await staffOf(request, env); allow(st, "users");
+      const { snapshot: data } = await pinLive(env);
+      const set = data?.settings ?? {};
+      const pick = (k, d) => Number(set[k] ?? d);
+      const cfg = { days: Number(url.searchParams.get("days") ?? 7), macro_min_turns: pick("macro_min_turns", 30), macro_std_sec: pick("macro_std_sec", 0.7),
+        marathon_hours: pick("marathon_hours", 12), marathon_games: pick("marathon_games", 40), pair_games: 3,
+        smurf_days: pick("smurf_days", 14), smurf_games: pick("smurf_report_games", 10), smurf_winrate: pick("smurf_report_winrate", 0.75) };
+      return json({ ok: true, cfg, ...(await rpc(env, "bo_suspects", { p_cfg: cfg })) });
     }
 
     // ---------- 금칙어(상세 13 닉네임·프로필) ----------

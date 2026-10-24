@@ -85,6 +85,8 @@ jobs:
           npm i --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
           npm run test:live:assets
+      - name: Live test on local Workers runtime + Postgres (champions cup, rate limit, abuse suspects)
+        run: npm run test:live:cup
 
   deploy:
     name: Deploy to Cloudflare
@@ -172,6 +174,7 @@ jobs:
             echo "account:"; curl -fsS "$BASE/v1/account" -H "authorization: Bearer $tok" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);if(!j.ok)process.exit(1);console.log({status:j.status,logins:j.logins})})'
             echo "events:"; curl -fsS -X POST "$BASE/v1/events" -H "authorization: Bearer $tok" -H 'content-type: application/json' -d '{"platform":"steam","device":"desktop","appVer":"smoke","events":[{"name":"session_start","props":{"smoke":true}}]}'; echo
             echo "assets:"; curl -fsS "$BASE/v1/assets" | head -c 300; echo
+            echo "cup:"; curl -fsS "$BASE/v1/cup" -H "authorization: Bearer $tok" | head -c 300; echo
             echo "hall of fame:"; curl -fsS "$BASE/v1/hall-of-fame" | head -c 200; echo
             echo "backoffice page:"; curl -fsS -o /dev/null -w "%{http_code}\n" "$BASE/bo"
             echo "backoffice api (no login → 401):"; test "$(curl -s -o /dev/null -w "%{http_code}" "$BASE/bo/v1/me")" = "401" && echo ok

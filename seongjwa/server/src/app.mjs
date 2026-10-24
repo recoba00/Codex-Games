@@ -12,8 +12,17 @@ import { handleBo, runCron } from "./bo/api.mjs";
 import { claimRankRoad, rankRoadView } from "./season.mjs";
 import { pairRule } from "./queue-logic.mjs";
 import { assetManifest } from "./assets.mjs";
+import { CUP, cupWindow, validRoster } from "./cup.mjs";
 import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
+
+// 요청 제한(전작 검토 B6): IP 해시 + 1분 칸. DB가 안 되면 막지 않는다(로그인이 더 중요)
+export async function rateLimit(env, request, kind, limit) {
+  const ip = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "local";
+  const key = `${kind}:${(await sha256Hex(`${env.TOKEN_SECRET ?? ""}|${ip}`)).slice(0, 24)}`;
+  const ok = await rpc(env, "rate_hit", { p_key: key, p_limit: limit, p_window_sec: 60 }).catch(() => true);
+  if (ok === false) throw new Error("rate_limited");
+}
 
 // 친구 코드: 표시 접두어는 게임 이름 가안이라 바뀔 수 있음(FRIEND_CODE_PREFIX). 입력은 접두어 있어도 없어도 됨
 const codePrefix = (env) => String(env.FRIEND_CODE_PREFIX ?? "ASTRA");
@@ -44,6 +53,7 @@ const STATUS = {
   friend_not_found: 404, already_friends: 409, friend_blocked: 403, friend_limit: 409, friend_in_game: 409, invite_expired: 410, not_friend: 403, invite_limit: 429, block_limit: 409,
   asset_not_webp: 400, asset_too_large: 413, asset_spec: 422, asset_region: 422, asset_slot_invalid: 400, asset_kind_invalid: 400, asset_skin_invalid: 400,
   asset_char_invalid: 400, asset_full_missing: 409, storage_failed: 502, state_invalid: 409,
+  rate_limited: 429, cup_closed: 409, cup_not_eligible: 403, cup_entry_active: 409, cup_left_this_week: 409, cup_no_ticket: 409, cup_no_entry: 409, cup_roster_invalid: 400,
   name_banned: 422, provider_taken: 409, provider_invalid: 400, choice_invalid: 400, account_not_active: 409, link_unavailable: 503, events_invalid: 400, confirm_required: 400,
   forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
@@ -147,12 +157,14 @@ export async function handle(request, env) {
       return json({ ok: true, service: "seongjwa", stage: 2 });
 
     case "POST /v1/auth/steam": {
+      await rateLimit(env, request, "auth", 20);
       const input = await readJson(request);
       const steam = await verifySteamTicket(env, input.ticket);
       return json(await issueSession(env, "steam", steam.steamId, "steam", deviceId(input)));
     }
 
     case "POST /v1/auth/dev": {
+      await rateLimit(env, request, "auth", Number(env.DEV_AUTH_RATE ?? 60));
       // 개발·테스트 전용. DEV_LOGIN=1 인 환경에서만 열린다. 운영 환경에서는 절대 켜지 않는다.
       if (env.DEV_LOGIN !== "1") throw new Error("not_found");
       const input = await readJson(request);
@@ -162,6 +174,7 @@ export async function handle(request, env) {
     }
 
     case "POST /v1/auth/refresh": {
+      await rateLimit(env, request, "refresh", 60);
       const input = await readJson(request);
       const old = String(input.refreshToken ?? "");
       if (!/^[A-Za-z0-9_-]{32,64}$/.test(old)) throw new Error("refresh_invalid");
@@ -237,6 +250,45 @@ export async function handle(request, env) {
       const out = await res.json();
       return json({ ...out, tier: rank.row.tier, tierName: tierName(data, rank.row.tier), rp: rank.row.rp, aiFallback: entry.aiOk && !entry.humanOnly, waitBeforeMin: rank.leaver.delayMin ?? 0, leaverStep: rank.leaver.step?.label ?? null });
     }
+
+    // ---------- 주말 챔피언스 컵(상세 08) ----------
+    case "GET /v1/cup": {
+      const claims = await authenticate(request, env);
+      const season = await currentSeason(env);
+      const w = cupWindow();
+      const st = await rpc(env, "cup_status", { p_account: claims.sub, p_week: w.week, p_season: season.id });
+      const allowed = 1 + (st.bonus ? 1 : 0) - (st.penalty ? 1 : 0);
+      return json({ ok: true, open: w.open, week: w.week, startsAt: new Date(w.start).toISOString(), endsAt: new Date(w.end).toISOString(),
+        eligible: (st.best ?? 0) >= CUP.minTier, best: st.best ?? 0, minTier: CUP.minTier, entry: st.entry, used: st.used, allowed: Math.max(0, allowed),
+        left: st.left, bonus: st.bonus, penalty: st.penalty, history: st.history, sevenWins: st.sevenWins, rules: CUP });
+    }
+    case "POST /v1/cup/enter": {  // { roster: [{char, preset}] × 3 } 기간 안, 플래티넘 III 이상
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const w = cupWindow();
+      if (!w.open && env.CUP_ALWAYS_OPEN !== "1") throw new Error("cup_closed");
+      const { snapshot: data } = await pinLive(env);
+      const roster = validRoster(data, input.roster);
+      const season = await currentSeason(env);
+      return json({ ok: true, entry: await rpc(env, "cup_enter", { p_account: claims.sub, p_week: w.week, p_season: season.id, p_roster: roster, p_min_tier: CUP.minTier }) });
+    }
+    case "POST /v1/cup/ticket": {  // 컵 매칭 진입(같은 승패끼리, AI 없음)
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      if ((await rpc(env, "auth_session_active", { p_session: claims.sid })) !== true) throw new Error("session_ended");
+      if (!cupWindow().open && env.CUP_ALWAYS_OPEN !== "1") throw new Error("cup_closed");
+      const season = await currentSeason(env);
+      const st = await rpc(env, "cup_status", { p_account: claims.sub, p_week: cupWindow().week, p_season: season.id });
+      if (!st.entry) throw new Error("cup_no_entry");
+      const sanction = await rpc(env, "sanction_status", { p_account: claims.sub });
+      if (sanction?.rankUntil) throw Object.assign(new Error("rank_restricted"), { extra: { until: sanction.rankUntil } });
+      const e = st.entry;
+      const entry = { acc: claims.sub, cup: { entryId: e.id, roster: e.roster, wins: e.wins, losses: e.losses }, wins: e.wins, losses: e.losses, notBefore: 0, seasonId: season.id, defaults: input.defaults ?? {} };
+      const res = await env.QUEUE.get(env.QUEUE.idFromName("cup")).fetch("https://queue/ticket", { method: "POST", body: JSON.stringify({ acc: claims.sub, entry }) });
+      return json({ ...(await res.json()), record: [e.wins, e.losses] });
+    }
+    case "GET /v1/cup/ws":
+      return env.QUEUE.get(env.QUEUE.idFromName("cup")).fetch(`https://queue/ws?ticket=${encodeURIComponent(url.searchParams.get("ticket") ?? "")}`, request);
 
     case "GET /v1/queue/ws":
       return env.QUEUE.get(env.QUEUE.idFromName("global")).fetch(`https://queue/ws?ticket=${encodeURIComponent(url.searchParams.get("ticket") ?? "")}`, request);
@@ -406,7 +458,11 @@ export async function handle(request, env) {
       const r = await econMutate(env, data, claims.sub, (out, state) => `mis:${kind}:${kind === "daily" ? state.day : kind === "weekly" ? state.week : state.season}:${out.ids.sort().join(",")}`,
         (state, ctx) => ({ ...claimMissions(state, kind, id, ctx.cfg), reason: "mission", detail: { kind } }));
       if (r.duplicate) throw new Error("mission_claimed");
-      return json({ ok: true, gold: r.gold, balance: r.balance, claimed: r.ids, econ: r.view });
+      // 챔피언스 컵 추가 참가권(상세 08): 설정값 cup_bonus_mission에 적은 주간 미션을 받으면 그 주(다가오는 주말) 1회
+      const bonusId = String(data.settings?.cup_bonus_mission ?? "");
+      let cupBonus = false;
+      if (kind === "weekly" && bonusId && r.ids.includes(bonusId)) cupBonus = Boolean(await rpc(env, "cup_bonus_grant", { p_account: claims.sub, p_week: cupWindow().week }).catch(() => false));
+      return json({ ok: true, gold: r.gold, balance: r.balance, claimed: r.ids, econ: r.view, cupBonus });
     }
 
     case "POST /v1/missions/reroll": {  // 일일 미션 하루 1개 무료 교체

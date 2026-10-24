@@ -13,6 +13,7 @@ import { currentSeason, settleMatch } from "./ranking.mjs";
 import { settleEconomy } from "./econ-db.mjs";
 import { sha256Hex } from "./tokens.mjs";
 import { rpc } from "./db.mjs";
+import { cupRewardCfg } from "./cup.mjs";
 
 export const PREP = Object.freeze({ ban_sec: 10, pick_sec: 15, loadout_sec: 15, grace_ms: 500 });
 const LOBBY_TTL_MS = 30 * 60 * 1000;
@@ -20,6 +21,7 @@ const TICKET_TTL_MS = 45 * 1000;
 const SAVE_RETRY_MS = 30 * 1000;
 const SAVE_MAX_TRIES = 10;
 const RANKED = ["ranked", "ranked_ai"];
+const COMPETITIVE = ["ranked", "ranked_ai", "cup"];  // 이탈 = 패배 처리 대상(총괄 10장, 상세 08 컵)
 // 감정표현(상세 05): 장착 4칸(없으면 기본 4종), 3초에 1회, 판당 10회, 상대 감정표현 끄기
 const DEFAULT_EMOTES = ["EMOTE_HELLO", "EMOTE_NICE", "EMOTE_OOPS", "EMOTE_THINK"];
 const EMOTE_GAP_MS = 3000;
@@ -73,9 +75,9 @@ export class FriendRoom extends DurableObject {
       }
       if (url.pathname === "/create-match") {  // 큐(랭킹전) 또는 Worker(AI 연습)가 만든다
         if (this.room) return json({ ok: false, error: "room_exists" }, 409);
-        const mode = ["ranked", "ranked_ai", "practice"].includes(body.mode) ? body.mode : "practice";
-        const members = body.players.map((p) => ({ acc: p.acc, ready: true, tier: p.tier ?? 1, mmr: p.mmr ?? 800, since: p.since ?? now, defaults: sanitizeDefaults(p.defaults) }));
-        if (mode !== "ranked") members.push({ acc: null, ready: true, ai: { difficulty: body.difficulty ?? null }, defaults: sanitizeDefaults({}) });
+        const mode = ["ranked", "ranked_ai", "practice", "cup"].includes(body.mode) ? body.mode : "practice";
+        const members = body.players.map((p) => ({ acc: p.acc, ready: true, tier: p.tier ?? 1, mmr: p.mmr ?? 800, since: p.since ?? now, defaults: sanitizeDefaults(p.defaults), cup: p.cup ?? null }));
+        if (!["ranked", "cup"].includes(mode)) members.push({ acc: null, ready: true, ai: { difficulty: body.difficulty ?? null }, defaults: sanitizeDefaults({}) });
         this.room = {
           code: body.code, mode, host: members[0].acc, createdAt: now, expiresAt: now + LOBBY_TTL_MS, seasonId: body.seasonId ?? null,
           options: { bans: mode !== "practice", turnSec: 20 },
@@ -218,7 +220,7 @@ export class FriendRoom extends DurableObject {
     switch (msg.type) {
       case "ready": {
         if (!["lobby", "result"].includes(room.phase)) throw new Error("phase_invalid");
-        if (RANKED.includes(room.mode)) throw new Error("requeue_required");  // 랭킹전 재매칭은 매칭부터(총괄 3장)
+        if (COMPETITIVE.includes(room.mode)) throw new Error("requeue_required");  // 랭킹전 재매칭은 매칭부터(총괄 3장)
         room.members[seat].ready = msg.ready !== false;
         if (msg.defaults) room.members[seat].defaults = sanitizeDefaults(msg.defaults);
         if (room.members.length === 2 && room.members.every((m) => m.ready)) await this.startPrep(now);
@@ -235,6 +237,7 @@ export class FriendRoom extends DurableObject {
         if (room.phase !== "ban") throw new Error("phase_invalid");
         const id = msg.characterId ? String(msg.characterId) : null;
         if (id && !g.data.characters[id]) throw new Error("character_unavailable");
+        if (id && room.mode === "cup" && !this.rosterOf(1 - seat).includes(id)) throw new Error("character_unavailable");  // 컵: 상대 등록 3명 중 1명
         g.bans[seat] = { id, done: true };
         markPrep(g, "ban", seat, now);
         if (g.bans.every((b) => b?.done)) this.toPick(now);
@@ -243,7 +246,7 @@ export class FriendRoom extends DurableObject {
       case "pick": {
         if (room.phase !== "pick") throw new Error("phase_invalid");
         const id = String(msg.characterId ?? "");
-        if (!this.pickable(g).includes(id)) throw new Error("character_unavailable");
+        if (!this.pickableFor(g, seat).includes(id)) throw new Error("character_unavailable");
         g.picks[seat] = id;
         markPrep(g, "pick", seat, now);
         if (g.picks.every(Boolean)) this.toLoadout(now);
@@ -251,7 +254,7 @@ export class FriendRoom extends DurableObject {
       }
       case "loadout": {
         if (room.phase !== "loadout") throw new Error("phase_invalid");
-        g.loadouts[seat] = this.validLoadout(g, g.picks[seat], msg);
+        g.loadouts[seat] = this.validLoadout(g, g.picks[seat], room.mode === "cup" ? { spells: msg.spells, preset: this.cupPreset(seat, g.picks[seat]) } : msg);  // 컵: 덱은 등록한 프리셋 고정
         markPrep(g, "loadout", seat, now);
         if (g.loadouts.every(Boolean)) this.startBattle(now);
         return;
@@ -337,7 +340,7 @@ export class FriendRoom extends DurableObject {
       if (g.bans.every((b) => b?.done)) this.toPick(now);
     }
     if (room.phase === "pick" && !g.picks[seat]) {
-      g.picks[seat] = choosePick(g.data, this.pickable(g), { playerFaction: fav ? g.data.characters[fav]?.faction : null });
+      g.picks[seat] = choosePick(g.data, this.pickableFor(g, seat), { playerFaction: fav ? g.data.characters[fav]?.faction : null });
       if (g.picks.every(Boolean)) this.toLoadout(now);
     }
     if (room.phase === "loadout" && !g.loadouts[seat]) {
@@ -354,6 +357,14 @@ export class FriendRoom extends DurableObject {
 
   banned(g) { return [...new Set(g.bans.map((b) => b?.id).filter(Boolean))]; }  // 같은 캐릭터를 둘이 밴하면 1명만
   pickable(g) { return Object.keys(g.data.characters).filter((id) => !this.banned(g).includes(id)); }
+  // 컵(상세 08): 자리마다 자기 등록 3명 중 상대가 밴한 1명을 뺀 2명. 그 밖의 모드는 공통 목록
+  rosterOf(seat) { return (this.room.members[seat]?.cup?.roster ?? []).map((r) => r.char); }
+  cupPreset(seat, charId) { return this.room.members[seat]?.cup?.roster?.find((r) => r.char === charId)?.preset ?? 2; }
+  pickableFor(g, seat) {
+    if (this.room.mode !== "cup") return this.pickable(g);
+    const banned = g.bans[1 - seat]?.id;
+    return this.rosterOf(seat).filter((id) => id !== banned);
+  }
 
   toPick(now) {
     const g = this.room.game;
@@ -365,8 +376,8 @@ export class FriendRoom extends DurableObject {
 
   toLoadout(now) {
     const g = this.room.game;
-    const pool = this.pickable(g);
-    g.picks = g.picks.map((p, seat) => {  // 픽 시간 초과: 선호 1·2·3순위 → 직전 사용 캐릭터 → 목록 첫 번째 (총괄 7장, 기획답변 2차 8)
+    g.picks = g.picks.map((p, seat) => {
+      const pool = this.pickableFor(g, seat);  // 픽 시간 초과: 선호 1·2·3순위 → 직전 사용 캐릭터 → 목록 첫 번째 (총괄 7장, 기획답변 2차 8)
       if (p) return p;
       const m = this.room.members[seat];
       const pref = m.defaults.preferred.find((id) => pool.includes(id));
@@ -398,7 +409,9 @@ export class FriendRoom extends DurableObject {
     g.loadouts = g.loadouts.map((l, seat) => {  // 스펠·덱 시간 초과: 그 캐릭터로 직전에 쓴 것 → 클라이언트 기본값 → 수호·거울 + 균형 덱 (기획답변 2차 8)
       if (l) return l;
       const m = room.members[seat];
-      const tries = [m.lastLoadout?.[g.picks[seat]], { spells: m.defaults.spells, preset: m.defaults.preset }, { spells: ["SP01", "SP02"], preset: 2 }];
+      const tries = room.mode === "cup"
+        ? [{ spells: m.defaults.spells, preset: this.cupPreset(seat, g.picks[seat]) }, { spells: ["SP01", "SP02"], preset: this.cupPreset(seat, g.picks[seat]) }]
+        : [m.lastLoadout?.[g.picks[seat]], { spells: m.defaults.spells, preset: m.defaults.preset }, { spells: ["SP01", "SP02"], preset: 2 }];
       for (const t of tries) {
         if (!t) continue;
         try { return this.validLoadout(g, g.picks[seat], t); } catch { /* 다음 후보 */ }
@@ -468,6 +481,12 @@ export class FriendRoom extends DurableObject {
     const room = this.room;
     if ((room.mode ?? "friend") === "friend") { this.cancelPrep(`left_${seats[0]}`); return; }
     const g = room.game;
+    if (room.mode === "cup") {  // 컵: 밴픽 중 이탈 = 이탈 패배(상세 08), 남은 쪽은 대기열 맨 앞
+      for (const s of seats) this.queueCup(g.id, s, "leave", now);
+      for (const s of [0, 1].filter((x) => !seats.includes(x))) {
+        try { await this.env.QUEUE.get(this.env.QUEUE.idFromName("cup")).fetch("https://queue/priority", { method: "POST", body: JSON.stringify({ acc: room.members[s].acc, since: room.members[s].since }) }); } catch { /* */ }
+      }
+    }
     if (RANKED.includes(room.mode)) {
       const humans = seats.filter((s) => !this.isAi(s));
       room.ranks.push({ tries: 0, next: now, job: { matchId: g.id, seasonId: room.seasonId, mode: room.mode, dataVersion: g.dataVersion, players: humans.map((s) => ({ seat: s, acc: room.members[s].acc, result: "dodge" })) } });
@@ -522,7 +541,15 @@ export class FriendRoom extends DurableObject {
       });
       room.ranks.push({ tries: 0, next: now, job: { matchId: g.id, seasonId: room.seasonId, mode, dataVersion: g.dataVersion, players } });
     }
-    if (outcome !== "void") {  // 골드·미션(상세 05·06): 친구방은 소셜 미션만, AI 대전은 하루 3판까지(econ에서 판단)
+    if (mode === "cup" && outcome !== "void") {  // 컵 성적(상세 08): 랭크·골드 영향 없음, 7승·3패에서 끝나면 서버가 보상 우편
+      const left = ["leave", "afk"].includes(reason);
+      for (const s of [0, 1]) {
+        const mine = s === 0 ? "a" : "b";
+        const result = outcome === "draw" ? "draw" : outcome === mine ? "win" : left ? "leave" : "loss";
+        this.queueCup(g.id, s, result, now);
+      }
+    }
+    if (outcome !== "void" && mode !== "cup") {  // 골드·미션(상세 05·06): 친구방은 소셜 미션만, AI 대전은 하루 3판까지(econ에서 판단)
       const players = [0, 1].filter((s) => !this.isAi(s) && room.members[s]?.acc).map((s) => {
         const mine = s === 0 ? "a" : "b";
         return { seat: s, acc: room.members[s].acc, character: g.picks[s], stats: g.stats?.[s] ?? { exclusive: 0, spells: 0 },
@@ -589,13 +616,30 @@ export class FriendRoom extends DurableObject {
       }
     }
     this.room.econs = keepEcon;
+    const keepCups = [];
+    for (const c of this.room.cups ?? []) {
+      if (c.next > now) { keepCups.push(c); continue; }
+      try {
+        const e = await rpc(this.env, "cup_record", { p_entry: c.entry, p_match: c.match, p_result: c.result, p_cfg: c.cfg });
+        if (this.room.last?.id === c.match) (this.room.last.cup ??= {})[c.seat] = { result: c.result, wins: e.wins, losses: e.losses, status: e.status };
+      } catch {
+        if (c.tries + 1 < SAVE_MAX_TRIES) keepCups.push({ ...c, tries: c.tries + 1, next: now + SAVE_RETRY_MS });
+      }
+    }
+    this.room.cups = keepCups;
+  }
+
+  queueCup(matchId, seat, result, now) {
+    const m = this.room.members[seat];
+    if (!m?.cup?.entryId) return;
+    (this.room.cups ??= []).push({ tries: 0, next: now, entry: m.cup.entryId, match: matchId, seat, result, cfg: cupRewardCfg(this.room.game?.data ?? this.room.lastData) });
   }
 
   // ---------- 알람: 단계 마감·턴 마감·재접속 유예·저장 재시도·방 만료 ----------
   async schedule() {
     const r = this.room;
     if (!r) return;
-    const times = [r.expiresAt, r.phaseDeadline || Infinity, ...r.saves.map((s) => s.next), ...(r.ranks ?? []).map((x) => x.next), ...(r.econs ?? []).map((x) => x.next)];
+    const times = [r.expiresAt, r.phaseDeadline || Infinity, ...r.saves.map((s) => s.next), ...(r.ranks ?? []).map((x) => x.next), ...(r.econs ?? []).map((x) => x.next), ...(r.cups ?? []).map((x) => x.next)];
     const g = r.game;
     if (g && r.phase === "battle") {
       times.push(...g.deadline);
@@ -620,7 +664,7 @@ export class FriendRoom extends DurableObject {
       const grace = g.battle.rules.reconnect_grace_sec * 1000;
       const gone = [0, 1].filter((s) => g.away[s] && now >= g.away[s] + grace);
       if (gone.length) {
-        if (RANKED.includes(r.mode)) {  // 랭킹전: 60초 안에 못 돌아오면 이탈 패배(총괄 10장)
+        if (COMPETITIVE.includes(r.mode)) {  // 랭킹전·컵: 60초 안에 못 돌아오면 이탈 패배(총괄 10장)
           g.dropped = gone.filter((s) => g.awayAbnormal?.[s]);
           if (gone.length === 1) concede(g.battle, gone[0], "leave");
           else g.battle.result = { outcome: "draw", reason: "leave", turn: g.battle.turn };
@@ -642,8 +686,8 @@ export class FriendRoom extends DurableObject {
       }
     }
     if (r.game?.pendingDodge) await this.dodge(r.game.pendingDodge, now);
-    if (r.saves.length) await this.flushSaves(now);
-    if (now >= r.expiresAt && !["ban", "pick", "loadout", "battle"].includes(r.phase) && !r.saves.length && !(r.ranks ?? []).length) {
+    if (r.saves.length || (r.ranks ?? []).length || (r.econs ?? []).length || (r.cups ?? []).length) await this.flushSaves(now);  // 실패한 반영도 다시
+    if (now >= r.expiresAt && !["ban", "pick", "loadout", "battle"].includes(r.phase) && !r.saves.length && !(r.ranks ?? []).length && !(r.cups ?? []).length) {
       for (const ws of this.ctx.getWebSockets()) try { ws.close(1000, "room_expired"); } catch { /* */ }
       this.room = null;
       await this.ctx.storage.deleteAll();
@@ -666,8 +710,10 @@ export class FriendRoom extends DurableObject {
     if (!g) return base;
     base.dataVersion = g.dataVersion;
     base.prep = {
-      characters: Object.keys(g.data.characters),
-      banned: r.phase === "ban" ? [] : this.banned(g),
+      characters: r.mode === "cup" ? (r.phase === "ban" ? this.rosterOf(1 - seat) : this.pickableFor(g, seat)) : Object.keys(g.data.characters),
+      banned: r.phase === "ban" ? [] : r.mode === "cup" ? [g.bans[0]?.id, g.bans[1]?.id].filter(Boolean) : this.banned(g),
+      ...(r.mode === "cup" ? { cup: { myRoster: r.members[seat].cup?.roster ?? [], oppRoster: this.rosterOf(1 - seat), myRecord: [r.members[seat].cup?.wins ?? 0, r.members[seat].cup?.losses ?? 0],
+        oppRecord: [r.members[1 - seat]?.cup?.wins ?? 0, r.members[1 - seat]?.cup?.losses ?? 0], myCharBanned: r.phase === "ban" ? null : g.bans[1 - seat]?.id ?? null } } : {}),
       myBan: g.bans[seat]?.id ?? null, oppBanDone: Boolean(g.bans[1 - seat]?.done),
       myPick: g.picks[seat], oppPickDone: Boolean(g.picks[1 - seat]),
       oppPick: ["loadout", "battle"].includes(r.phase) ? g.picks[1 - seat] : null,  // 픽은 동시·비공개, 스펠·덱 단계에서 공개

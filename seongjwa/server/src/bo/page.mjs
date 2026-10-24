@@ -83,7 +83,7 @@ function bindLogin(){$('lgSwitch').onclick=function(){T.reg=!T.reg;render()};
 /* ---------- 메뉴 ---------- */
 var MENU=[['운영',[['dashboard','대시보드','dashboard'],['metrics','지표(KPI)','dashboard']]],
  ['게임 데이터',[['data','데이터 배포(xlsx)','data_view'],['characters','캐릭터','data_view'],['cards','전투카드','data_view'],['spells','스펠','data_view'],['settings','설정값','data_view'],['assets','에셋 등록','data_view']]],
- ['운영 도구',[['shop','상점·상품','shop'],['events','배너·공지·우편','events'],['users','유저 조회·제재','users'],['reports','신고','users'],['words','금칙어·닉네임','users']]],
+ ['운영 도구',[['shop','상점·상품','shop'],['events','배너·공지·우편','events'],['users','유저 조회·제재','users'],['reports','신고','users'],['words','금칙어·닉네임','users'],['suspects','어뷰징 의심','users']]],
  ['배포·관리',[['audit','감사 로그','audit'],['staff','권한 관리','dashboard']]]];
 function shell(inner){var nav='<div class="brand">성좌 결투 BO</div>'+MENU.map(function(g){return '<div class="grp">'+g[0]+'</div>'+g[1].map(function(m){return '<button data-k="'+m[0]+'" '+((T.route===m[0]||(m[0]==='assets'&&/^asset[A-Z]/.test(T.route)))?'aria-current="page"':'')+(T.perms[m[2]]?'':' disabled title="권한 없음"')+'>'+m[1]+'</button>'}).join('')}).join('');
  var opts=MENU.reduce(function(a,g){return a.concat(g[1])},[]).filter(function(m){return T.perms[m[2]]}).map(function(m){return '<option value="'+m[0]+'" '+((T.route===m[0]||(m[0]==='assets'&&/^asset[A-Z]/.test(T.route)))?'selected':'')+'>'+m[1]+'</option>'}).join('');
@@ -225,6 +225,20 @@ V.assetSlot.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bind
  $('view').onclick=function(e){var n=e.target.closest('[data-anext]');if(n){T.aslot=n.dataset.anext;ssSet('bo_aslot',T.aslot);render()}};
  if($('aSlotFile'))$('aSlotFile').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'slot',s,function(P){return upload(P.blob,upQ('slot','&slot='+s.id))})};
  if($('aSlotDel'))$('aSlotDel').onclick=function(){if(!confirm(s.id+' 파일을 빼고 내장 기본 이미지를 쓸까요?'))return;api('/assets/remove',{version:d.version,slot:s.id}).then(function(){toast('뺐어요');render()}).catch(fail)}};
+
+/* ---------- 어뷰징 의심(상세 13): 자동 탐지 → 사람이 판단·제재 ---------- */
+function who(id,name){return '<button class="btn sm" data-uid="'+id+'">'+esc(name||'-')+'</button>'}
+V.suspects=function(){return api('/suspects?days='+(T.sdays||7)).then(function(d){var c=d.cfg;
+ return '<h2>어뷰징 의심</h2><p class="sub">자동으로 걸러낸 목록이에요. 이름을 누르면 유저 조회로 가서 전적·턴별 기록을 보고 사람이 판단해요. 기준은 설정값으로 바꿀 수 있어요(상세 13).</p>'
+ +'<div class="row" style="margin-bottom:12px"><span class="small">최근</span><select id="sDays">'+[1,3,7,14,30].map(function(n){return '<option value="'+n+'"'+(n===c.days?' selected':'')+'>'+n+'일</option>'}).join('')+'</select></div>'
+ +'<div class="grid g2"><div class="card"><h3>매크로 의심 '+d.macro.length+'</h3><p class="small muted">직접 확정한 턴 '+c.macro_min_turns+'번 이상, 확정 시간 표준편차 '+c.macro_std_sec+'초 미만. 자동 대응: 확인 팝업(사람 인증) — 클라이언트 작업 때 연결.</p>'
+ +table(['계정','턴','평균','표준편차'],d.macro.map(function(x){return '<tr><td>'+who(x.id,x.name)+'</td><td>'+x.turns+'</td><td>'+x.avg+'초</td><td><span class="tag bad">'+x.std+'초</span></td></tr>'}))+'</div>'
+ +'<div class="card"><h3>연속 플레이 '+d.marathon.length+'</h3><p class="small muted">최근 '+c.marathon_hours+'시간에 '+c.marathon_games+'판 이상.</p>'+table(['계정','판'],d.marathon.map(function(x){return '<tr><td>'+who(x.id,x.name)+'</td><td>'+x.games+'</td></tr>'}))+'</div>'
+ +'<div class="card"><h3>승점 몰아주기 의심 '+d.pairs.length+'</h3><p class="small muted">같은 두 계정 랭킹전 '+c.pair_games+'판 이상 중 3턴 안 항복·이탈 2판 이상. 자동 대응: 24시간 2판 넘으면 매칭 회피(이미 적용).</p>'
+ +table(['계정 A','계정 B','판','일찍 끝남','A 승'],d.pairs.map(function(x){return '<tr><td>'+who(x.a,x.aName)+'</td><td>'+who(x.b,x.bName)+'</td><td>'+x.games+'</td><td><span class="tag bad">'+x.early+'</span></td><td>'+x.aWins+'</td></tr>'}))+'</div>'
+ +'<div class="card"><h3>부계정 의심 '+d.smurf.length+'</h3><p class="small muted">가입 '+c.smurf_days+'일 안, 랭킹전 '+c.smurf_games+'판 이상, 승률 '+Math.round(c.smurf_winrate*100)+'% 이상. 자동 대응: 숨은 MMR 갱신 폭 증가(제재 대상 아님).</p>'
+ +table(['계정','가입','판','승률'],d.smurf.map(function(x){return '<tr><td>'+who(x.id,x.name)+'</td><td class="small">'+fmt(x.created_at)+'</td><td>'+x.games+'</td><td>'+Math.round(x.winrate*100)+'%</td></tr>'}))+'</div></div>'})};
+V.suspects.bind=function(){if(!$('sDays'))return;$('sDays').onchange=function(e){T.sdays=Number(e.target.value);render()};$('view').onclick=function(e){var b=e.target.closest('[data-uid]');if(b){T.uq=b.dataset.uid;go('users')}}};
 
 /* ---------- 지표(상세 12) ---------- */
 function pct(v,lo,hi){if(v==null)return '-';var bad=(lo!=null&&v<lo)||(hi!=null&&v>hi);return '<span class="tag '+(bad?'bad':'ok')+'">'+v+'%</span>'}

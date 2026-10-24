@@ -27,7 +27,9 @@ const PASS_THROUGH = new Set(["account_banned", "account_deleted", "ttl_invalid"
   "name_banned", "word_invalid", "word_exists", "word_not_found", "provider_invalid", "provider_taken", "choice_invalid",
   "account_not_found", "account_not_active",
   // 9단계 에셋
-  "data_not_published"]);
+  "data_not_published",
+  // 10단계 챔피언스 컵
+  "cup_not_eligible", "cup_entry_active", "cup_left_this_week", "cup_no_ticket", "cup_entry_not_found"]);
 
 export async function rpc(env, name, args, fetcher = fetch) {
   const response = await fetcher(`${base(env)}/rest/v1/rpc/${name}`, {

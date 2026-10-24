@@ -7,4 +7,4 @@ if [ "${1:-}" = "--fresh" ]; then
 fi
 psql -q -v ON_ERROR_STOP=1 -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname='service_role') then create role anon; create role authenticated; create role service_role; end if; end \$\$;"
 for f in migrations/*.sql; do psql -q -v ON_ERROR_STOP=1 -f "$f"; done
-for f in tests/step5_check.sql tests/step6_check.sql tests/step7_check.sql tests/step8_check.sql tests/step9_check.sql; do out=$(psql -q -v ON_ERROR_STOP=1 -f "$f" 2>&1) || { echo "$out" | grep -E "ERROR|CONTEXT" | head -5; exit 1; }; echo "$out" | grep -o "step[0-9] OK"; done
+for f in tests/step5_check.sql tests/step6_check.sql tests/step7_check.sql tests/step8_check.sql tests/step9_check.sql tests/step10_check.sql; do out=$(psql -q -v ON_ERROR_STOP=1 -f "$f" 2>&1) || { echo "$out" | grep -E "ERROR|CONTEXT" | head -5; exit 1; }; echo "$out" | grep -oE "step[0-9]+ OK"; done

@@ -13,7 +13,8 @@
     "test:live:bo": "node test/live/bo.mjs",
     "test:live:social": "node test/live/social.mjs",
     "test:live:ops": "node test/live/ops.mjs",
-    "test:live:assets": "node test/live/assets.mjs"
+    "test:live:assets": "node test/live/assets.mjs",
+    "test:live:cup": "node test/live/cup.mjs"
   },
   "devDependencies": {
     "pg": "^8.23.1",

@@ -4,6 +4,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { sha256Hex } from "./tokens.mjs";
 import { rpc } from "./db.mjs";
+import { cupMatchTick, cupNextWake } from "./cup.mjs";
 
 import { matchTick, nextWake, pairKey, prunePairs, PAIR_DEFAULT, searchRange } from "./queue-logic.mjs";
 
@@ -82,6 +83,7 @@ export class MatchQueue extends DurableObject {
 
   async tick(now) {
     const entries = this.entries();
+    if (entries.some((e) => e.cup)) return this.cupTick(entries, now);  // 챔피언스 컵 큐(DO 이름 "cup")
     const aiFallbackSec = Number(entries[0]?.aiFallbackSec ?? 30);
     const pair = entries[0]?.pair ?? PAIR_DEFAULT;  // 몰아주기 방지(상세 13): 기준은 발급 시점 데이터의 설정값
     const history = prunePairs((await this.ctx.storage.get("pairs")) ?? {}, now, pair);
@@ -105,6 +107,20 @@ export class MatchQueue extends DurableObject {
     for (const e of left) send(e.ws, { type: "waiting", waitSec: Math.floor((now - e.since) / 1000), range: searchRange((now - e.since) / 1000, { aiFallbackSec, wideAfterFallback: !e.aiOk || e.humanOnly }) });
   }
 
+  // 챔피언스 컵(상세 08): 같은 승패끼리, 30초 넘으면 ±1승. AI·몰아주기 기록 없음
+  async cupTick(entries, now) {
+    const { pairs, timeout } = cupMatchTick(entries, now);
+    for (const [a, b] of pairs) await this.start("cup", [a, b], now);
+    const props = (e) => ({ wait_sec: waitOf(e, now), mode: "cup", record: `${e.wins}-${e.losses}` });
+    this.log([...pairs.flatMap(([a, b]) => [ev(a, "match_found", now, props(a)), ev(b, "match_found", now, props(b))]),
+      ...timeout.map((a) => ev(a, "match_cancel", now, { ...props(a), reason: "timeout" }))]);
+    for (const a of timeout) { send(a.ws, { type: "timeout" }); try { a.ws.close(1000, "timeout"); } catch { /* */ } }
+    const left = this.entries();
+    const wake = cupNextWake(left, now);
+    if (wake) await this.ctx.storage.setAlarm(wake);
+    for (const e of left) send(e.ws, { type: "waiting", waitSec: Math.floor((now - e.since) / 1000), record: `${e.wins}-${e.losses}` });
+  }
+
   // 지표 로그(상세 12): 매칭 이벤트는 틱마다 모아 한 번에
   log(rows) {
     if (!rows.length || !this.env.SUPABASE_URL) return;
@@ -117,7 +133,7 @@ export class MatchQueue extends DurableObject {
       const code = [...crypto.getRandomValues(new Uint8Array(6))].map((b) => ROOM_ALPHABET[b % ROOM_ALPHABET.length]).join("");
       const res = await this.env.ROOMS.get(this.env.ROOMS.idFromName(code)).fetch("https://room/create-match", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, mode, players: list.map((e) => ({ acc: e.acc, tier: e.tier, mmr: e.mmr, since: e.since, defaults: e.defaults })), seasonId: list[0].seasonId })
+        body: JSON.stringify({ code, mode, players: list.map((e) => ({ acc: e.acc, tier: e.tier, mmr: e.mmr, since: e.since, defaults: e.defaults, cup: e.cup ?? null })), seasonId: list[0].seasonId })
       });
       if (res.status === 409) continue;
       for (const e of list) {

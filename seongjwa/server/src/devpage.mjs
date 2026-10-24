@@ -36,6 +36,9 @@ pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220
 <button id="btnFRefresh">새로고침</button><button id="btnFRecent">최근 상대</button><button id="btnFRank">친구 랭킹</button><button id="btnHof">명예의 전당</button>
 <label><input type="checkbox" id="fHidden"> 접속 상태 숨기기</label></div>
 <div id="fList" style="margin-top:8px"></div><div id="fBox" style="margin-top:8px"></div></section>
+<section id="cup" hidden><div class="row"><b>주말 챔피언스 컵</b> <span id="cupInfo" class="dim"></span><button id="btnCupRefresh">새로고침</button></div>
+<div class="row" style="margin-top:8px" id="cupRoster"></div>
+<div class="row" style="margin-top:8px"><button id="btnCupEnter">참가(3명 등록)</button><button id="btnCupQueue">컵 매칭</button><button id="btnCupCancel" hidden>취소</button><span id="cupQ" class="dim"></span></div></section>
 <section id="room" hidden></section>
 <section><b>로그</b><pre id="log"></pre></section>
 <script>
@@ -44,7 +47,7 @@ var $=function(id){return document.getElementById(id)};
 function log(m){$('log').textContent=new Date().toLocaleTimeString()+' '+m+'\n'+$('log').textContent}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.token?{authorization:'Bearer '+S.token}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function nm(kind,id){var d=S.data&&S.data[kind]&&S.data[kind][id];return d?d.name:id}
-function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;$('econ').hidden=!S.token;$('social').hidden=!S.token;if(S.token){loadRank();loadEcon();loadFriends()}$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
+function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;$('econ').hidden=!S.token;$('social').hidden=!S.token;$('cup').hidden=!S.token;if(S.token){loadRank();loadEcon();loadFriends();loadCup()}$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
  if(S.token&&!S.data)fetch('/v1/data/live').then(function(r){return r.json()}).then(function(j){S.data=j.data;S.dataVer=j.version;log('데이터 버전 '+j.version)});
  var code=sessionStorage.getItem('room');if(S.token&&code)connect(code)}
 $('btnLogin').onclick=function(){api('/v1/auth/dev',{devId:$('devId').value.trim().toLowerCase()}).then(function(j){S.token=j.accessToken;S.acc=j.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('로그인 '+(j.replacedSessions?'(다른 기기 세션 종료됨)':'')+(j.restoredFromDeletion?' · 삭제 요청이 취소됨':''));start();sendEv([{name:'session_start',props:{res:screen.width+'x'+screen.height,window:'browser'}}])}).catch(function(e){log('로그인 실패: '+e.message)})};
@@ -66,11 +69,11 @@ function connect(code){sessionStorage.setItem('room',code);api('/v1/rooms/'+code
  ws.onclose=function(e){log('연결 끊김 '+e.code+' '+(e.reason||''));if(e.code===4001)return;setTimeout(function(){if(sessionStorage.getItem('room'))connect(code)},1500)};
  setInterval(function(){if(ws.readyState===1)ws.send('{"type":"ping"}')},20000);
 }).catch(function(e){log('접속 실패: '+e.message);if(e.message==='room_not_found')sessionStorage.removeItem('room')})}
-function leaveRoom(){sessionStorage.removeItem('room');if(S.ws){S.ws.onclose=null;S.ws.close()}S.ws=null;S.st=null;$('room').hidden=true;$('lobby').hidden=false;$('ranked').hidden=false;$('econ').hidden=false;$('social').hidden=false;loadRank();loadEcon();loadFriends()}
+function leaveRoom(){sessionStorage.removeItem('room');if(S.ws){S.ws.onclose=null;S.ws.close()}S.ws=null;S.st=null;$('room').hidden=true;$('lobby').hidden=false;$('ranked').hidden=false;$('econ').hidden=false;$('social').hidden=false;$('cup').hidden=false;loadRank();loadEcon();loadFriends();loadCup()}
 function send(o){S.ws&&S.ws.readyState===1&&S.ws.send(JSON.stringify(o))}
 function btn(label,fn,on,dis){var b=document.createElement('button');b.textContent=label;if(on)b.className='on';if(dis)b.disabled=true;b.onclick=fn;return b}
 function left(t){return t?Math.max(0,Math.ceil((t-Date.now())/1000))+'초':''}
-function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;$('econ').hidden=true;$('social').hidden=true;
+function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;$('econ').hidden=true;$('social').hidden=true;$('cup').hidden=true;
  var head=document.createElement('div');head.className='row';
  var MODE={friend:'친구방',practice:'AI 대전',ranked:'랭킹전',ranked_ai:'AI 랭킹전'};head.innerHTML='<b>'+MODE[m.mode]+'</b>'+(m.mode==='friend'?' <span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span>':'')+'<span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
  el.appendChild(head);
@@ -86,9 +89,9 @@ function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lob
   if(m.you===0&&m.phase==='lobby'&&m.mode==='friend'){row.appendChild(btn('밴 '+(m.options.bans?'끄기':'켜기'),function(){send({type:'options',bans:!m.options.bans})}))}
   row.appendChild(btn('방 나가기',function(){send({type:'leave'});leaveRoom()}));
   if(m.lastLog){var p=document.createElement('pre');p.textContent=fmtLog(m.lastLog,m.you);el.appendChild(p)}
- }else if(m.phase==='ban'||m.phase==='pick'){var P=m.prep;
+ }else if(m.phase==='ban'||m.phase==='pick'){var P=m.prep;if(P.cup){var cp=document.createElement('p');cp.className='dim';cp.textContent='챔피언스 컵 · 내 기록 '+P.cup.myRecord.join('승 ')+'패 vs 상대 '+P.cup.oppRecord.join('승 ')+'패 · '+(m.phase==='ban'?'상대 등록 3명 중 1명 밴':'내 등록 중 밴 안 된 캐릭터 1명 픽'+(P.cup.myCharBanned?' (밴됨: '+nm('characters',P.cup.myCharBanned)+')':''));el.appendChild(cp)}
   row.appendChild(document.createTextNode((m.phase==='ban'?'밴할 캐릭터(상대 '+(P.oppBanDone?'완료':'선택 중')+'): ':'픽(동시·비공개, 상대 '+(P.oppPickDone?'완료':'선택 중')+'): ')));
-  P.characters.forEach(function(id){var dis=m.phase==='pick'&&P.banned.indexOf(id)>=0;row.appendChild(btn(nm('characters',id),function(){send(m.phase==='ban'?{type:'ban',characterId:id}:{type:'pick',characterId:id})},(m.phase==='ban'?P.myBan:P.myPick)===id,dis))});
+  P.characters.forEach(function(id){var dis=m.phase==='pick'&&!P.cup&&P.banned.indexOf(id)>=0;row.appendChild(btn(nm('characters',id),function(){send(m.phase==='ban'?{type:'ban',characterId:id}:{type:'pick',characterId:id})},(m.phase==='ban'?P.myBan:P.myPick)===id,dis))});
   if(m.phase==='ban')row.appendChild(btn('밴 안 함',function(){send({type:'ban',characterId:null})}));
   if(P.banned.length){var b=document.createElement('p');b.className='dim';b.textContent='밴됨: '+P.banned.map(function(i){return nm('characters',i)}).join(', ');el.appendChild(b)}
  }else if(m.phase==='loadout'){var P2=m.prep;
@@ -197,5 +200,17 @@ $('btnAcc').onclick=function(){api('/v1/account').then(function(a){var b=$('econ
  r.appendChild(btn('연결',function(){link(null)}));
  r.appendChild(btn('계정 삭제 요청',function(){if(!confirm('14일 뒤 진행도·보유 스킨이 모두 삭제되고 복구할 수 없습니다(유료 '+a.paidItems+'개 포함). 그 전에 로그인하면 취소됩니다. 요청할까요?'))return;
   api('/v1/account/delete',{confirm:true}).then(function(j){log('삭제 요청됨 → '+new Date(j.deletionAt).toLocaleString()+' 삭제. 다시 로그인하면 취소');sessionStorage.clear();S.token=null;S.acc=null;start()}).catch(function(e){log(e.message)})}))}).catch(function(e){log('계정 정보 실패: '+e.message)})};
+function loadCup(){api('/v1/cup').then(function(c){S.cup=c;var e=c.entry;
+ $('cupInfo').textContent=' · '+(c.open?'진행 중':'닫힘')+' ('+new Date(c.startsAt).toLocaleString()+' ~ '+new Date(c.endsAt).toLocaleString()+') · '+(c.eligible?'참가 가능':'플래티넘 III 이상 필요(최고 '+c.best+'단계)')+' · 참가권 '+(c.allowed-c.used)+'/'+c.allowed+(c.penalty?' (이탈 차감)':'')+(c.bonus?' (+미션 보너스)':'')+(e?' · 진행 중 '+e.wins+'승 '+e.losses+'패':'')+(c.sevenWins?' · 7승 '+c.sevenWins+'회':'');
+ var r=$('cupRoster');if(e){r.textContent='등록: '+e.roster.map(function(x){return nm('characters',x.char)+'(덱 '+x.preset+')'}).join(', ');return}
+ if(!S.data)return;var ids=Object.keys(S.data.characters);r.innerHTML='';for(var i=0;i<3;i++){var sel=document.createElement('select');sel.id='cupC'+i;ids.forEach(function(id,k){var o=document.createElement('option');o.value=id;o.textContent=nm('characters',id);if(k===i)o.selected=true;sel.appendChild(o)});var pr=document.createElement('select');pr.id='cupP'+i;[1,2,3].forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent='덱 '+n;if(n===2)o.selected=true;pr.appendChild(o)});r.appendChild(sel);r.appendChild(pr)}
+}).catch(function(er){$('cupInfo').textContent=' 정보 없음('+er.message+')'})}
+var CE={cup_closed:'컵 기간이 아니에요(토 05:00~월 05:00)',cup_not_eligible:'이번 시즌 플래티넘 III 이상 필요',cup_entry_active:'이미 참가 중',cup_left_this_week:'이번 주 이탈해서 재참가 불가',cup_no_ticket:'이번 주 참가권 없음',cup_no_entry:'먼저 참가(3명 등록)',cup_roster_invalid:'서로 다른 3명'};
+$('btnCupRefresh').onclick=loadCup;
+$('btnCupEnter').onclick=function(){var roster=[0,1,2].map(function(i){return {char:$('cupC'+i).value,preset:Number($('cupP'+i).value)}});api('/v1/cup/enter',{roster:roster}).then(function(){log('컵 참가');loadCup()}).catch(function(e){log('컵: '+(CE[e.message]||e.message))})};
+$('btnCupQueue').onclick=function(){api('/v1/cup/ticket',{}).then(function(j){var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/cup/ws?ticket='+encodeURIComponent(j.ticket));S.cws=ws;$('btnCupCancel').hidden=false;$('btnCupQueue').disabled=true;
+ ws.onmessage=function(e){var m=JSON.parse(e.data);if(m.type==='waiting')$('cupQ').textContent='대기 '+m.waitSec+'초 · 기록 '+m.record+(m.waitSec>=30?' (±1승까지)':'');else if(m.type==='matched'){log('컵 매칭 성사');$('cupQ').textContent='';connect(m.code)}else if(m.type==='timeout')log('컵 매칭 시간 초과')};
+ ws.onclose=function(){$('btnCupCancel').hidden=true;$('btnCupQueue').disabled=false}}).catch(function(e){log('컵: '+(CE[e.message]||e.message))})};
+$('btnCupCancel').onclick=function(){S.cws&&S.cws.send('{"type":"cancel"}')};
 setInterval(tick,500);start();
 </script></body></html>`;

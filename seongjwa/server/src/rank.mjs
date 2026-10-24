@@ -47,7 +47,15 @@ export function netExemptAvailable(recent, now = Date.now()) {
 
 // 한 판 결과 반영. result: win | loss | draw | leave | drop(비정상 끊김 이탈) | dodge
 // mode: ranked(사람) | ranked_ai. opponentMmr는 사람 판에서만 의미.
-export function settle({ data, row, result: rawResult, mode, mmr, opponentMmr = mmr, now = Date.now(), exemptAvailable = false }) {
+// 부계정(상세 13): 사람 랭킹전 누적 판수가 적은데 승률이 높으면 숨은 MMR 갱신 폭(K)을 키워 빨리 제 구간으로. 제재 대상 아님
+export function smurfKMult(data, stats) {
+  const s = data?.settings ?? {};
+  const games = Number(stats?.games ?? 0), wins = Number(stats?.wins ?? 0);
+  if (games < num(s, "smurf_min_games", 5) || games >= num(s, "smurf_games", 20)) return 1;
+  return wins / games >= num(s, "smurf_winrate", 0.7) ? num(s, "smurf_k_mult", 2) : 1;
+}
+
+export function settle({ data, row, result: rawResult, mode, mmr, opponentMmr = mmr, now = Date.now(), exemptAvailable = false, kMult = 1 }) {
   let result = rawResult;
   const exempt = rawResult === "drop" && exemptAvailable;
   if (rawResult === "drop") result = exempt ? "loss" : "leave";
@@ -113,7 +121,7 @@ export function settle({ data, row, result: rawResult, mode, mmr, opponentMmr = 
   if (!isAi && ["win", "loss", "leave", "draw"].includes(result)) {
     const expected = 1 / (1 + 10 ** ((opponentMmr - mmr) / 400));
     const score = result === "win" ? 1 : result === "draw" ? 0.5 : 0;
-    mmrDelta = Math.round(num(s, "mmr_k", ELO_K) * (score - expected));
+    mmrDelta = Math.round(num(s, "mmr_k", ELO_K) * kMult * (score - expected));
   }
   return { rp, tier, state, rpDelta: rp - row.rp, mmrDelta, detail };
 }

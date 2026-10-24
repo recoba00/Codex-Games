@@ -1,9 +1,12 @@
 // 랭크 DB 연동: 시즌·상태 읽기 → rank.mjs로 계산 → 판 단위 1회 반영(rank_commit). 판 DO와 큐에서 쓴다.
 import { rpc } from "./db.mjs";
-import { leaverStatus, netExemptAvailable, seasonStart, settle, tierForRp, tiersOf } from "./rank.mjs";
+import { leaverStatus, netExemptAvailable, seasonStart, settle, smurfKMult, tierForRp, tiersOf } from "./rank.mjs";
+import { pinLive } from "./gamedata.mjs";
 
 export async function currentSeason(env) {
-  const s = await rpc(env, "season_current", { p_length_days: 28 });
+  const live = await pinLive(env).catch(() => null);  // 새 시즌 길이는 설정값 season_days(없으면 28일)
+  const days = Number(live?.snapshot?.settings?.season_days ?? 28);
+  const s = await rpc(env, "season_current", { p_length_days: Number.isInteger(days) && days > 0 ? days : 28 });
   return Array.isArray(s) ? s[0] : s;
 }
 
@@ -14,7 +17,7 @@ export async function loadRank(env, data, account, seasonId) {
   const row = cur
     ? { rp: cur.rp, tier: cur.tier_no, state: cur.state ?? {}, version: cur.version }
     : seasonStart(data, st.previous);
-  return { row, mmr: Number(st.mmr ?? 800), recent: st.recent ?? [], leaver: leaverStatus(data, st.recent ?? []) };
+  return { row, mmr: Number(st.mmr ?? 800), recent: st.recent ?? [], leaver: leaverStatus(data, st.recent ?? []), stats: st.stats ?? { games: 0, wins: 0 } };
 }
 
 // 판 결과 반영. players: [{acc, result}] (AI 자리는 넣지 않음). 반환: 자리별 {rpDelta, rp, tier}
@@ -26,7 +29,7 @@ export async function settleMatch(env, data, { matchId, seasonId, mode, players 
     const opp = loaded[1 - i];
     let r = loaded[i];
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const res = settle({ data, row: r.row, result: p.result, mode, mmr: r.mmr, opponentMmr: opp?.mmr ?? r.mmr, exemptAvailable: netExemptAvailable(r.recent) });
+      const res = settle({ data, row: r.row, result: p.result, mode, mmr: r.mmr, opponentMmr: opp?.mmr ?? r.mmr, exemptAvailable: netExemptAvailable(r.recent), kMult: smurfKMult(data, r.stats) });
       const kind = p.result === "drop" ? (res.detail.netExempt ? "loss" : "leave") : p.result;
       try {
         const status = await rpc(env, "rank_commit", {
