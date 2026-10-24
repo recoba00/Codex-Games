@@ -51,7 +51,7 @@ var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 var T={token:sessionStorage.getItem('bo_tok'),me:null,perms:{},route:(location.hash||'#dashboard').slice(1),cache:{}};
 var ROLE={planner:'기획자',reviewer:'검수자',admin:'관리자',ops:'운영·CS'};
-var ERR={login_failed:'아이디 또는 비밀번호가 맞지 않아요',login_locked:'5번 틀려서 15분 잠겼어요',forbidden:'이 역할로는 할 수 없어요',self_review:'자기가 만든·요청한 초안은 승인·반려할 수 없어요(상세 14)',
+var ERR={name_banned:'금칙어가 들어간 닉네임',word_exists:'이미 있는 금칙어',word_invalid:'글자가 없는 금칙어',word_not_found:'없는 금칙어',login_failed:'아이디 또는 비밀번호가 맞지 않아요',login_locked:'5번 틀려서 15분 잠겼어요',forbidden:'이 역할로는 할 수 없어요',self_review:'자기가 만든·요청한 초안은 승인·반려할 수 없어요(상세 14)',
  validation_failed:'검증 차단 항목이 있어 검수 요청을 할 수 없어요',state_invalid:'지금 상태에서는 할 수 없는 작업이에요',reason_required:'사유를 적어 주세요',not_approved:'승인된 초안만 배포할 수 있어요',
  invite_invalid:'초대 코드가 틀렸거나 만료·사용됐어요',login_taken:'이미 쓰는 아이디예요',password_weak:'비밀번호는 10자 이상',gold_short:'잔액보다 많이 회수할 수 없어요',last_admin:'관리자가 최소 1명은 있어야 해요',
  schedule_invalid:'예약 시각은 지금 이후여야 해요',session_ended:'로그인이 끝났어요. 다시 로그인해 주세요',auth_expired:'로그인이 끝났어요. 다시 로그인해 주세요',xlsx_invalid:'xlsx 파일을 읽지 못했어요',
@@ -77,9 +77,9 @@ function bindLogin(){$('lgSwitch').onclick=function(){T.reg=!T.reg;render()};
  $('lgGo').onclick=go;$('lgPw').onkeydown=function(e){if(e.key==='Enter')go()}}
 
 /* ---------- 메뉴 ---------- */
-var MENU=[['운영',[['dashboard','대시보드','dashboard']]],
+var MENU=[['운영',[['dashboard','대시보드','dashboard'],['metrics','지표(KPI)','dashboard']]],
  ['게임 데이터',[['data','데이터 배포(xlsx)','data_view'],['characters','캐릭터','data_view'],['cards','전투카드','data_view'],['spells','스펠','data_view'],['settings','설정값','data_view']]],
- ['운영 도구',[['shop','상점·상품','shop'],['events','배너·공지·우편','events'],['users','유저 조회·제재','users'],['reports','신고','users']]],
+ ['운영 도구',[['shop','상점·상품','shop'],['events','배너·공지·우편','events'],['users','유저 조회·제재','users'],['reports','신고','users'],['words','금칙어·닉네임','users']]],
  ['배포·관리',[['audit','감사 로그','audit'],['staff','권한 관리','dashboard']]]];
 function shell(inner){var nav='<div class="brand">성좌 결투 BO</div>'+MENU.map(function(g){return '<div class="grp">'+g[0]+'</div>'+g[1].map(function(m){return '<button data-k="'+m[0]+'" '+(T.route===m[0]?'aria-current="page"':'')+(T.perms[m[2]]?'':' disabled title="권한 없음"')+'>'+m[1]+'</button>'}).join('')}).join('');
  var opts=MENU.reduce(function(a,g){return a.concat(g[1])},[]).filter(function(m){return T.perms[m[2]]}).map(function(m){return '<option value="'+m[0]+'" '+(T.route===m[0]?'selected':'')+'>'+m[1]+'</option>'}).join('');
@@ -94,6 +94,48 @@ function boot(){api('/me').then(function(j){T.me=j.staff;T.perms=j.perms;T.solo=
 var V={};
 function table(head,rows){return '<div class="tw"><table><tr>'+head.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr>'+(rows.join('')||'<tr><td colspan="'+head.length+'" class="muted">없음</td></tr>')+'</table></div>'}
 function val(id){var e=$(id);return e?e.value.trim():''}
+
+/* ---------- 지표(상세 12) ---------- */
+function pct(v,lo,hi){if(v==null)return '-';var bad=(lo!=null&&v<lo)||(hi!=null&&v>hi);return '<span class="tag '+(bad?'bad':'ok')+'">'+v+'%</span>'}
+V.metrics=function(){var q=T.mq||{};return api('/metrics?from='+(q.from||'')+'&to='+(q.to||'')).then(function(d){
+ var s=d.searches||{},g=d.gold||{},rv=d.revenue||{},rt=d.retention||{};
+ var k=[['랭킹전 판 길이 평균 / 90%',(d.matchMinAvg??'-')+'분 / '+(d.matchMinP90??'-')+'분','목표 3.9분 / 5.5분 이하'],['전투 길이 중앙값 · 평균 턴',(d.battleMinMedian??'-')+'분 · '+(d.avgTurns??'-')+'턴','목표 2.6분 · 7턴'],
+  ['매칭 대기 중앙값',(d.waitSecMedian??'-')+'초','목표 15초 이하'],['AI 전환율',pct(d.aiFallbackPct,null,20),'출시 초 20% 이하'],['이탈률',pct(d.leavePct,null,2),'2% 이하'],['항복률',d.surrenderPct==null?'-':d.surrenderPct+'%',''],
+  ['신규 계정 · 첫날 랭킹전 진입',num(d.newAccounts)+' · '+(d.rankedEntryPct??'-')+'%','진입 50% 이상'],['리텐션 D1 / D7 / D30',['d1','d7','d30'].map(function(x){return rt[x]&&rt[x].pct!=null?rt[x].pct+'%':'-'}).join(' / '),'40% / 15% / 6%'],
+  ['골드 획득 · 소비',num(g.earned)+' · '+num(g.spent),'첫 소비일 중앙값 '+(g.firstSpendDaysMedian??'-')+'일 (목표 14일 이하)'],['매출 · 환불률',num(rv.amount)+'원 · '+(rv.refundPct??'-')+'%',num(rv.orders)+'건'],
+  ['매칭 결과(사람·AI·취소)',[s.found||0,s.ai||0,s.cancel||0].join(' · '),''],['신고',num(d.reports),'']];
+ var ch=(d.characterGroups||[]).map(function(c){return '<tr><td>'+esc(c.group)+'</td><td>'+esc(c.name)+'</td><td>'+c.games+'</td><td>'+pct(c.winPct,45,55)+'</td></tr>'});
+ var sp=Object.keys(d.spells||{}).map(function(id){var x=d.spells[id];return '<tr><td>'+id+'</td><td>'+x.games+'</td><td>'+(x.games?Math.round(1000*x.wins/x.games)/10+'%':'-')+'</td></tr>'});
+ var ev=Object.keys(d.events||{}).sort().map(function(n){return '<tr><td>'+n+'</td><td>'+num(d.events[n])+'</td></tr>'});
+ var tu=Object.keys(d.tutorial||{}).sort().map(function(n){return '<tr><td>'+esc(n)+'</td><td>'+num(d.tutorial[n])+'</td></tr>'});
+ var bs=Object.keys(g.bySource||{}).map(function(n){return '<tr><td>'+esc(n)+'</td><td>'+num(g.bySource[n])+'</td></tr>'});
+ var st=Object.keys(d.settings||{}).map(function(n){return '<tr><td>'+esc(n)+'</td><td>'+num(d.settings[n])+'</td></tr>'});
+ return '<h2>지표(KPI)</h2><p class="sub">상세 12 기준. 목표값은 출시 전 가정이에요. 판·매칭 지표는 랭킹전(사람+AI) 기준, 기간은 한국 시간 날짜.</p>'
+ +'<div class="row" style="margin-bottom:12px"><input type="date" id="mFrom" value="'+(q.from||'')+'"> ~ <input type="date" id="mTo" value="'+(q.to||'')+'"><button class="btn sm" id="mGo">조회</button><span class="small muted">비우면 최근 7일 · '+fmt(d.range.from)+' ~ '+fmt(d.range.to)+'</span></div>'
+ +'<div class="grid g4">'+k.map(function(x){return '<div class="card"><div class="muted small">'+x[0]+'</div><div class="kpi">'+x[1]+'</div><div class="small muted">'+x[2]+'</div></div>'}).join('')+'</div>'
+ +'<div class="grid g2" style="margin-top:14px"><div class="card"><h3>캐릭터 승률(티어 구간별, 목표 45~55%)</h3>'+table(['구간','캐릭터','판수','승률'],ch)+'</div>'
+ +'<div class="card"><h3>스펠 승률</h3>'+table(['스펠','판수','승률'],sp)+'<h3 style="margin-top:12px">골드 출처별</h3>'+table(['사유','합계'],bs)+'</div>'
+ +'<div class="card"><h3>튜토리얼 단계 도달(유저 수)</h3>'+table(['단계','유저'],tu)+'<h3 style="margin-top:12px">설정 변경(유저 수)</h3>'+table(['설정','유저'],st)+'</div>'
+ +'<div class="card"><h3>이벤트 수</h3>'+table(['이벤트','건수'],ev)+'</div></div>'})};
+V.metrics.bind=function(){var b=$('mGo');if(b)b.onclick=function(){T.mq={from:val('mFrom'),to:val('mTo')};render()}};
+
+/* ---------- 금칙어·닉네임(상세 13) ---------- */
+var WK={profanity:'욕설',hate:'혐오',impersonation:'사칭',staff:'운영자 사칭',other:'기타'},WM={contains:'포함',prefix:'앞부분',exact:'전체 일치'};
+V.words=function(){return Promise.all([api('/words?q='+encodeURIComponent(T.wq||'')),api('/words/flagged')]).then(function(r){var w=r[0].words,f=r[1].users;
+ return '<h2>금칙어·닉네임</h2><p class="sub">닉네임 변경 때 검사해요. 비교는 대소문자·띄어쓰기·기호 무시, 흔한 숫자 바꿔 쓰기(0→o, 1→i, 3→e…)도 같은 글자로 봐요. 추가·삭제는 감사 로그에 남아요(상세 13).</p>'
+ +'<div class="card" style="margin-bottom:14px"><h3>금칙어 추가</h3><div class="row"><input id="wWord" placeholder="단어" maxlength="40"><select id="wKind">'+Object.keys(WK).map(function(k){return '<option value="'+k+'">'+WK[k]+'</option>'}).join('')+'</select><select id="wMatch">'+Object.keys(WM).map(function(k){return '<option value="'+k+'">'+WM[k]+'</option>'}).join('')+'</select><select id="wLang"><option value="ko">한국어</option><option value="en">영어</option><option value="ja">일본어</option><option value="any">공통</option></select><input id="wNote" placeholder="메모" style="flex:1"><button class="btn pri sm" id="wAdd">추가</button></div>'
+ +'<div class="row" style="margin-top:8px"><input id="wTest" placeholder="닉네임 미리 검사"><button class="btn sm" id="wTry">검사</button><span id="wTestOut" class="small"></span></div></div>'
+ +'<div class="grid g2"><div class="card"><h3>금칙어 '+w.length+'개</h3><div class="row" style="margin-bottom:8px"><input id="wq" placeholder="찾기" value="'+esc(T.wq||'')+'"><button class="btn sm" id="wFind">찾기</button></div>'
+ +table(['단어','종류','방식','언어','메모','추가','작업'],w.map(function(x){return '<tr><td><b>'+esc(x.word)+'</b></td><td>'+WK[x.kind]+'</td><td>'+WM[x.match]+'</td><td>'+x.lang+'</td><td class="small">'+esc(x.note)+'</td><td class="small">'+esc(x.by||'기본')+'<br>'+fmt(x.createdAt)+'</td><td><button class="btn sm" data-wdel="'+x.id+'">삭제</button></td></tr>'}))+'</div>'
+ +'<div class="card"><h3>지금 걸리는 닉네임 '+f.length+'명</h3><p class="small muted">검토 후 강제 변경하면 임시 닉네임 + 무료 변경권 + 경고(상세 13).</p>'
+ +table(['닉네임','걸린 단어','작업'],f.map(function(u){return '<tr><td>'+esc(u.name)+'<div class="small muted">'+u.id+'</div></td><td>'+u.hits.map(function(h){return esc(h.word)}).join(', ')+'</td><td><button class="btn sm" data-ren="'+u.id+'">강제 변경</button></td></tr>'}))+'</div></div>'})};
+V.words.bind=function(){var v=$('view');if(!$('wAdd'))return;
+ $('wAdd').onclick=function(){api('/words',{word:val('wWord'),kind:val('wKind'),match:val('wMatch'),lang:val('wLang'),note:val('wNote')}).then(function(){toast('금칙어 추가');render()}).catch(fail)};
+ $('wFind').onclick=function(){T.wq=val('wq');render()};
+ $('wTry').onclick=function(){api('/words/test?name='+encodeURIComponent(val('wTest'))).then(function(j){$('wTestOut').innerHTML=j.hits.length?'<span class="tag bad">걸림: '+j.hits.map(function(h){return esc(h.word)}).join(', ')+'</span>':'<span class="tag ok">통과</span>'}).catch(fail)};
+ v.onclick=function(e){var d=e.target.closest('[data-wdel]'),r=e.target.closest('[data-ren]');
+  if(d){var why=prompt('삭제 사유(감사 로그)');if(!why)return;api('/words/remove',{id:Number(d.dataset.wdel),reason:why}).then(function(){toast('삭제');render()}).catch(fail)}
+  if(r){var why2=prompt('강제 변경 사유(감사 로그·유저 경고)','부적절한 닉네임');if(!why2)return;api('/user/sanction',{account:r.dataset.ren,kind:'rename',reason:why2}).then(function(){toast('강제 변경 완료');render()}).catch(fail)}}};
 
 /* ---------- 대시보드 ---------- */
 V.dashboard=function(){return api('/dashboard').then(function(d){var m=d.matchesToday||{};

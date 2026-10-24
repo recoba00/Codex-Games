@@ -236,6 +236,7 @@ export class FriendRoom extends DurableObject {
         const id = msg.characterId ? String(msg.characterId) : null;
         if (id && !g.data.characters[id]) throw new Error("character_unavailable");
         g.bans[seat] = { id, done: true };
+        markPrep(g, "ban", seat, now);
         if (g.bans.every((b) => b?.done)) this.toPick(now);
         return;
       }
@@ -244,12 +245,14 @@ export class FriendRoom extends DurableObject {
         const id = String(msg.characterId ?? "");
         if (!this.pickable(g).includes(id)) throw new Error("character_unavailable");
         g.picks[seat] = id;
+        markPrep(g, "pick", seat, now);
         if (g.picks.every(Boolean)) this.toLoadout(now);
         return;
       }
       case "loadout": {
         if (room.phase !== "loadout") throw new Error("phase_invalid");
         g.loadouts[seat] = this.validLoadout(g, g.picks[seat], msg);
+        markPrep(g, "loadout", seat, now);
         if (g.loadouts.every(Boolean)) this.startBattle(now);
         return;
       }
@@ -257,6 +260,7 @@ export class FriendRoom extends DurableObject {
         if (room.phase !== "battle") throw new Error("phase_invalid");
         if (g.battle.turn !== Number(msg.turn ?? g.battle.turn)) throw new Error("turn_mismatch");
         const both = submit(g.battle, seat, { cards: msg.cards ?? [], spell: msg.spell ?? null, active: Boolean(msg.active) });
+        (g.actAt ??= [0, 0])[seat] = now;
         if (both) await this.resolve(now);
         return;
       }
@@ -420,6 +424,7 @@ export class FriendRoom extends DurableObject {
 
   openTurn(now) {
     const g = this.room.game;
+    g.turnAt = now;
     const ms = g.battle.rules.turn_select_sec * 1000 + PREP.grace_ms;
     g.deadline = [now + ms, now + ms];
     const ai = this.room.members.findIndex((m) => m.ai);
@@ -443,6 +448,7 @@ export class FriendRoom extends DurableObject {
     }
     const ai = this.room.members.findIndex((m) => m.ai);
     if (ai >= 0) remember(g.battle, ai, g.aiMemory);
+    recordTurn(g, now);
     if (g.battle.result) return this.finishGame(now);
     this.openTurn(now);
     return null;
@@ -525,6 +531,7 @@ export class FriendRoom extends DurableObject {
       if (players.length) { room.econs ??= []; room.econs.push({ tries: 0, next: now, job: { matchId: g.id, mode, players } }); }
     }
     this.presence("");
+    this.logEvents(matchEvents(room, g, { outcome, reason, now }));
     room.lastBattle = view(b, 0);  // 결과 화면용 마지막 로그(0번 시점; 공개 정보만 쓴다)
     room.lastData = g.data;
     room.game = null;
@@ -533,6 +540,12 @@ export class FriendRoom extends DurableObject {
     room.expiresAt = now + LOBBY_TTL_MS;
     room.members.forEach((m) => { m.ready = Boolean(m.ai); });
     await this.flushSaves(now);
+  }
+
+  // 지표 로그(상세 12): 판이 끝날 때 한 번에(배치). 실패해도 판 진행에는 영향 없음
+  logEvents(rows) {
+    if (!rows.length || !this.env.SUPABASE_URL) return;
+    this.ctx.waitUntil(rpc(this.env, "events_add", { p_rows: rows }).catch(() => rpc(this.env, "events_add", { p_rows: rows }).catch(() => {})));
   }
 
   // 판 결과 저장: 판 ID가 키라 재시도해도 중복 없음. 실패하면 30초 뒤 다시(최대 10회)
@@ -687,4 +700,51 @@ function send(ws, value) {
 function sanitizeDefaults(d = {}) {
   const ids = (list, max) => (Array.isArray(list) ? list.map(String).filter((x) => /^[A-Z0-9]{2,8}$/.test(x)).slice(0, max) : []);
   return { preferred: ids(d.preferred, 3), spells: ids(d.spells, 2), preset: [1, 2, 3].includes(Number(d.preset)) ? Number(d.preset) : 2 };
+}
+
+// ---------- 지표 로그 도우미(상세 12) ----------
+function markPrep(g, phase, seat, now) { ((g.prepAt ??= {})[phase] ??= [0, 0])[seat] = now; }
+
+// 턴마다 좌석별 요약: 낸 카드, 사용 에너지(카드 비용 합), 준·받은 피해, 타임뱅크, 확정까지 걸린 초, 자동 확정
+function recordTurn(g, now) {
+  const L = g.battle.log, turn = L[0]?.turn ?? g.battle.turn;
+  g.turns ??= [[], []];
+  for (const seat of [0, 1]) {
+    const cards = L.filter((e) => e.t === "card" && e.seat === seat).map((e) => e.id);
+    const reveal = L.find((e) => e.t === "reveal" && e.seat === seat);
+    g.turns[seat].push({
+      t: turn, cards, e: cards.reduce((a, id) => a + Number(g.data.cards?.[id]?.cost ?? 0), 0),
+      d: L.filter((e) => e.t === "dmg" && e.seat === 1 - seat).reduce((a, e) => a + (e.v ?? 0), 0),
+      r: L.filter((e) => e.t === "dmg" && e.seat === seat).reduce((a, e) => a + (e.v ?? 0), 0),
+      tb: g.timebank?.[seat] === turn ? 1 : 0,
+      s: g.actAt?.[seat] && g.turnAt ? Math.max(0, Math.round((g.actAt[seat] - g.turnAt) / 1000)) : null,
+      auto: reveal?.auto ? 1 : 0
+    });
+  }
+  g.actAt = [0, 0];
+}
+
+// 판 종료 이벤트 묶음: 사람 좌석마다 banpick_ban·banpick_pick·banpick_spell·turn_end(턴 목록을 한 줄로 집계)·match_end
+export function matchEvents(room, g, { outcome, reason, now }) {
+  const rows = [];
+  const mode = room.mode ?? "friend";
+  const at = new Date(now).toISOString();
+  for (const seat of [0, 1]) {
+    const m = room.members[seat];
+    if (!m?.acc || m.ai) continue;
+    const base = { account: m.acc, at, data_ver: g.dataVersion };
+    const common = { match_id: g.id, mode };
+    const timeout = (phase) => !(g.prepAt?.[phase]?.[seat]);
+    if (room.options?.bans) rows.push({ ...base, name: "banpick_ban", props: { ...common, character_id: g.bans[seat]?.id ?? null, timeout: timeout("ban") } });
+    rows.push({ ...base, name: "banpick_pick", props: { ...common, character_id: g.picks[seat], timeout: timeout("pick") } });
+    rows.push({ ...base, name: "banpick_spell", props: { ...common, spell_ids: g.loadouts[seat]?.spells ?? [], deck_preset: g.loadouts[seat]?.preset ?? null, timeout: timeout("loadout") } });
+    if (g.turns?.[seat]?.length) rows.push({ ...base, name: "turn_end", props: { ...common, turns: g.turns[seat] } });
+    const mine = seat === 0 ? "a" : "b";
+    const result = outcome === "void" ? "void" : outcome === "draw" ? "draw" : outcome === mine ? "win" : "loss";
+    const surrender = reason === "surrender" && result === "loss" ? g.battle.turn : null;
+    rows.push({ ...base, name: "match_end", props: { ...common, result, reason, turns: g.battle.turn, duration_sec: Math.round((now - g.startedAt) / 1000),
+      battle_sec: Math.round((now - (g.battleStartedAt ?? now)) / 1000), is_ai: room.members.some((x) => x.ai), character_id: g.picks[seat],
+      leave_flag: ["leave", "afk"].includes(reason) && result === "loss", surrender_turn: surrender } });
+  }
+  return rows;
 }

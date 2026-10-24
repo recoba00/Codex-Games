@@ -6,7 +6,7 @@ import { sha256Hex, signAccess, verifyAccess } from "../tokens.mjs";
 import { importWorkbook } from "./importer.mjs";
 import { readXlsx } from "./xlsx.mjs";
 import { pinLive } from "../gamedata.mjs";
-import { payoutConfig, seasonSkin } from "../season.mjs";
+import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -126,7 +126,16 @@ export async function runCron(env) {
       paid.push({ season: s.id, mailed: await rpc(env, "season_payout", { p_season: s.id, p_cfg: payoutConfig(data, masters, { skinItem: skin }) }) });
     } catch { /* 다음 크론에서 다시 */ }
   }
-  return { published: done, mailed, seasons: paid };
+  // 정리(한 시간에 한 번): 유예 지난 삭제 요청 계정 익명화(상세 09), 보관 기간 지난 상세 로그 삭제(상세 12)
+  let purged = null;
+  if (new Date().getUTCMinutes() < 5 || env.CRON_PURGE_ALWAYS === "1") {
+    const set = (await pinLive(env).catch(() => ({ snapshot: {} }))).snapshot?.settings ?? {};
+    purged = {
+      accounts: await rpc(env, "account_purge_due", { p_days: Number(set.account_delete_grace_days ?? 14), p_retain_years: Number(set.payment_retain_years ?? 5), p_limit: 50 }).catch(() => null),
+      events: await rpc(env, "events_purge", { p_days: Number(set.log_retention_days ?? 90), p_limit: 20000 }).catch(() => null)
+    };
+  }
+  return { published: done, mailed, seasons: paid, purged };
 }
 
 export async function handleBo(request, env, url) {
@@ -192,6 +201,37 @@ export async function handleBo(request, env, url) {
     }
 
     // ---------- 대시보드·감사 로그 ----------
+    // ---------- 지표(상세 12 KPI·운영 대시보드) ----------
+    case "GET /metrics": {  // ?from=YYYY-MM-DD&to=YYYY-MM-DD (KST 날짜, 기본 최근 7일)
+      const st = await staffOf(request, env); allow(st, "dashboard");
+      const day = (v, d) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? "") ? new Date(`${v}T00:00:00+09:00`) : d);
+      const to = day(url.searchParams.get("to"), null);
+      const toAt = to ? new Date(to.getTime() + 86400000) : new Date();
+      const from = day(url.searchParams.get("from"), new Date(toAt.getTime() - 7 * 86400000));
+      const m = await rpc(env, "bo_metrics", { p_from: from.toISOString(), p_to: toAt.toISOString() });
+      const { snapshot: data } = await pinLive(env);
+      return json({ ok: true, ...m, characterGroups: characterWinRates(data, m.characters ?? []) });
+    }
+
+    // ---------- 금칙어(상세 13 닉네임·프로필) ----------
+    case "GET /words": { const st = await staffOf(request, env); allow(st, "users"); return json({ ok: true, words: await rpc(env, "bo_words", { p_q: url.searchParams.get("q") ?? "" }) }); }
+    case "GET /words/flagged": { const st = await staffOf(request, env); allow(st, "users"); return json({ ok: true, users: await rpc(env, "bo_names_flagged", { p_limit: 200 }) }); }
+    case "GET /words/test": { const st = await staffOf(request, env); allow(st, "users"); return json({ ok: true, hits: await rpc(env, "name_matches", { p_name: url.searchParams.get("name") ?? "" }) }); }
+    case "POST /words": {
+      const st = await staffOf(request, env); allow(st, "users");
+      const b = await body(request);
+      const pick = (v, list, d) => (list.includes(v) ? v : d);
+      return json({ ok: true, id: await rpc(env, "bo_word_add", { p_staff: st.id, p_word: String(b.word ?? "").slice(0, 40), p_lang: pick(b.lang, ["ko", "en", "ja", "any"], "ko"),
+        p_kind: pick(b.kind, ["profanity", "hate", "impersonation", "staff", "other"], "profanity"), p_match: pick(b.match, ["contains", "prefix", "exact"], "contains"), p_note: String(b.note ?? "").slice(0, 200) }) });
+    }
+    case "POST /words/remove": {
+      const st = await staffOf(request, env); allow(st, "users");
+      const b = await body(request);
+      if (!String(b.reason ?? "").trim()) throw new Error("reason_required");
+      await rpc(env, "bo_word_remove", { p_staff: st.id, p_id: Number(b.id), p_reason: String(b.reason).slice(0, 200) });
+      return json({ ok: true });
+    }
+
     case "GET /dashboard": { const st = await staffOf(request, env); allow(st, "dashboard"); return json({ ok: true, ...(await rpc(env, "bo_dashboard", {})) }); }
     case "GET /audit": {
       const st = await staffOf(request, env); allow(st, "audit");
@@ -377,4 +417,19 @@ export async function handleBo(request, env, url) {
 
     default: throw new Error("not_found");
   }
+}
+
+// 캐릭터 승률을 티어 구간(브론즈~마스터 이름 묶음)별로(상세 12 밸런스, 목표 45~55%)
+export function characterWinRates(data, rows) {
+  const groups = Object.entries(tierGroups(data)).sort((a, b) => a[1].min - b[1].min);
+  const order = (g) => { const i = groups.findIndex(([k]) => k === g); return i < 0 ? 99 : i; };
+  const out = {};
+  for (const r of rows) {
+    const g = groups.find(([, v]) => r.tier >= v.min && r.tier <= v.max)?.[0] ?? "기타";
+    const k = `${g}|${r.id}`;
+    out[k] ??= { group: g, id: r.id, name: data?.characters?.[r.id]?.name ?? r.id, games: 0, wins: 0 };
+    out[k].games += Number(r.games); out[k].wins += Number(r.wins);
+  }
+  return Object.values(out).map((x) => ({ ...x, winPct: x.games ? Math.round((1000 * x.wins) / x.games) / 10 : null }))
+    .sort((a, b) => order(a.group) - order(b.group) || b.games - a.games);
 }

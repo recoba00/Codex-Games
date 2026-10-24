@@ -27,7 +27,7 @@ pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220
 <div class="row" style="margin-top:8px"><b>AI 대전(연습)</b><button data-d="easy" class="pr">쉬움</button><button data-d="normal" class="pr">보통</button><button data-d="hard" class="pr">어려움</button><button id="btnBoard">랭킹 보드</button></div>
 <pre id="board" hidden></pre></section>
 <section id="econ" hidden><div class="row"><b>경제</b> <span id="gold" style="color:var(--acc);font-weight:600"></span><span id="econInfo" class="dim"></span>
-<button id="btnEcon">새로고침</button><button id="btnAtt">출석 받기</button><button id="btnMail">우편함</button><button id="btnShop">상점</button><button id="btnInv">보관함</button><button id="btnRoad">랭크 로드</button>
+<button id="btnEcon">새로고침</button><button id="btnAtt">출석 받기</button><button id="btnMail">우편함</button><button id="btnShop">상점</button><button id="btnInv">보관함</button><button id="btnRoad">랭크 로드</button><button id="btnAcc">계정</button>
 <input id="newName" placeholder="새 닉네임(2~12자)" size="14"><button id="btnName">닉네임 변경</button></div>
 <div id="missions" style="margin-top:8px"></div><div id="econBox" style="margin-top:8px"></div></section>
 <section id="social" hidden><div class="row"><b>친구</b> <span id="fcode" class="dim"></span>
@@ -45,9 +45,9 @@ function log(m){$('log').textContent=new Date().toLocaleTimeString()+' '+m+'\n'+
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.token?{authorization:'Bearer '+S.token}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function nm(kind,id){var d=S.data&&S.data[kind]&&S.data[kind][id];return d?d.name:id}
 function start(){$('login').hidden=!!S.token;$('lobby').hidden=!S.token;$('ranked').hidden=!S.token;$('econ').hidden=!S.token;$('social').hidden=!S.token;if(S.token){loadRank();loadEcon();loadFriends()}$('who').textContent=S.acc?'계정 '+S.acc.slice(0,8):'';
- if(S.token&&!S.data)fetch('/v1/data/live').then(function(r){return r.json()}).then(function(j){S.data=j.data;log('데이터 버전 '+j.version)});
+ if(S.token&&!S.data)fetch('/v1/data/live').then(function(r){return r.json()}).then(function(j){S.data=j.data;S.dataVer=j.version;log('데이터 버전 '+j.version)});
  var code=sessionStorage.getItem('room');if(S.token&&code)connect(code)}
-$('btnLogin').onclick=function(){api('/v1/auth/dev',{devId:$('devId').value.trim().toLowerCase()}).then(function(j){S.token=j.accessToken;S.acc=j.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('로그인 '+(j.replacedSessions?'(다른 기기 세션 종료됨)':''));start()}).catch(function(e){log('로그인 실패: '+e.message)})};
+$('btnLogin').onclick=function(){api('/v1/auth/dev',{devId:$('devId').value.trim().toLowerCase()}).then(function(j){S.token=j.accessToken;S.acc=j.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('로그인 '+(j.replacedSessions?'(다른 기기 세션 종료됨)':'')+(j.restoredFromDeletion?' · 삭제 요청이 취소됨':''));start();sendEv([{name:'session_start',props:{res:screen.width+'x'+screen.height,window:'browser'}}])}).catch(function(e){log('로그인 실패: '+e.message)})};
 $('btnCreate').onclick=function(){api('/v1/rooms',{options:{bans:$('optBans').checked,turnSec:Number($('optTurn').value)}}).then(function(j){log('방 '+j.code);connect(j.code)}).catch(function(e){log(e.message)})};
 $('btnJoin').onclick=function(){var c=$('joinCode').value.trim().toUpperCase();if(!/^[2-9A-HJKMNP-Z]{6}$/.test(c)){log('방 코드는 상대 화면의 "방 코드" 6자리입니다(예: JCWBV3)');return}api('/v1/rooms/'+c+'/join',{}).then(function(){connect(c)}).catch(function(e){log('참가 실패: '+({not_found:'방 코드 형식 오류',room_not_found:'그런 방이 없음(코드 확인)',room_full:'방이 가득 참'}[e.message]||e.message))})};
 function loadRank(){api('/v1/rank/me').then(function(r){$('rankInfo').textContent=r.tierName+' '+r.rp+'RP · '+r.wins+'승/'+r.games+'판'+(r.streak?' · '+r.streak+'연승':'')+(r.leaver.step?' · 이탈 '+r.leaver.step:'')}).catch(function(e){$('rankInfo').textContent='랭크 정보 없음('+e.message+')'})}
@@ -144,7 +144,7 @@ function loadEcon(){api('/v1/econ').then(function(e){S.econ=e;$('gold').textCont
   box.appendChild(r)})}).catch(function(er){log('경제 정보 실패: '+er.message)})}
 $('btnEcon').onclick=loadEcon;
 $('btnAtt').onclick=function(){api('/v1/attendance/claim',{}).then(function(j){log('출석 '+j.cycleDay+'일차 +'+j.gold);loadEcon()}).catch(function(e){log(e.message)})};
-$('btnName').onclick=function(){api('/v1/profile/name',{name:$('newName').value.trim(),requestId:crypto.randomUUID()}).then(function(j){log('닉네임 '+j.name+' (−'+j.cost+'골드)');loadEcon()}).catch(function(e){log('닉네임 변경 실패: '+e.message)})};
+$('btnName').onclick=function(){api('/v1/profile/name',{name:$('newName').value.trim(),requestId:crypto.randomUUID()}).then(function(j){log('닉네임 '+j.name+' (−'+j.cost+'골드)');loadEcon()}).catch(function(e){log('닉네임 변경 실패: '+({name_banned:'금칙어가 들어간 닉네임',name_invalid:'2~12자'}[e.message]||e.message))})};
 $('btnMail').onclick=function(){api('/v1/mail').then(function(j){var b=$('econBox');b.innerHTML='<b>우편함</b> ';
  b.appendChild(btn('모두 받기',function(){api('/v1/mail/claim',{}).then(function(r){log('우편 '+r.claimed+'통 받음: 골드 +'+r.gold+(r.items.length?' / 상품 '+r.items.join(','):''));loadEcon();$('btnMail').onclick()})}));
  var pre=document.createElement('pre');pre.textContent=j.mail.map(function(m){return (m.claimed?'[받음] ':'[ ] ')+m.title+' · '+m.rewards.map(function(r){return r.type==='gold'?r.amount+'골드':r.id}).join(', ')+' · 만료 '+new Date(m.expiresAt).toLocaleDateString()}).join('\n')||'우편 없음';b.appendChild(pre)})};
@@ -185,5 +185,17 @@ $('btnRoad').onclick=function(){var e=S.econ&&S.econ.rankRoad;var b=$('econBox')
 setInterval(function(){if(S.token&&!document.hidden)api('/v1/presence',{away:false}).catch(function(){})},60000);
 document.addEventListener('visibilitychange',function(){if(S.token)api('/v1/presence',{away:document.hidden}).catch(function(){})});
 setInterval(function(){if(S.token&&!S.st&&!document.hidden)loadFriends()},30000);
+function sendEv(list){if(S.token)api('/v1/events',{platform:'steam',device:'desktop',appVer:'dev-page',dataVer:S.dataVer||null,events:list}).catch(function(){})}
+function summ(a){return a.name+' · 티어 '+(a.tier||'-')+' '+(a.rp||0)+'RP · 골드 '+a.gold+' · 보유 '+a.items+'(유료 '+a.paidItems+') · '+a.games+'판 · 로그인 '+a.logins.join(',')}
+$('btnAcc').onclick=function(){api('/v1/account').then(function(a){var b=$('econBox');b.innerHTML='<b>계정</b> <span class=dim>'+a.id.slice(0,8)+' · 가입 '+new Date(a.createdAt).toLocaleDateString()+' · 상태 '+a.status+'</span><pre>'+summ(a)+'\n로그인 수단: '+a.identities.map(function(i){return i.provider+'('+new Date(i.linkedAt).toLocaleDateString()+')'}).join(', ')+'</pre>';
+ var r=document.createElement('div');r.className='row';r.innerHTML='<input id="lnkId" placeholder="Steam 연결(개발용 ID)" size="16">';b.appendChild(r);
+ var link=function(choice){api('/v1/account/link',{provider:'steam',devSteamId:$('lnkId').value.trim().toLowerCase(),choice:choice}).then(function(j){
+  if(j.status==='conflict'){var c=document.createElement('pre');c.textContent='이미 다른 계정에 연결된 Steam입니다. 하나를 고르세요(합치기 없음)\n[이 계정] '+summ(j.current)+'\n[그 계정] '+summ(j.other);b.appendChild(c);
+   b.appendChild(btn('이 계정에 연결(그 계정은 로그인 수단이 없으면 14일 뒤 삭제)',function(){link('current')}));b.appendChild(btn('그 계정으로 전환',function(){link('other')}));return}
+  if(j.status==='switch'){S.token=j.session.accessToken;S.acc=j.session.accountId;sessionStorage.setItem('tok',S.token);sessionStorage.setItem('acc',S.acc);log('그 계정으로 전환');start();return}
+  log('Steam 연결: '+j.status);$('btnAcc').onclick()}).catch(function(e){log('연결 실패: '+({provider_taken:'이 계정엔 이미 Steam이 연결됨',provider_invalid:'개발 ID 형식(영문 소문자·숫자 3~32자)'}[e.message]||e.message))})};
+ r.appendChild(btn('연결',function(){link(null)}));
+ r.appendChild(btn('계정 삭제 요청',function(){if(!confirm('14일 뒤 진행도·보유 스킨이 모두 삭제되고 복구할 수 없습니다(유료 '+a.paidItems+'개 포함). 그 전에 로그인하면 취소됩니다. 요청할까요?'))return;
+  api('/v1/account/delete',{confirm:true}).then(function(j){log('삭제 요청됨 → '+new Date(j.deletionAt).toLocaleString()+' 삭제. 다시 로그인하면 취소');sessionStorage.clear();S.token=null;S.acc=null;start()}).catch(function(e){log(e.message)})}))}).catch(function(e){log('계정 정보 실패: '+e.message)})};
 setInterval(tick,500);start();
 </script></body></html>`;

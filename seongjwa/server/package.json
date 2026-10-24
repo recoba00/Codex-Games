@@ -11,7 +11,8 @@
     "deploy": "wrangler deploy",
     "test:live:econ": "node test/live/econ.mjs",
     "test:live:bo": "node test/live/bo.mjs",
-    "test:live:social": "node test/live/social.mjs"
+    "test:live:social": "node test/live/social.mjs",
+    "test:live:ops": "node test/live/ops.mjs"
   },
   "devDependencies": {
     "pg": "^8.23.1",

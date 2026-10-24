@@ -22,7 +22,10 @@ const PASS_THROUGH = new Set(["account_banned", "account_deleted", "ttl_invalid"
   "title_required", "target_invalid", "job_invalid", "forbidden", "value_invalid", "key_invalid",
   // 7단계 친구·시즌
   "friend_not_found", "already_friends", "friend_blocked", "friend_limit", "request_invalid", "block_invalid", "block_limit",
-  "not_friend", "friend_in_game", "invite_limit"]);
+  "not_friend", "friend_in_game", "invite_limit",
+  // 8단계 금칙어·계정 연동·삭제
+  "name_banned", "word_invalid", "word_exists", "word_not_found", "provider_invalid", "provider_taken", "choice_invalid",
+  "account_not_found", "account_not_active"]);
 
 export async function rpc(env, name, args, fetcher = fetch) {
   const response = await fetcher(`${base(env)}/rest/v1/rpc/${name}`, {

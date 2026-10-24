@@ -41,6 +41,7 @@ const STATUS = {
   mission_claimed: 409, mission_not_done: 409, nothing_to_claim: 409, reroll_used: 409, order_closed: 409, too_many_orders: 429,
   payment_unavailable: 503, payment_pending: 409, payment_failed: 402, steam_txn_failed: 502, item_not_owned: 403,
   friend_not_found: 404, already_friends: 409, friend_blocked: 403, friend_limit: 409, friend_in_game: 409, invite_expired: 410, not_friend: 403, invite_limit: 429, block_limit: 409,
+  name_banned: 422, provider_taken: 409, provider_invalid: 400, choice_invalid: 400, account_not_active: 409, link_unavailable: 503, events_invalid: 400, confirm_required: 400,
   forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
 };
@@ -50,6 +51,28 @@ async function readJson(request) {
   const text = await request.text();
   if (text.length > MAX_BODY) throw new Error("body_too_large");
   try { return text ? JSON.parse(text) : {}; } catch { throw new Error("json_invalid"); }
+}
+
+// 지표 로그(상세 12): 클라이언트가 보내는 이벤트. 판·매칭 이벤트는 서버가, 골드·결제·신고·보상은 원본 표가 기준이라 받지 않는다
+export const CLIENT_EVENTS = new Set(["session_start", "session_end", "tutorial_step", "card_detail_open", "shop_view", "item_preview",
+  "settings_change", "disconnect", "reconnect", "purchase_start", "purchase_fail"]);
+const PLATFORMS = new Set(["android", "ios", "steam"]), DEVICES = new Set(["phone", "tablet", "desktop"]);
+export function clientEvents(input, acc, now = Date.now()) {
+  const list = Array.isArray(input?.events) ? input.events : [];
+  if (!list.length || list.length > 50) throw new Error("events_invalid");
+  const platform = PLATFORMS.has(input.platform) ? input.platform : null;
+  const device = DEVICES.has(input.device) ? input.device : null;
+  const appVer = /^[0-9A-Za-z.+_-]{1,20}$/.test(String(input.appVer ?? "")) ? String(input.appVer) : null;
+  const rows = [];
+  for (const e of list) {
+    if (!CLIENT_EVENTS.has(e?.name)) continue;  // 모르는 이름은 버림(이름 목록은 상세 12가 기준)
+    const props = e.props && typeof e.props === "object" && !Array.isArray(e.props) ? e.props : {};
+    if (JSON.stringify(props).length > 2000) continue;
+    const t = Date.parse(e.at ?? "");
+    const at = Number.isFinite(t) && t <= now + 60000 && t >= now - 7 * 86400000 ? new Date(t).toISOString() : new Date(now).toISOString();  // 오프라인 묶음은 7일까지
+    rows.push({ account: acc, name: e.name, at, platform, device, app_ver: appVer, data_ver: Number.isInteger(input.dataVer) ? input.dataVer : null, props });
+  }
+  return { rows, platform, device, appVer };
 }
 
 function deviceId(input) {
@@ -425,6 +448,44 @@ export async function handle(request, env) {
     case "GET /v1/inventory": {
       const claims = await authenticate(request, env);
       return json({ ok: true, ...(await rpc(env, "inventory_list", { p_account: claims.sub })) });
+    }
+
+    // ---------- 지표 로그(상세 12) ----------
+    case "POST /v1/events": {  // { platform, device, appVer, dataVer, events: [{ name, at, props }] } 최대 50개, 앱이 모아서 보냄
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const { rows, platform, device, appVer } = clientEvents(input, claims.sub);
+      if (platform || device || appVer) await rpc(env, "client_profile", { p_account: claims.sub, p_platform: platform, p_device: device, p_app_ver: appVer });
+      const saved = rows.length ? await rpc(env, "events_add", { p_rows: rows }) : 0;
+      return json({ ok: true, saved, dropped: input.events.length - rows.length });
+    }
+
+    // ---------- 계정(상세 09): 정보, 로그인 수단 연결, 삭제 요청 ----------
+    case "GET /v1/account": {
+      const claims = await authenticate(request, env);
+      const season = await currentSeason(env);
+      return json({ ok: true, ...(await rpc(env, "account_info", { p_account: claims.sub, p_season: season.id })) });
+    }
+    case "POST /v1/account/link": {  // { provider: "steam", ticket } (개발 환경은 { provider: "steam", devSteamId }), choice: null | "current" | "other"
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const provider = String(input.provider ?? "");
+      let uid;
+      if (provider === "steam" && input.ticket) uid = (await verifySteamTicket(env, input.ticket)).steamId;
+      else if (provider === "steam" && env.DEV_LOGIN === "1" && /^[a-z0-9_-]{3,32}$/.test(String(input.devSteamId ?? ""))) uid = `dev:${input.devSteamId}`;
+      else if (["google", "apple"].includes(provider)) throw new Error("link_unavailable");  // 모바일 2단계 출시 때(상세 09)
+      else throw new Error("provider_invalid");
+      const choice = ["current", "other"].includes(input.choice) ? input.choice : null;
+      const season = await currentSeason(env);
+      const r = await rpc(env, "identity_link", { p_account: claims.sub, p_provider: provider, p_uid: uid, p_choice: choice, p_season: season.id });
+      if (r.status === "switch") return json({ ok: true, status: "switch", session: await issueSession(env, provider, uid, "steam", deviceId(input)) });
+      return json({ ok: true, ...r });
+    }
+    case "POST /v1/account/delete": {  // { confirm: true } 14일 유예, 그동안 로그인하면 취소. 세션은 바로 끝남
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      if (input.confirm !== true) throw new Error("confirm_required");
+      return json({ ok: true, ...(await rpc(env, "account_delete_request", { p_account: claims.sub })) });
     }
 
     case "POST /v1/profile/name": {  // 닉네임 2~12자, 첫 변경 무료·이후 골드(상세 05)

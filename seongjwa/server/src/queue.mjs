@@ -3,10 +3,13 @@
 //      다이아 이상 AI 없음·최대 120초 후 취소, "사람 상대만 기다리기"), 10장(이탈 단계 대기·잠금, 닷지 당한 쪽 대기열 맨 앞).
 import { DurableObject } from "cloudflare:workers";
 import { sha256Hex } from "./tokens.mjs";
+import { rpc } from "./db.mjs";
 
 import { matchTick, nextWake, pairKey, prunePairs, PAIR_DEFAULT, searchRange } from "./queue-logic.mjs";
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8" } });
+const waitOf = (e, now) => Math.round((now - e.since) / 1000);
+const ev = (e, name, now, props) => ({ account: e.acc, name, at: new Date(now).toISOString(), props });
 const send = (ws, v) => { try { ws.send(JSON.stringify(v)); } catch { /* closing */ } };
 
 export class MatchQueue extends DurableObject {
@@ -55,6 +58,7 @@ export class MatchQueue extends DurableObject {
       this.ctx.acceptWebSocket(server);
       const entry = { ...t.entry, since: t.entry.since ?? now };
       server.serializeAttachment(entry);
+      this.log([ev(entry, "match_search_start", now, { mode: "ranked", mmr: entry.mmr, tier: entry.tier, human_only: Boolean(entry.humanOnly) })]);
       send(server, { type: "queued", since: entry.since, notBefore: entry.notBefore, aiOk: entry.aiOk, humanOnly: entry.humanOnly, now });
       await this.tick(now);
       return new Response(null, { status: 101, webSocket: client });
@@ -65,7 +69,11 @@ export class MatchQueue extends DurableObject {
   async webSocketMessage(ws, raw) {
     let m;
     try { m = JSON.parse(String(raw)); } catch { return; }
-    if (m.type === "cancel") { try { ws.close(1000, "cancelled"); } catch { /* */ } }
+    if (m.type === "cancel") {
+      const e = ws.deserializeAttachment() ?? {};
+      if (e.acc) this.log([ev(e, "match_cancel", Date.now(), { wait_sec: waitOf(e, Date.now()), human_only: Boolean(e.humanOnly), range: searchRange(waitOf(e, Date.now()), { aiFallbackSec: e.aiFallbackSec ?? 30, wideAfterFallback: !e.aiOk || e.humanOnly }) })]);
+      try { ws.close(1000, "cancelled"); } catch { /* */ }
+    }
   }
 
   async webSocketClose(ws) { try { ws.close(1000, "bye"); } catch { /* */ } }
@@ -84,11 +92,23 @@ export class MatchQueue extends DurableObject {
     }
     await this.ctx.storage.put("pairs", history);
     for (const a of ai) await this.start("ranked_ai", [a], now);
+    const rows = [];
+    const props = (e) => ({ wait_sec: waitOf(e, now), human_only: Boolean(e.humanOnly), range: searchRange(waitOf(e, now), { aiFallbackSec, wideAfterFallback: !e.aiOk || e.humanOnly }) });
+    for (const [a, b] of pairs) for (const e of [a, b]) rows.push(ev(e, "match_found", now, props(e)));
+    for (const a of ai) rows.push(ev(a, "match_ai_fallback", now, props(a)));
+    for (const a of timeout) rows.push(ev(a, "match_cancel", now, { ...props(a), reason: "timeout" }));
+    this.log(rows);
     for (const a of timeout) { send(a.ws, { type: "timeout" }); try { a.ws.close(1000, "timeout"); } catch { /* */ } }
     const left = this.entries();
     const wake = nextWake(left, now, { aiFallbackSec });
     if (wake) await this.ctx.storage.setAlarm(wake);
     for (const e of left) send(e.ws, { type: "waiting", waitSec: Math.floor((now - e.since) / 1000), range: searchRange((now - e.since) / 1000, { aiFallbackSec, wideAfterFallback: !e.aiOk || e.humanOnly }) });
+  }
+
+  // 지표 로그(상세 12): 매칭 이벤트는 틱마다 모아 한 번에
+  log(rows) {
+    if (!rows.length || !this.env.SUPABASE_URL) return;
+    this.ctx.waitUntil(rpc(this.env, "events_add", { p_rows: rows }).catch(() => {}));
   }
 
   async start(mode, list, now) {
