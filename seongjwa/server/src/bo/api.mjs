@@ -6,7 +6,7 @@ import { sha256Hex, signAccess, verifyAccess } from "../tokens.mjs";
 import { importWorkbook } from "./importer.mjs";
 import { readXlsx } from "./xlsx.mjs";
 import { pinLive } from "../gamedata.mjs";
-import { payoutConfig } from "../season.mjs";
+import { payoutConfig, seasonSkin } from "../season.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -122,7 +122,7 @@ export async function runCron(env) {
     try {
       const { snapshot: data } = await pinLive(env);
       const masters = await rpc(env, "season_masters", { p_season: s.id });
-      const skin = data?.tables?.season_skins?.[String(s.id)] ?? null;
+      const skin = seasonSkin(data, s.id);
       paid.push({ season: s.id, mailed: await rpc(env, "season_payout", { p_season: s.id, p_cfg: payoutConfig(data, masters, { skinItem: skin }) }) });
     } catch { /* 다음 크론에서 다시 */ }
   }
@@ -229,6 +229,13 @@ export async function handleBo(request, env, url) {
       let sheets;
       try { sheets = await readXlsx(buf); } catch { throw new Error("xlsx_invalid"); }
       const result = importWorkbook(sheets);
+      // 보상에 적힌 상품 ID가 상점(카탈로그)에 없으면 지급 때 빠진다 → 알림
+      const refs = [...(result.data.tables?.rank_road?.steps ?? []).flatMap((x) => x.items), ...(result.data.tables?.season_skins?.seasons ?? []).map((x) => x.item).filter(Boolean)];
+      if (refs.length) {
+        const known = new Set(((await rpc(env, "bo_catalog", {}))?.items ?? []).map((i) => i.id));
+        const missing = [...new Set(refs)].filter((id) => !known.has(id));
+        if (missing.length) result.warnings.push(`상점에 없는 상품 ID(등록 전까지 지급 안 됨): ${missing.join(", ")}`);
+      }
       const validation = { errors: result.errors, blocks: result.blocks, warnings: result.warnings, summary: result.summary, file: url.searchParams.get("file") ?? "" };
       if (result.errors.length) return json({ ok: false, error: "validation_errors", validation }, 422);
       const live = (await rpc(env, "bo_versions", { p_limit: 1 })).live;

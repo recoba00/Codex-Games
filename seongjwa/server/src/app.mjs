@@ -10,8 +10,16 @@ import { claimAttendance, claimMissions, econConfig, econView, firstWinMult, per
 import { cancelOrder, finishOrder, recoverOrders, startOrder } from "./payments.mjs";
 import { handleBo, runCron } from "./bo/api.mjs";
 import { claimRankRoad, rankRoadView } from "./season.mjs";
+import { pairRule } from "./queue-logic.mjs";
 import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
+
+// 친구 코드: 표시 접두어는 게임 이름 가안이라 바뀔 수 있음(FRIEND_CODE_PREFIX). 입력은 접두어 있어도 없어도 됨
+const codePrefix = (env) => String(env.FRIEND_CODE_PREFIX ?? "ASTRA");
+function friendCodeOf(raw) {
+  const m = String(raw ?? "").trim().toUpperCase().match(/^(?:[A-Z]+-)?([2-9A-HJKMNP-Z]{4}|[2-9A-HJKMNP-Z]{6})$/);
+  return m ? m[1] : null;
+}
 
 export const ACCESS_TTL_SECONDS = 15 * 60;
 export const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -195,7 +203,7 @@ export async function handle(request, env) {
         acc: claims.sub, mmr: rank.mmr, tier: rank.row.tier, seasonId: season.id,
         aiOk: aiAllowed(data, rank.row.tier), humanOnly: Boolean(input.humanOnly),
         notBefore: now + (rank.leaver.delayMin ?? 0) * 60000,  // 이탈 누적 단계의 매칭 전 대기
-        aiFallbackSec: Number(data.settings?.ai_fallback_sec ?? 30), defaults: input.defaults ?? {}
+        aiFallbackSec: Number(data.settings?.ai_fallback_sec ?? 30), pair: pairRule(data.settings), defaults: input.defaults ?? {}
       };
       const res = await env.QUEUE.get(env.QUEUE.idFromName("global")).fetch("https://queue/ticket", { method: "POST", body: JSON.stringify({ acc: claims.sub, entry }) });
       const out = await res.json();
@@ -283,15 +291,18 @@ export async function handle(request, env) {
       const claims = await authenticate(request, env);
       await rpc(env, "friend_code_get", { p_account: claims.sub });
       await rpc(env, "presence_touch", { p_account: claims.sub, p_away: null, p_room: null, p_hidden: null });
-      return json({ ok: true, ...(await rpc(env, "friends_list", { p_account: claims.sub })) });
+      const list = await rpc(env, "friends_list", { p_account: claims.sub });
+      const show = (c) => (c ? `${codePrefix(env)}-${c}` : c);  // 서버에는 뒤 4~6자리만 저장, 접두어는 표시할 때(기획답변 17차 Q4)
+      return json({ ok: true, ...list, code: show(list.code), friends: list.friends.map((f) => ({ ...f, code: show(f.code) })) });
     }
-    case "POST /v1/friends/request": {  // { code: "ASTRA-XXXX" } 또는 { id: 계정 }
+    case "POST /v1/friends/request": {  // { code: "ASTRA-XXXX" 또는 "XXXX" } 또는 { id: 계정 }
       const claims = await authenticate(request, env);
       const input = await readJson(request);
       const id = input.id ? String(input.id) : null;
       if (id && !/^[0-9a-f-]{36}$/.test(id)) throw new Error("friend_not_found");
-      if (!id && !/^ASTRA-[2-9A-HJKMNP-Z]{4,6}$/i.test(String(input.code ?? "").trim())) throw new Error("friend_code_invalid");
-      return json({ ok: true, ...(await rpc(env, "friend_request", { p_account: claims.sub, p_code: id ? null : String(input.code).trim(), p_target: id })) });
+      const code = id ? null : friendCodeOf(input.code);
+      if (!id && !code) throw new Error("friend_code_invalid");
+      return json({ ok: true, ...(await rpc(env, "friend_request", { p_account: claims.sub, p_code: code, p_target: id })) });
     }
     case "POST /v1/friends/respond": {
       const claims = await authenticate(request, env);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { importWorkbook } from "../src/bo/importer.mjs";
+import { diffData } from "../src/bo/api.mjs";
 import { readXlsx } from "../src/bo/xlsx.mjs";
 
 // 백오피스 업로드 경로(JS 리더 + JS 가져오기)가 라이브 데이터(테스트 픽스처)와 같은 결과를 내는지 확인한다.
@@ -21,7 +22,7 @@ test("가져오기: 오류·검수 차단·경고 0건, 라이브 데이터와 �
   const r = importWorkbook(await sheetsP);
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.blocks, []);
-  assert.deepEqual(r.warnings, []);
+  assert.deepEqual(r.warnings.map((w) => w.split(" →")[0]), ["시트 `랭크로드` 없음"], "v8에는 랭크로드 시트가 없음(기획답변 17차에서 추가)");
   assert.deepEqual(r.summary, { characters: 9, cards: 34, spells: 8, settings: 44, presets: 27, tables: ["missions", "rank_tiers", "leaver", "rank_rewards"] });
   const d = r.data;
   for (const [id, c] of Object.entries(FIX.characters)) {
@@ -87,4 +88,42 @@ test("변경표: 경제 키 추가는 설정 행, 미션 표는 미션 행 단�
   v9.characters.AU.hp = 1210;
   assert.deepEqual(diffData(v8, v9).map((x) => [x.kind, x.id, x.field, x.from, x.to]),
     [["characters", "AU", "hp", 1200, 1210], ["tables", "missions.weekly.W02", "gold", 200, 250]]);
+});
+
+// 기획답변 17차 시트 배치: 랭크로드(헤더 4행, 데이터 5~20행, 22행 합계), 시즌스킨(헤더 4행, 데이터 5행~), 설정값 39·40행
+function withV9(sheets) {
+  const s = structuredClone(sheets);
+  const tiers = ["브론즈 III", "브론즈 II", "브론즈 I", "실버 III", "실버 II", "실버 I", "골드 III", "골드 II", "골드 I", "플래티넘 III", "플래티넘 II", "플래티넘 I", "다이아 III", "다이아 II", "다이아 I", "마스터"];
+  const edge = new Set([4, 7, 10, 13, 16]);
+  s["랭크로드"] = [["랭크 로드(시즌마다 각 단계 첫 도달 1회)"], ["메모"], [],
+    ["단계 번호", "단계", "골드", "추가 보상 종류", "상품 ID"],
+    ...tiers.map((t, i) => [i + 1, t, edge.has(i + 1) ? 300 : 100, edge.has(i + 1) ? "감정표현·카드 뒷면" : "", ""]),
+    [], ["합계", "", 2600]];
+  s["시즌스킨"] = [["시즌 이벤트 스킨"], [], [], ["시즌", "상품 ID", "비고"], [1, "", "출시 스킨 0종"], [2, "", ""]];
+  const set = s["설정값"];
+  const at = set.findIndex((r) => r?.[4] === "ai_subopt_gold_plat") + 1;
+  set.splice(at, 0, ["몰아주기 기간", 24, "시간", "상세 13", "pair_window_hours"], ["몰아주기 판수", 2, "판", "상세 13", "pair_limit"]);
+  return s;
+}
+
+test("랭크로드·시즌스킨·몰아주기 설정 (기획답변 17차)", async () => {
+  const r = importWorkbook(withV9(await sheetsP));
+  assert.deepEqual([r.errors, r.blocks, r.warnings], [[], [], []]);
+  const road = r.data.tables.rank_road.steps;
+  assert.equal(road.length, 16);
+  assert.equal(road.reduce((a, x) => a + x.gold, 0), 2600);
+  assert.deepEqual(road[3], { no: 4, name: "실버 III", gold: 300, extra: "감정표현·카드 뒷면", items: [] });
+  assert.deepEqual(r.data.tables.season_skins.seasons.map((x) => [x.no, x.item]), [[1, null], [2, null]]);
+  assert.deepEqual([r.data.settings.pair_window_hours.value, r.data.settings.pair_limit.value], [24, 2]);
+  // 변경표: 랭크로드 16행 + 시즌스킨 2행 + 설정 2개 추가, 그 밖은 0
+  const base = importWorkbook(await sheetsP).data;
+  const diff = diffData(base, r.data);
+  assert.deepEqual([diff.filter((d) => d.id.startsWith("rank_road.")).length, diff.filter((d) => d.id.startsWith("season_skins.")).length, diff.filter((d) => d.kind === "settings").length, diff.length], [16, 2, 2, 20]);
+  // 오류: 상품 ID 형식, 단계 수
+  const bad = withV9(await sheetsP);
+  bad["랭크로드"][4][4] = "emote hello!";
+  bad["랭크로드"].splice(6, 1);
+  const e = importWorkbook(bad).errors.join(" / ");
+  assert.match(e, /상품 ID 형식 오류/);
+  assert.match(e, /15단계/);
 });

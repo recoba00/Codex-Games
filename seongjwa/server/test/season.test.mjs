@@ -39,3 +39,13 @@ test("랭크 로드: 16단계, 티어 경계 300골드·나머지 100, 도달한
   assert.deepEqual(claimRankRoad(state, DATA, { best: 8 }).tiers, [8]);
   assert.equal(rankRoadView(state, DATA, { best: 8, rp: 700 }).claimable, 1);
 });
+
+test("랭크 로드·시즌 스킨: 시트 값(tables.rank_road·season_skins)이 있으면 그 값", async () => {
+  const { seasonSkin } = await import("../src/season.mjs");
+  const data = structuredClone(DATA);
+  data.tables.rank_road = { steps: Array.from({ length: 16 }, (_, i) => ({ no: i + 1, gold: 50, extra: "", items: i === 3 ? ["EMOTE_S1"] : [] })) };
+  data.tables.season_skins = { seasons: [{ no: 1, item: null }, { no: 2, item: "SKIN_AU_S2" }] };
+  const r = claimRankRoad({ season: 1, seasonM: { list: [], fw: {}, cw: {} } }, data, { best: 4 });
+  assert.deepEqual([r.gold, r.items], [200, ["EMOTE_S1"]]);
+  assert.deepEqual([seasonSkin(data, 1), seasonSkin(data, 2), seasonSkin(data, 3)], [null, "SKIN_AU_S2", null]);
+});

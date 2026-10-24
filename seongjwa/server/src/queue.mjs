@@ -4,7 +4,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { sha256Hex } from "./tokens.mjs";
 
-import { matchTick, nextWake, pairKey, prunePairs, searchRange } from "./queue-logic.mjs";
+import { matchTick, nextWake, pairKey, prunePairs, PAIR_DEFAULT, searchRange } from "./queue-logic.mjs";
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 const send = (ws, v) => { try { ws.send(JSON.stringify(v)); } catch { /* closing */ } };
@@ -75,8 +75,9 @@ export class MatchQueue extends DurableObject {
   async tick(now) {
     const entries = this.entries();
     const aiFallbackSec = Number(entries[0]?.aiFallbackSec ?? 30);
-    const history = prunePairs((await this.ctx.storage.get("pairs")) ?? {}, now);  // 몰아주기 방지(상세 13)
-    const { pairs, ai, timeout } = matchTick(entries, now, { aiFallbackSec, history });
+    const pair = entries[0]?.pair ?? PAIR_DEFAULT;  // 몰아주기 방지(상세 13): 기준은 발급 시점 데이터의 설정값
+    const history = prunePairs((await this.ctx.storage.get("pairs")) ?? {}, now, pair);
+    const { pairs, ai, timeout } = matchTick(entries, now, { aiFallbackSec, history, pair });
     for (const [a, b] of pairs) {
       await this.start("ranked", [a, b], now);
       (history[pairKey(a.acc, b.acc)] ??= []).push(now);

@@ -14,6 +14,8 @@ export const RANK_REWARDS_DEFAULT = Object.freeze({
     { tier: "legend", label: "레전드", gold: 12000, first_win_mult: 1.5, frame: true, title: true, grade: 4, skin: true }
   ]
 });
+// 시즌 이벤트 스킨 상품 ID(시트 `시즌스킨`). 없으면 null
+export const seasonSkin = (data, season) => data?.tables?.season_skins?.seasons?.find((x) => Number(x.no) === Number(season))?.item ?? null;
 export const rankRewards = (data) => data?.tables?.rank_rewards ?? RANK_REWARDS_DEFAULT;
 
 // 단계 번호 범위: 티어 이름 앞부분(브론즈 III·II·I = 1~3 …)으로 묶는다
@@ -46,7 +48,7 @@ export function payoutConfig(data, masters, { skinItem = null } = {}) {
 const BOUNDARY = new Set(["실버", "골드", "플래티넘", "다이아", "마스터"]);
 export function rankRoadSteps(data) {
   const custom = data?.tables?.rank_road?.steps;
-  if (custom?.length) return custom.map((s) => ({ tier: Number(s.tier), gold: Number(s.gold ?? 0), items: s.items ?? [] }));
+  if (custom?.length) return custom.map((s) => ({ tier: Number(s.no ?? s.tier), gold: Number(s.gold ?? 0), items: s.items ?? [], extra: s.extra ?? "" }));
   // 개발 가정값: 단계마다 100골드, 티어 경계(실버 III·골드 III·플래티넘 III·다이아 III·마스터)는 300골드(+ 시즌별 감정표현·카드 뒷면은 기획이 상품 ID를 정하면 추가)
   const tiers = tiersOf(data).tiers;
   return tiers.map((t, i) => {

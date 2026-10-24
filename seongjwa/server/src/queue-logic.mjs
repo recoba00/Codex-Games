@@ -7,21 +7,24 @@ export function searchRange(waitSec, { aiFallbackSec, wideAfterFallback }) {
   return QUEUE_RULES.steps.find(([t]) => waitSec < t)[1];
 }
 
-// 승점 몰아주기 방지(상세 13): 같은 두 계정은 24시간 안에 2번까지만 맺고, 3번째부터 피한다
-export const PAIR_WINDOW_MS = 24 * 3600 * 1000;
-export const PAIR_LIMIT = 2;
+// 승점 몰아주기 방지(상세 13, 설정값 pair_window_hours·pair_limit): 같은 두 계정은 N시간 안에 M번까지만 맺고, 그다음부터 피한다
+export const PAIR_DEFAULT = Object.freeze({ windowMs: 24 * 3600 * 1000, limit: 2 });
+export const pairRule = (settings) => ({
+  windowMs: Number(settings?.pair_window_hours ?? 24) * 3600 * 1000,
+  limit: Number(settings?.pair_limit ?? 2)
+});
 export const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
-export function pairBlocked(history, a, b, now) {
-  return (history?.[pairKey(a, b)] ?? []).filter((t) => now - t < PAIR_WINDOW_MS).length >= PAIR_LIMIT;
+export function pairBlocked(history, a, b, now, rule = PAIR_DEFAULT) {
+  return (history?.[pairKey(a, b)] ?? []).filter((t) => now - t < rule.windowMs).length >= rule.limit;
 }
-export function prunePairs(history, now) {
+export function prunePairs(history, now, rule = PAIR_DEFAULT) {
   const out = {};
-  for (const [k, ts] of Object.entries(history ?? {})) { const keep = ts.filter((t) => now - t < PAIR_WINDOW_MS); if (keep.length) out[k] = keep; }
+  for (const [k, ts] of Object.entries(history ?? {})) { const keep = ts.filter((t) => now - t < rule.windowMs); if (keep.length) out[k] = keep; }
   return out;
 }
 
 // 순수 매칭 함수: entries → { pairs:[[a,b]], ai:[a], timeout:[a] }
-export function matchTick(entries, now, { aiFallbackSec, history = {} }) {
+export function matchTick(entries, now, { aiFallbackSec, history = {}, pair = PAIR_DEFAULT }) {
   const ready = entries.filter((e) => now >= e.notBefore).sort((a, b) => a.since - b.since);  // 오래 기다린 사람 먼저
   const used = new Set();
   const pairs = [], ai = [], timeout = [];
@@ -31,7 +34,7 @@ export function matchTick(entries, now, { aiFallbackSec, history = {} }) {
     if (used.has(a.acc)) continue;
     let best = null;
     for (const b of ready) {
-      if (b === a || used.has(b.acc) || pairBlocked(history, a.acc, b.acc, now)) continue;
+      if (b === a || used.has(b.acc) || pairBlocked(history, a.acc, b.acc, now, pair)) continue;
       const diff = Math.abs(a.mmr - b.mmr);
       if (diff <= Math.max(range(a), range(b)) && (!best || diff < Math.abs(a.mmr - best.mmr))) best = b;
     }

@@ -42,3 +42,12 @@ test("몰아주기 방지: 같은 두 계정은 24시간 안에 2번까지, 3번
   const old = { [pairKey("a", "b")]: [T0 - 25 * 3600e3, T0 - 3600e3] };
   assert.deepEqual(matchTick([e("a", 1000, 5), e("b", 1000, 4)], T0, { ...cfg, history: old }).pairs.length, 1, "24시간 지난 기록은 안 셈");
 });
+
+test("몰아주기 기준은 설정값 pair_window_hours·pair_limit (기획답변 17차 Q5)", async () => {
+  const { pairRule, pairBlocked, pairKey: k } = await import("../src/queue-logic.mjs");
+  const now = Date.now(), h = { [k("a", "b")]: [now - 3 * 3600e3, now - 5 * 3600e3] };
+  assert.equal(pairBlocked(h, "a", "b", now, pairRule({ pair_window_hours: 24, pair_limit: 2 })), true);
+  assert.equal(pairBlocked(h, "a", "b", now, pairRule({ pair_window_hours: 4, pair_limit: 2 })), false, "4시간 창이면 1판만 셈");
+  assert.equal(pairBlocked(h, "a", "b", now, pairRule({ pair_window_hours: 24, pair_limit: 3 })), false);
+  assert.deepEqual(pairRule({}), { windowMs: 24 * 3600e3, limit: 2 });
+});

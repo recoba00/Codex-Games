@@ -9,8 +9,8 @@ begin
 
   -- 친구 코드·요청·수락·상호 요청 자동 수락
   code := public.friend_code_get(b);
-  assert code ~ '^ASTRA-[2-9A-HJKMNP-Z]{4}$' and public.friend_code_get(b) = code, 'code stable';
-  r := public.friend_request(a, lower(code), null);
+  assert code ~ '^[2-9A-HJKMNP-Z]{4}$' and public.friend_code_get(b) = code, 'code stable';
+  r := public.friend_request(a, code, null);
   assert r->>'status' = 'sent', 'sent';
   assert jsonb_array_length(public.friends_list(b)->'incoming') = 1, 'incoming';
   rid := (public.friends_list(b)->'incoming'->0->>'id')::bigint;

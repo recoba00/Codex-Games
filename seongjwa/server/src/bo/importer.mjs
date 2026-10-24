@@ -347,6 +347,53 @@ export function importWorkbook(sheets) {
     tables.rank_rewards = { first_win_gold: firstWin ?? 100, tiers: list };
   }
 
+  // ---------- 랭크로드(상세 08): 단계마다 첫 도달 1회, 골드 + 상품(비어 있으면 골드만) ----------
+  const ITEM_ID = /^[A-Z][A-Z0-9_]{1,47}$/;
+  const itemsOf = (v, where) => {
+    const ids = norm(v).split(/[,\s·]+/).filter(Boolean);
+    for (const id of ids) if (!ITEM_ID.test(id)) err(`${where}: 상품 ID 형식 오류 → ${JSON.stringify(id)}`);
+    return ids;
+  };
+  if (!sheets["랭크로드"]) warnings.push("시트 `랭크로드` 없음 → 랭크 로드는 서버 기본값(단계 100골드, 티어 경계 300골드)");
+  else {
+    const rows = sheets["랭크로드"];
+    const [r0, h] = headerIndex(rows, ["단계 번호", "골드"], "랭크로드");
+    const tierCount = tables.rank_tiers?.tiers?.length ?? 16;
+    const steps = [];
+    for (let r = r0 + 1; r < rows.length; r += 1) {
+      const row = rows[r] ?? [];
+      const no = cell(row, h["단계 번호"]);
+      if (!isInt(no)) continue;  // 합계·메모 행은 건너뜀
+      const where = `랭크로드 ${r + 1}행 단계 ${no}`;
+      const gold = cell(row, h["골드"]);
+      if (!isInt(gold) || gold < 0) err(`${where}: 골드가 0 이상 정수가 아님 → ${JSON.stringify(gold)}`);
+      if (no < 1 || no > tierCount) err(`${where}: 단계 번호가 1~${tierCount} 밖`);
+      steps.push({ no, name: norm(cell(row, h["단계"])), gold, extra: norm(cell(row, h["추가 보상 종류"])),
+        items: h["상품 ID"] === undefined ? [] : itemsOf(cell(row, h["상품 ID"]), where) });
+    }
+    const nos = steps.map((x) => x.no);
+    if (new Set(nos).size !== nos.length) err("랭크로드: 단계 번호 중복");
+    if (steps.length !== tierCount) err(`랭크로드: ${steps.length}단계 (랭크_승점 ${tierCount}단계와 같아야 함)`);
+    tables.rank_road = { steps: steps.sort((a, b) => a.no - b.no) };
+  }
+
+  // ---------- 시즌스킨(상세 08): 플래티넘 이상 시즌 이벤트 스킨. 상품 ID가 빈 시즌은 지급 없음 ----------
+  if (sheets["시즌스킨"]) {
+    const rows = sheets["시즌스킨"];
+    const [r0, h] = headerIndex(rows, ["시즌", "상품 ID"], "시즌스킨");
+    const seasons = [];
+    for (let r = r0 + 1; r < rows.length; r += 1) {
+      const row = rows[r] ?? [];
+      const no = cell(row, h["시즌"]);
+      if (!isInt(no)) continue;
+      const ids = itemsOf(cell(row, h["상품 ID"]), `시즌스킨 ${r + 1}행 시즌 ${no}`);
+      if (ids.length > 1) err(`시즌스킨 ${r + 1}행: 상품 ID는 시즌당 1개`);
+      seasons.push({ no, item: ids[0] ?? null, note: norm(cell(row, h["비고"])) });
+    }
+    if (new Set(seasons.map((x) => x.no)).size !== seasons.length) err("시즌스킨: 시즌 번호 중복");
+    tables.season_skins = { seasons };
+  }
+
   // ---------- 상세 14 자동 검증: 스탯 범위·예산(검수 차단), 스펠 개수(알림) ----------
   {
     const [, hc] = headerIndex(charRows, ["HP", "ATK", "DEF", "SPD", "CRIT(%)"], "캐릭터");
