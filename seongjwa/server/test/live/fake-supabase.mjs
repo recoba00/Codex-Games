@@ -41,6 +41,8 @@ export function startFakeSupabase(port) {
         return reply(res, 200, Boolean(s && !s.revoked));
       }
       if (url.pathname === "/rest/v1/rpc/season_current") return reply(res, 200, season);
+      if (url.pathname === "/rest/v1/rpc/account_unban_expired") return reply(res, 200, false);
+      if (url.pathname === "/rest/v1/rpc/sanction_status") return reply(res, 200, { warnings: [], rankUntil: null });
       if (url.pathname === "/rest/v1/rpc/rank_state") {
         const cur = ratings.get(`${body.p_account}|${body.p_season}`) ?? null;
         return reply(res, 200, { current: cur, previous: null, mmr: mmr.get(body.p_account) ?? 800,

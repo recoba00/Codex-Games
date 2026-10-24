@@ -7,6 +7,7 @@
   "keep_vars": true,
   "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "FriendRoom" }, { "name": "QUEUE", "class_name": "MatchQueue" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["FriendRoom"] }, { "tag": "v2", "new_sqlite_classes": ["MatchQueue"] }],
+  "triggers": { "crons": ["*/5 * * * *"] },  // 예약 배포·예약 우편(백오피스). 무료 플랜 크론 한도 안
   // 비밀값은 `wrangler secret put` 으로만 넣는다(소스·Git 금지):
   //   SUPABASE_SERVICE_KEY, TOKEN_SECRET(32자 이상), STEAM_WEB_API_KEY, STEAM_APP_ID
   "vars": {

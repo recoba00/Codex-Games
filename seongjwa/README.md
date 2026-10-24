@@ -93,6 +93,14 @@ Supabase 테스트 프로젝트 `seongjwa-dev`(서울, 무료)에 마이그레�
 - 결제: 테스트 환경은 dev(가짜) 결제. Steam은 `InitTxn` → 오버레이 승인 → 클라이언트 `finalize` → `FinalizeTxn` → 지급. 승인됐는데 확정이 안 온 주문은 다음 `GET /v1/econ` 때 `QueryTxn`으로 확인해 우편 지급. 기본 샌드박스(`STEAM_TXN_SANDBOX=0`일 때만 실결제).
 - 테스트 DB 상품: `supabase/seed/dev_test_catalog.sql`(테스트 환경 전용).
 
+### 백오피스 (상세 14, 6단계) — `https://seongjwa.recoba00.workers.dev/bo`
+
+- 직원 계정은 플레이어 계정과 별개(아이디·비밀번호, PBKDF2). 가입은 관리자가 만든 **초대 코드**로만(2일, 한 번만 표시). 5번 틀리면 15분 잠금, 토큰 8시간, 비활성화하면 즉시 세션 종료. 직원 토큰은 게임 API에 쓸 수 없다(서명 키 분리).
+- 역할: 기획자(xlsx 업로드·검수 요청) / 검수자(승인·반려) / 관리자(배포·예약·롤백, 직원 관리, 전부) / 운영·CS(상점·배너·공지·우편, 유저 조회·재화·제재·신고). **자기가 만든·요청한 초안은 관리자도 승인 불가.**
+- 게임 데이터: xlsx 업로드 → `server/src/bo/xlsx.mjs`(의존성 없는 리더) + `bo/importer.mjs`(Python 가져오기 도구를 옮긴 것, 라이브 v7과 전 항목 일치 테스트) → 오류면 초안 없음 / 스탯 예산·범위는 "검수 차단" / 나머지는 경고 → 라이브 대비 변경 표 → 검수 → 즉시 배포 또는 예약(크론 5분) → 롤백(새 버전으로 기록).
+- 운영: 상품·판매 설정(기간·슬롯·가격), 로비 배너(최대 5)·공지 팝업(`GET /v1/lobby`), 우편 발송(전체·계정·티어, 예약 가능, 계정마다 1번), 유저 검색·상세(장부·보유·결제·전적·제재·신고), 골드·상품 지급/회수(사유 필수), 제재(경고·랭킹전 제한·시즌 기록 처리·정지·닉네임 강제 변경, 해제 시 복구), 신고 처리(`POST /v1/reports`, 같은 상대 24시간 1회), 대시보드, 감사 로그(DB에서 수정·삭제 불가).
+- 아직 없음: 이미지 업로드·압축(R2), 배포 묶음 외 개별 항목 편집 화면(숫자는 xlsx 기준), 금칙어 목록.
+
 ## 테스트
 
 ```bash
@@ -102,7 +110,8 @@ npm run test:live    # 실제 Workers 런타임(wrangler 로컬)에서 친구방
 npm run test:live:rank   # 같은 런타임에서 AI 연습·랭킹전 매칭·AI 전환·닷지·랭크 조회
 LIVE_LONG=1 npm run test:live   # + 60초 재접속 유예 초과 시나리오
 PGHOST=… npm run test:live:econ   # Workers 런타임 + 실제 Postgres(마이그레이션 적용) + 가짜 Steam: 경제·미션·우편·상점·결제 8단계
-psql -f ../supabase/tests/step5_check.sql   # DB 함수 검사(끝에 rollback)
+PGHOST=… npm run test:live:bo     # Workers 런타임 + 실제 Postgres: 직원 가입·권한·xlsx 업로드·검수·크론 예약 배포·롤백·제재·우편·신고·감사 로그
+PGHOST=… PGDATABASE=… bash ../supabase/tests/rebuild_local.sh [--fresh]   # 마이그레이션 전부 + DB 함수 검사(step5·6)
 ```
 
 ## 문서 해석이 필요했던 규칙 (기획 2차 답변으로 확정, 2026-10-23)

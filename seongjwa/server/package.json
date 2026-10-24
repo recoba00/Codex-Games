@@ -9,7 +9,8 @@
     "simulate": "node tools/simulate.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test:live:econ": "node test/live/econ.mjs"
+    "test:live:econ": "node test/live/econ.mjs",
+    "test:live:bo": "node test/live/bo.mjs"
   },
   "devDependencies": {
     "pg": "^8.23.1",

@@ -8,6 +8,8 @@ import { verifySteamTicket } from "./steam.mjs";
 import { econLoad, econMutate } from "./econ-db.mjs";
 import { claimAttendance, claimMissions, econConfig, econView, firstWinMult, periodKeys, rerollDaily } from "./economy.mjs";
 import { cancelOrder, finishOrder, recoverOrders, startOrder } from "./payments.mjs";
+import { handleBo, runCron } from "./bo/api.mjs";
+import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
 
 export const ACCESS_TTL_SECONDS = 15 * 60;
@@ -29,6 +31,7 @@ const STATUS = {
   gold_short: 409, already_owned: 409, price_changed: 409, offer_unavailable: 410, econ_conflict: 409, attendance_done: 409,
   mission_claimed: 409, mission_not_done: 409, nothing_to_claim: 409, reroll_used: 409, order_closed: 409, too_many_orders: 429,
   payment_unavailable: 503, payment_pending: 409, payment_failed: 402, steam_txn_failed: 502, item_not_owned: 403,
+  forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
 };
 
@@ -45,6 +48,7 @@ function deviceId(input) {
 }
 
 async function issueSession(env, provider, providerUid, platform, device) {
+  await rpc(env, "account_unban_expired", { p_provider: provider, p_provider_uid: providerUid }).catch(() => false);  // 기간 정지 만료 자동 해제(상세 13), 실패해도 로그인 판단은 auth_login
   const refreshToken = newRefreshToken();
   const rows = await rpc(env, "auth_login", {
     p_provider: provider, p_provider_uid: providerUid, p_platform: platform, p_device_id: device,
@@ -72,8 +76,35 @@ async function authenticate(request, env) {
 export async function handle(request, env) {
   const url = new URL(request.url);
   const route = `${request.method} ${url.pathname}`;
+  if (url.pathname.startsWith("/bo/v1/")) return handleBo(request, env, url);  // 백오피스 API(직원 계정, 상세 14)
 
   switch (route) {
+    case "GET /bo":  // 백오피스 화면(직원 로그인 필요, 상세 14)
+      return new Response(BO_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-frame-options": "DENY",
+        "content-security-policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'" } });
+
+    case "GET /v1/lobby":  // 로비 배너(최대 5)·공지 팝업(상세 05)
+      return json({ ok: true, ...(await rpc(env, "lobby_content", {})) }, 200, { "cache-control": "public, max-age=60" });
+
+    case "GET /v1/sanctions": {  // 경고 팝업·랭킹전 제한 표시(상세 13)
+      const claims = await authenticate(request, env);
+      return json({ ok: true, ...(await rpc(env, "sanction_status", { p_account: claims.sub })) });
+    }
+    case "POST /v1/sanctions/ack": {
+      const claims = await authenticate(request, env);
+      await rpc(env, "sanction_ack", { p_account: claims.sub });
+      return json({ ok: true });
+    }
+    case "POST /v1/reports": {  // 신고(같은 상대 24시간 1회, 결과는 "처리됨"만, 상세 13)
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      const target = String(input.target ?? ""), match = input.matchId ? String(input.matchId) : null;
+      if (!/^[0-9a-f-]{36}$/.test(target) || (match && !/^[0-9a-f-]{36}$/.test(match))) throw new Error("report_invalid");
+      if (!["afk", "boosting", "cheat", "name", "emote_spam"].includes(input.reason)) throw new Error("report_invalid");
+      await rpc(env, "report_create", { p_reporter: claims.sub, p_target: target, p_reason: input.reason, p_match: match, p_note: String(input.note ?? "").slice(0, 200) });
+      return json({ ok: true });
+    }
+
     case "GET /health":
       return json({ ok: true, service: "seongjwa", stage: 2 });
 
@@ -156,6 +187,8 @@ export async function handle(request, env) {
       const now = Date.now();
       if (rank.leaver.lockedUntil) throw Object.assign(new Error("queue_locked"), { extra: { until: rank.leaver.lockedUntil, step: rank.leaver.step } });
       if (rank.leaver.dodgeUntil) throw Object.assign(new Error("dodge_blocked"), { extra: { until: rank.leaver.dodgeUntil } });
+      const sanction = await rpc(env, "sanction_status", { p_account: claims.sub });  // 제재: 랭킹전 제한(상세 13)
+      if (sanction?.rankUntil) throw Object.assign(new Error("rank_restricted"), { extra: { until: sanction.rankUntil } });
       const entry = {
         acc: claims.sub, mmr: rank.mmr, tier: rank.row.tier, seasonId: season.id,
         aiOk: aiAllowed(data, rank.row.tier), humanOnly: Boolean(input.humanOnly),
@@ -376,6 +409,10 @@ async function roomCall(env, code, path, body) {
 }
 
 export const app = {
+  // 5분마다: 예약 배포, 예약 우편(wrangler.jsonc triggers.crons)
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runCron(env).catch((e) => console.error("cron", e.message)));
+  },
   async fetch(request, env) {
     try {
       return await handle(request, env);

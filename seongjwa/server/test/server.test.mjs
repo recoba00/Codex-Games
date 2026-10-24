@@ -29,7 +29,7 @@ globalThis.fetch = async (url, init = {}) => {
 
 beforeEach(() => {
   calls = [];
-  routes = [];
+  routes = [["https://db.example/rest/v1/rpc/account_unban_expired", () => respond(false)]];
   _resetCache();
 });
 
@@ -75,12 +75,13 @@ test("Steam 로그인 → 세션 발급, 리프레시 토큰은 해시로만 DB�
   assert.equal(out.accountId, ACC);
   assert.equal(out.replacedSessions, 1);
   assert.equal(out.accessExpiresIn, ACCESS_TTL_SECONDS);
-  const sent = JSON.parse(calls[1].init.body);
+  const login = calls.find((c) => c.url.pathname.endsWith("/auth_login"));
+  const sent = JSON.parse(login.init.body);
   assert.equal(sent.p_provider, "steam");
   assert.equal(sent.p_provider_uid, "76561198000000001");
   assert.equal(sent.p_refresh_hash, await sha256Hex(out.refreshToken));
-  assert.ok(!calls[1].init.body.includes(out.refreshToken), "원본 리프레시 토큰은 DB로 보내지 않는다");
-  assert.equal(calls[1].init.headers.authorization, undefined, "새 형식 secret 키는 apikey 헤더만");
+  assert.ok(!login.init.body.includes(out.refreshToken), "원본 리프레시 토큰은 DB로 보내지 않는다");
+  assert.equal(login.init.headers.authorization, undefined, "새 형식 secret 키는 apikey 헤더만");
   const claims = await verifyAccess(SECRET, out.accessToken);
   assert.deepEqual([claims.sub, claims.sid], [ACC, SID]);
 });
@@ -106,7 +107,7 @@ test("개발 로그인은 DEV_LOGIN=1일 때만 열린다", async () => {
   routes.push(["https://db.example/rest/v1/rpc/auth_login", loginOk]);
   const res = await call("POST", "/v1/auth/dev", { body: { devId: "tester" } }, { ...env, DEV_LOGIN: "1" });
   assert.equal(res.status, 200);
-  assert.equal(JSON.parse(calls[0].init.body).p_provider_uid, "dev:tester");
+  assert.equal(JSON.parse(calls.find((c) => c.url.pathname.endsWith("/auth_login")).init.body).p_provider_uid, "dev:tester");
 });
 
 test("갱신: 무효·재사용 토큰은 401, 정상은 새 토큰 쌍", async () => {
