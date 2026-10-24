@@ -28,6 +28,7 @@ textarea{resize:vertical;min-height:56px;width:100%}
 .btn{font:inherit;font-size:14px;border-radius:8px;padding:7px 12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;white-space:nowrap}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.bad{color:var(--bad)}.btn[disabled]{opacity:.45;cursor:not-allowed}.btn.sm{padding:3px 8px;font-size:12px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.tw{overflow-x:auto}
+@media(max-width:700px){.tw table,.tw tbody,.tw tr,.tw td{display:block;width:auto}.tw tr:first-child{display:none}.tw tr{border-bottom:1px solid var(--line);padding:10px 0}.tw td{border:none!important;padding:3px 0!important}.tw td[data-l]:before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}}
 table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
 th{color:var(--muted);font-weight:500;background:var(--panel2);position:sticky;top:0}td.wrap{white-space:normal;min-width:200px}
 tr.click{cursor:pointer}tr.click:hover td{background:var(--panel2)}
@@ -89,9 +90,12 @@ function render(){var root=$('root');
  if(!T.token||!T.me){root.innerHTML=loginView();bindLogin();return}
  root.innerHTML=shell('<p class="muted">불러오는 중…</p>');
  $('side').onclick=function(e){var b=e.target.closest('button[data-k]');if(b&&!b.disabled)go(b.dataset.k)};$('mnav').onchange=function(e){go(e.target.value)};$('btnOut').onclick=function(){logout()};
- var v=V[T.route]||V.dashboard;Promise.resolve(v()).then(function(h){if(typeof h==='string')$('view').innerHTML=h;if(v.bind)v.bind()}).catch(function(e){$('view').innerHTML='<div class="note">'+esc(e.message)+'</div>'})}
+ var v=V[T.route]||V.dashboard;Promise.resolve(v()).then(function(h){if(typeof h==='string')$('view').innerHTML=h;labelTables();if(v.bind)v.bind()}).catch(function(e){$('view').innerHTML='<div class="note">'+esc(e.message)+'</div>'})}
 function boot(){api('/me').then(function(j){T.me=j.staff;T.perms=j.perms;T.solo=j.soloMode;render()}).catch(function(){T.token=null;render()})}
 var V={};
+/* 휴대폰(700px 이하): 표를 카드처럼 세로로 쌓고 칸 이름을 붙인다(작업 버튼이 화면 밖으로 밀리지 않게) */
+function labelTables(root){(root||document).querySelectorAll('.tw table').forEach(function(t){var hs=[].map.call(t.querySelectorAll('tr:first-child th'),function(h){return h.textContent});t.querySelectorAll('tr').forEach(function(r){[].forEach.call(r.children,function(td,i){if(td.tagName==='TD'&&hs[i]&&!td.hasAttribute('colspan'))td.setAttribute('data-l',hs[i])})})})}
+new MutationObserver(function(){labelTables()}).observe(document.documentElement,{childList:true,subtree:true});
 function table(head,rows){return '<div class="tw"><table><tr>'+head.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr>'+(rows.join('')||'<tr><td colspan="'+head.length+'" class="muted">없음</td></tr>')+'</table></div>'}
 function val(id){var e=$(id);return e?e.value.trim():''}
 
