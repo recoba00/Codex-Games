@@ -10,7 +10,7 @@ export const ART = Object.freeze({
   full: { ratio: [9, 16], min: [1080, 1920], max: [1440, 2560], mult: 4, alpha: true },
   thumb: { exact: [576, 1024], alpha: true },
   face: { exact: [512, 512], alpha: true },
-  card: { ratio: [3, 4] },        // 카드 영역(상세 14): 전신 너비 전체, 위쪽 약 3/4 안에서 위아래로만
+  card: { ratio: [3, 4] },        // 카드 그림 창 영역: 3:4, 크기·위치는 얼굴처럼 자유(사용자 결정 2026-10-24)
   faceRect: { ratio: [1, 1], minPx: 512 }
 });
 
@@ -77,16 +77,15 @@ export function checkUpload(kind, info, bytes, slot = null) {
   if (info.w !== ex[0] || info.h !== ex[1]) throw bad(`${kind}: ${ex[0]}×${ex[1]}이어야 함 (올린 파일 ${info.w}×${info.h})`);
 }
 
-// 영역 좌표 검사(0~1 비율). 카드: 너비 전체·3:4·위아래만, 얼굴: 1:1·이미지 안. 얼굴 영역이 512px 미만이면 경고
+// 영역 좌표 검사(0~1 비율). 카드: 3:4·이미지 안(크기·위치 자유, 사용자 결정 2026-10-24), 얼굴: 1:1·이미지 안. 얼굴 영역이 512px 미만이면 경고
 export function checkRegions(full, card, face) {
   const bad = (msg) => Object.assign(new Error("asset_region"), { extra: { detail: msg } });
   const num = (r) => r && ["x", "y", "w", "h"].every((k) => Number.isFinite(r[k]) && r[k] >= 0 && r[k] <= 1);
   if (!num(card) || !num(face)) throw bad("좌표는 0~1 비율 x·y·w·h");
   const eps = 0.002;
   const W = full.w, H = full.h;
-  if (Math.abs(card.x) > eps || Math.abs(card.w - 1) > eps) throw bad("카드 영역은 전신 너비 전체");
-  if (Math.abs(card.h * H - (W * 4) / 3) > 2) throw bad("카드 영역 비율 3:4");
-  if (card.y + card.h > 1 + eps) throw bad("카드 영역이 이미지 밖");
+  if (Math.abs(card.h * H - (card.w * W * 4) / 3) > 2) throw bad("카드 영역 비율 3:4");
+  if (card.x + card.w > 1 + eps || card.y + card.h > 1 + eps) throw bad("카드 영역이 이미지 밖");
   if (Math.abs(face.w * W - face.h * H) > 2) throw bad("얼굴 영역 비율 1:1");
   if (face.x + face.w > 1 + eps || face.y + face.h > 1 + eps) throw bad("얼굴 영역이 이미지 밖");
   const round = (r) => Object.fromEntries(["x", "y", "w", "h"].map((k) => [k, Math.round(r[k] * 1e5) / 1e5]));

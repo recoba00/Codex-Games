@@ -130,24 +130,30 @@ function compareBox(P){var cap=P.kind==='full'?T.ad.spec.fullMaxKb:P.kind==='fac
  +'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aOk">승인·저장</button><button class="btn sm" id="aNo">취소</button></div></div>'}
 function drawCompare(P){loadImg(P.url).then(function(c){[[P.img,'cmpA',P.origW/P.w],[c,'cmpB',1]].forEach(function(x){var cv=$(x[1]);if(!cv)return;var g=cv.getContext('2d'),s=x[2],cx=P.w/2,cy=(P.kind==='full'?P.h*0.2:P.h/2);g.imageSmoothingEnabled=false;g.clearRect(0,0,240,240);g.drawImage(x[0],(cx-60)*s,(cy-60)*s,120*s,120*s,0,0,240,240)})})}
 function upload(blob,q){return fetch('/bo/v1/assets/upload?'+q,{method:'POST',headers:{authorization:'Bearer '+T.token,'content-type':'image/webp'},body:blob}).then(function(r){return r.json()}).then(function(j){if(!j.ok){var e=new Error((ERR[j.error]||j.error)+(j.detail?': '+j.detail:''));throw e}return j})}
-/* 영역 편집: 카드(너비 전체 3:4, 위아래만)와 얼굴(1:1). 비율 좌표 0~1 */
-function regionEditor(img,W,H,R){var host=$('aReg');if(!host)return;var cardH=(W*4/3)/H,maxY=Math.max(0,1-cardH);
- R.card={x:0,y:Math.min(R.card?R.card.y:0,maxY),w:1,h:cardH};R.face=R.face||{x:0.3,y:0.05,w:0.4,h:0.4*W/H};
- host.innerHTML='<div class="row" style="align-items:flex-start"><canvas id="rgFull" width="240" height="'+Math.round(240*H/W)+'" style="border:1px solid var(--line);touch-action:none;cursor:crosshair"></canvas><div><div class="small muted">카드(3:4)</div><canvas id="rgCard" width="150" height="200" style="border:1px solid var(--line)"></canvas><div class="small muted" style="margin-top:6px">얼굴(1:1)</div><canvas id="rgFace" width="100" height="100" style="border-radius:50%;border:1px solid var(--line)"></canvas></div></div>'
- +'<label class="small" style="display:block;margin-top:8px">카드 영역 위치(위↔아래) <input type="range" id="rgY" min="0" max="1000" value="'+Math.round(maxY?R.card.y/maxY*1000:0)+'" style="width:100%"'+(maxY?'':' disabled')+'></label>'
- +'<label class="small" style="display:block">얼굴 영역 크기 <input type="range" id="rgS" min="80" max="1000" value="'+Math.round(R.face.w*1000)+'" style="width:100%"></label><div class="small" id="rgWarn"></div><div class="small muted">얼굴은 왼쪽 그림을 눌러(끌어) 옮겨요.</div>';
+/* 영역 편집: 카드 그림 창(3:4)과 얼굴(1:1). 둘 다 그림을 끌어 옮기고 슬라이더로 크기 조절. 비율 좌표 0~1 */
+function regionEditor(img,W,H,R){var host=$('aReg');if(!host)return;var mode='card';
+ var ratioH={card:(4/3)*W/H,face:W/H};  /* 너비(비율) → 높이(비율) */
+ R.card=R.card?{x:R.card.x,y:R.card.y,w:R.card.w,h:R.card.w*ratioH.card}:{x:0,y:0,w:1,h:ratioH.card};
+ R.face=R.face?{x:R.face.x,y:R.face.y,w:R.face.w,h:R.face.w*ratioH.face}:{x:0.3,y:0.05,w:0.4,h:0.4*ratioH.face};
+ var maxW=function(k){return Math.min(1,1/ratioH[k])};
+ host.innerHTML='<div class="row" style="margin-bottom:8px"><span class="small">그림을 끌어서 옮길 영역</span><button class="btn sm pri" data-rm="card">카드(3:4)</button><button class="btn sm" data-rm="face">얼굴(1:1)</button></div>'
+ +'<div class="row" style="align-items:flex-start"><canvas id="rgFull" width="240" height="'+Math.round(240*H/W)+'" style="border:1px solid var(--line);touch-action:none;cursor:move"></canvas><div><div class="small muted">카드 그림 창(3:4)</div><canvas id="rgCard" width="150" height="200" style="border:1px solid var(--line)"></canvas><div class="small muted" style="margin-top:6px">얼굴(1:1)</div><canvas id="rgFace" width="100" height="100" style="border-radius:50%;border:1px solid var(--line)"></canvas></div></div>'
+ +'<label class="small" style="display:block;margin-top:8px">카드 영역 크기 <input type="range" id="rgC" min="150" max="1000" value="'+Math.round(R.card.w/maxW('card')*1000)+'" style="width:100%"></label>'
+ +'<label class="small" style="display:block">얼굴 영역 크기 <input type="range" id="rgS" min="50" max="1000" value="'+Math.round(R.face.w/maxW('face')*1000)+'" style="width:100%"></label><div class="small" id="rgWarn"></div><div class="small muted">파란 사각형 = 카드, 주황 사각형 = 얼굴. 위 버튼으로 끌어 옮길 영역을 고르세요.</div>';
  var full=$('rgFull'),sc=full.width/W;
+ function clamp(k){var r=R[k];r.w=Math.min(maxW(k),Math.max(0.05,r.w));r.h=r.w*ratioH[k];r.x=Math.min(1-r.w,Math.max(0,r.x));r.y=Math.min(1-r.h,Math.max(0,r.y))}
  function draw(){var g=full.getContext('2d');g.clearRect(0,0,full.width,full.height);g.drawImage(img,0,0,full.width,full.height);
-  g.lineWidth=2;g.strokeStyle='#4fa3ff';g.strokeRect(1,R.card.y*H*sc,full.width-2,R.card.h*H*sc);g.strokeStyle='#ffb020';g.strokeRect(R.face.x*W*sc,R.face.y*H*sc,R.face.w*W*sc,R.face.h*H*sc);
-  var c=$('rgCard').getContext('2d');c.clearRect(0,0,150,200);c.drawImage(img,0,R.card.y*img.naturalHeight,img.naturalWidth,R.card.h*img.naturalHeight,0,0,150,200);
+  [['card','#4fa3ff'],['face','#ffb020']].forEach(function(x){var r=R[x[0]];g.lineWidth=x[0]===mode?3:1.5;g.strokeStyle=x[1];g.strokeRect(r.x*W*sc,r.y*H*sc,r.w*W*sc,r.h*H*sc)});
+  var c=$('rgCard').getContext('2d');c.clearRect(0,0,150,200);c.drawImage(img,R.card.x*img.naturalWidth,R.card.y*img.naturalHeight,R.card.w*img.naturalWidth,R.card.h*img.naturalHeight,0,0,150,200);
   var f=$('rgFace').getContext('2d');f.clearRect(0,0,100,100);f.drawImage(img,R.face.x*img.naturalWidth,R.face.y*img.naturalHeight,R.face.w*img.naturalWidth,R.face.h*img.naturalHeight,0,0,100,100);
-  var px=Math.round(R.face.w*W);$('rgWarn').innerHTML=px<512?'<span class="tag warn">얼굴 영역 '+px+'px — 출력 512px보다 작아 흐릴 수 있어요(상세 10)</span>':'<span class="tag ok">얼굴 영역 '+px+'px</span>'}
- function clampFace(){R.face.w=Math.min(1,Math.max(0.05,R.face.w));R.face.h=R.face.w*W/H;if(R.face.h>1){R.face.h=1;R.face.w=H/W}R.face.x=Math.min(1-R.face.w,Math.max(0,R.face.x));R.face.y=Math.min(1-R.face.h,Math.max(0,R.face.y))}
- $('rgY').oninput=function(e){R.card.y=maxY*e.target.value/1000;draw()};
- $('rgS').oninput=function(e){var cx=R.face.x+R.face.w/2,cy=R.face.y+R.face.h/2;R.face.w=e.target.value/1000;R.face.h=R.face.w*W/H;R.face.x=cx-R.face.w/2;R.face.y=cy-R.face.h/2;clampFace();draw()};
- var drag=false;function mv(e){if(!drag)return;var r=full.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;R.face.x=x-R.face.w/2;R.face.y=y-R.face.h/2;clampFace();draw()}
+  var px=Math.round(R.face.w*W);$('rgWarn').innerHTML='<span class="tag">카드 영역 '+Math.round(R.card.w*W)+'×'+Math.round(R.card.h*H)+'px</span> '+(px<512?'<span class="tag warn">얼굴 영역 '+px+'px — 출력 512px보다 작아 흐릴 수 있어요(상세 10)</span>':'<span class="tag ok">얼굴 영역 '+px+'px</span>')}
+ function resize(k,v){var r=R[k],cx=r.x+r.w/2,cy=r.y+r.h/2;r.w=maxW(k)*v/1000;r.h=r.w*ratioH[k];r.x=cx-r.w/2;r.y=cy-r.h/2;clamp(k);draw()}
+ $('rgC').oninput=function(e){resize('card',e.target.value)};$('rgS').oninput=function(e){resize('face',e.target.value)};
+ host.querySelectorAll('[data-rm]').forEach(function(b){b.onclick=function(){mode=b.dataset.rm;host.querySelectorAll('[data-rm]').forEach(function(x){x.className='btn sm'+(x.dataset.rm===mode?' pri':'')});draw()}});
+ var drag=false;function mv(e){if(!drag)return;var rc=full.getBoundingClientRect(),x=(e.clientX-rc.left)/rc.width,y=(e.clientY-rc.top)/rc.height,r=R[mode];r.x=x-r.w/2;r.y=y-r.h/2;clamp(mode);draw()}
  full.onpointerdown=function(e){drag=true;full.setPointerCapture(e.pointerId);mv(e)};full.onpointermove=mv;full.onpointerup=function(){drag=false};
- clampFace();draw()}
+ clamp('card');clamp('face');draw()}
+
 /* 목록 → 상세: 에셋 등록(목록: 캐릭터 카드·슬롯 카드) → 캐릭터 상세 / 슬롯 상세 */
 function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}

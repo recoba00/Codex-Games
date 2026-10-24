@@ -139,8 +139,10 @@ try {
   assert.match(await page.textContent("#aPrep"), /1620×2880 .* → WebP 1440×2560/);
   await page.click("#aOk");
   await page.waitForSelector("#rgFull", { timeout: 15000 });
-  await page.fill("#rgY", "500"); await page.dispatchEvent("#rgY", "input");
+  await page.fill("#rgC", "600"); await page.dispatchEvent("#rgC", "input");  // 카드 영역을 너비 60%로 줄이고
   const box = await page.locator("#rgFull").boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.4);   // 가운데로 끌기
+  await page.click('[data-rm="face"]');
   await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.18);
   await page.click("#aRegSave");
   await page.waitForFunction(() => document.body.textContent.includes("카드 영역 지정됨"));
@@ -153,7 +155,9 @@ try {
   const art = (await sql("select body from public.data_tables where version_id = $1 and name = 'art'", [draft]))[0].body;
   assert.equal(art.SE["000"].full.w, 1440);
   assert.equal(art.SE["000"].thumb.h, 1024);
-  assert.ok(art.SE["000"].card.y > 0.1 && art.SE["000"].card.y < 0.15, JSON.stringify(art.SE["000"].card));
+  const cd = art.SE["000"].card;
+  assert.ok(Math.abs(cd.w - 0.6) < 0.01 && Math.abs(cd.x + cd.w / 2 - 0.5) < 0.02 && Math.abs(cd.y + cd.h / 2 - 0.4) < 0.04, JSON.stringify(cd));
+  assert.ok(Math.abs(cd.h * 2560 - (cd.w * 1440 * 4) / 3) < 3, "카드 3:4 유지");
   assert.ok(Math.abs(art.SE["000"].faceRect.x + art.SE["000"].faceRect.w / 2 - 0.5) < 0.02);
   assert.deepEqual(perr, []);
   step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: 에셋 초안 → PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로 → 영역 편집기(카드 위아래·얼굴 끌기) 저장");
