@@ -10,7 +10,7 @@ const DB_PORT = 54391, API_PORT = 8871;
 const API = `http://127.0.0.1:${API_PORT}`;
 const here = new URL("../../", import.meta.url).pathname;
 const db = await startPgRest(DB_PORT);
-writeFileSync(`${here}.dev.vars`, `SUPABASE_URL=http://127.0.0.1:${DB_PORT}\nSUPABASE_SERVICE_KEY=sb_secret_local\nTOKEN_SECRET=local-test-secret-local-test-secret-123\n`);
+writeFileSync(`${here}.dev.vars`, `SUPABASE_URL=http://127.0.0.1:${DB_PORT}\nSUPABASE_SERVICE_KEY=sb_secret_local\nTOKEN_SECRET=local-test-secret-local-test-secret-123\nAI_THINK_MS=150,300\nCRON_PURGE_ALWAYS=1\n`);
 const wr = spawn("npx", ["wrangler", "dev", "--port", String(API_PORT), "--ip", "127.0.0.1", "--test-scheduled", "--var", "DEV_LOGIN:1", "--var", "CRON_PURGE_ALWAYS:1", "--var", "AI_THINK_MS:200,400"], { cwd: here, stdio: ["ignore", "pipe", "pipe"] });
 let wlog = "";
 wr.stdout.on("data", (d) => { wlog += d; });
@@ -108,7 +108,7 @@ try {
   await a.until((s) => s.phase === "loadout");
   a.send({ type: "loadout", spells: ["SP01", "SP04"], preset: 2 });
   await a.until((s) => s.phase === "battle");
-  while (a.state.phase === "battle" && a.state.battle.turn < 4) { const t = a.state.battle.turn; const me = a.state.battle.me, cd = me.hand.find((h) => h.cost <= me.energy && !h.sealed); a.send({ type: "act", turn: t, cards: cd ? [cd.uid] : [] }); await a.until((s) => s.phase !== "battle" || s.battle.turn > t, 10000); }
+  while (a.state.phase === "battle" && a.state.battle.turn < 4) { const t = a.state.battle.turn; const me = a.state.battle.me, cd = me.hand.find((h) => h.cost <= me.energy && !h.sealed); a.send({ type: "act", turn: t, cards: cd ? [cd.uid] : [] }); await a.until((s) => s.phase !== "battle" || s.battle.turn > t, 30000); }
   a.send({ type: "surrender" });
   await a.until((s) => s.phase === "result").catch((e) => { console.error(JSON.stringify(a.events.slice(-3))); throw e; });
   a.ws.close();
