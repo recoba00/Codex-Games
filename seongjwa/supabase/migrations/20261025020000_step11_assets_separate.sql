@@ -56,9 +56,7 @@ select 'art:' || c.key || ':' || k.key || ':' || f.kind, f.val
  where t.version_id = (select version_id from public.data_live) and t.name = 'art' and f.val is not null and jsonb_typeof(f.val) = 'object'
 on conflict (key) do nothing;
 
--- 데이터 버전 쪽 에셋 함수는 없앤다(xlsx 초안의 assets·art 이어받기는 남아 있어도 새 버전엔 그 표가 없음)
-drop function if exists public.bo_asset_draft(uuid, text);
-drop function if exists public.bo_asset_set(uuid, bigint, text, text[], jsonb, text, jsonb);
+-- 예전 함수 bo_asset_draft·bo_asset_set은 운영 DB에 남겨 둔다(쓰지 않음, 삭제는 승인 창에서 막혀 보류).
 
 revoke execute on function public.bo_asset_put(uuid, text, jsonb, text, jsonb) from public, anon, authenticated;
 grant execute on function public.bo_asset_put(uuid, text, jsonb, text, jsonb) to service_role;
