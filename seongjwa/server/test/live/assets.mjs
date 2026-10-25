@@ -111,6 +111,8 @@ try {
   const page = await (await browser.newContext({ viewport: { width: 400, height: 900 } })).newPage();
   const perr = [];
   page.on("pageerror", (e) => perr.push(e.message));
+  const reqs = [];
+  page.on("request", (r) => reqs.push(new URL(r.url()).pathname));
   page.on("dialog", (dlg) => dlg.accept(dlg.type() === "prompt" ? "브라우저 시험" : undefined));
   await page.goto(`${API}/bo`);
   await page.evaluate((t) => sessionStorage.setItem("bo_tok", t), admin);
@@ -143,6 +145,7 @@ try {
   await page.waitForSelector('[data-ach="SE"]');
   await page.locator('[data-ach="AU"]').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_assets_list.png` });
+  await page.evaluate(() => sessionStorage.setItem("bo_wasm_webp", "1"));  // iPhone Safari처럼 브라우저 WebP 저장이 없을 때 → libwebp 인코더(/bo/vendor)
   await page.click('[data-ach="SE"]');
   await page.waitForSelector("#aFull", { state: "attached" });
   await page.setInputFiles("#aFull", fx("full_1620.png"));
@@ -170,7 +173,8 @@ try {
   assert.ok(Math.abs(cd.h * 2560 - (cd.w * 1440 * 4) / 3) < 3, "카드 3:4 유지");
   assert.ok(Math.abs(art.SE["000"].faceRect.x + art.SE["000"].faceRect.w / 2 - 0.5) < 0.02);
   assert.deepEqual(perr, []);
-  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로 → 영역 편집기(카드 위아래·얼굴 끌기) 저장");
+  assert.ok(reqs.includes("/bo/vendor/webp_enc.wasm"), "libwebp 인코더 사용");
+  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로(브라우저 WebP 없을 때 libwebp 인코더) → 영역 편집기(카드 위아래·얼굴 끌기) 저장");
 
   console.log(`\n에셋 통합 테스트 ${steps.length}단계 통과`);
 } catch (error) {

@@ -131,11 +131,16 @@ export async function handle(request, env) {
   const url = new URL(request.url);
   const route = `${request.method} ${url.pathname}`;
   if (url.pathname.startsWith("/bo/v1/")) return handleBo(request, env, url);  // 백오피스 API(직원 계정, 상세 14)
+  if (request.method === "GET" && url.pathname.startsWith("/bo/vendor/")) {  // WebP 인코더(브라우저가 WebP로 못 저장할 때)
+    const { VENDOR } = await import("./bo/vendor.mjs");
+    const f = VENDOR[url.pathname];
+    if (f) return f();
+  }
 
   switch (route) {
     case "GET /bo":  // 백오피스 화면(직원 로그인 필요, 상세 14)
       return new Response(BO_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-frame-options": "DENY",
-        "content-security-policy": `default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob: https: ${originOf(env.SUPABASE_URL)}; connect-src 'self'; frame-ancestors 'none'` } });
+        "content-security-policy": `default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src 'self' data: blob: https: ${originOf(env.SUPABASE_URL)}; connect-src 'self'; frame-ancestors 'none'` } });
 
     case "GET /v1/lobby":  // 로비 배너(최대 5)·공지 팝업(상세 05)
       return json({ ok: true, ...(await rpc(env, "lobby_content", {})) }, 200, { "cache-control": "public, max-age=60" });
