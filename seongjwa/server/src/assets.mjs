@@ -22,7 +22,7 @@ const CARD = [800, 1120];
 export const SLOTS = Object.freeze([
   ...["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "LEGEND"].map((t, i) =>
     S(`TIER_${t}`, "티어", `티어 엠블럼 ${["브론즈", "실버", "골드", "플래티넘", "다이아", "마스터", "레전드"][i]}`, 512, 512, true)),
-  ...[["COMMON", "일반"], ["RARE", "희귀"], ["EPIC", "영웅"], ["LEGEND", "전설"]].map(([k, n]) => S(`RARITY_${k}`, "카드", `등급 테두리 ${n}`, ...CARD, true)),
+  ...[1, 2, 3, 4].map((n) => S(`MASTERY_${n}`, "카드", `숙련도 테두리 ${n}단계`, ...CARD, true)),  // 등급 테두리 RARITY_* 대체(기획지시 숙련도)
   ...[["IMMUNE", "면역"], ["DEFENSE", "방어"], ["COUNTER", "반격"], ["SILENCE", "침묵"], ["DISRUPT", "방해"], ["SKILL", "스킬"], ["ATTACK", "공격"]]
     .map(([k, n]) => S(`KIND_${k}`, "카드", `카드 종류 아이콘 ${n}`, 256, 256, true)),
   ...[["FIRE", "불"], ["WATER", "물"], ["WIND", "바람"], ["NEUTRAL", "중립"]].map(([k, n]) => S(`CARD_BG_${k}`, "카드", `카드 배경 ${n}`, ...CARD, "corners")),

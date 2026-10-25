@@ -14,6 +14,7 @@ import { settleEconomy } from "./econ-db.mjs";
 import { sha256Hex } from "./tokens.mjs";
 import { rpc } from "./db.mjs";
 import { cupRewardCfg } from "./cup.mjs";
+import { MASTERY_PAIR, masteryCfg, masteryTiers } from "./mastery.mjs";
 
 export const PREP = Object.freeze({ ban_sec: 10, pick_sec: 15, loadout_sec: 15, grace_ms: 500 });
 const LOBBY_TTL_MS = 30 * 60 * 1000;
@@ -314,8 +315,11 @@ export class FriendRoom extends DurableObject {
       if (m.ai && room.mode === "ranked_ai") Object.assign(m.ai, aiProfileForTier(pinned.snapshot, room.members[0].tier ?? 1));
       if (m.ai && !m.ai.difficulty) m.ai.difficulty = "normal";
     });
+    const accs = room.members.filter((m) => !m.ai && m.acc).map((m) => m.acc);
+    const mast = accs.length && this.env.SUPABASE_URL ? await rpc(this.env, "mastery_get", { p_accounts: accs }).catch(() => ({})) : {};
     room.game = {
       id: crypto.randomUUID(), startedAt: now, dataVersion: pinned.version, data: pinned.snapshot,
+      mastery: room.members.map((m) => (m.ai ? {} : masteryTiers(mast?.[m.acc] ?? {}, pinned.snapshot))),  // 숙련도 단계(능력치 영향 없음)
       bans: [null, null], picks: [null, null], loadouts: [null, null],
       battle: null, deadline: [0, 0], timebank: [0, 0], away: [null, null], warned: [0, 0], log: []
     };
@@ -541,6 +545,15 @@ export class FriendRoom extends DurableObject {
       });
       room.ranks.push({ tries: 0, next: now, job: { matchId: g.id, seasonId: room.seasonId, mode, dataVersion: g.dataVersion, players } });
     }
+    if (mode === "ranked" && outcome !== "void" && players2(room, this).length === 2) {  // 숙련도: 사람 상대 랭킹전만
+      const early = ["surrender", "leave", "afk"].includes(reason) && b.turn <= 3;
+      const rows = [0, 1].map((s) => {
+        const mine = s === 0 ? "a" : "b";
+        const leftSide = ["leave", "afk"].includes(reason) && outcome !== mine && outcome !== "draw";
+        return { acc: room.members[s].acc, char: g.picks[s], result: leftSide ? "leave" : outcome === "draw" ? "draw" : outcome === mine ? "win" : "loss" };
+      });
+      (room.mastery ??= []).push({ tries: 0, next: now, job: { matchId: g.id, rows, early, cfg: { win_bonus: masteryCfg(g.data).winBonus, pair_days: MASTERY_PAIR.days, pair_games: MASTERY_PAIR.games, pair_early: MASTERY_PAIR.early } } });
+    }
     if (mode === "cup" && outcome !== "void") {  // 컵 성적(상세 08): 랭크·골드 영향 없음, 7승·3패에서 끝나면 서버가 보상 우편
       const left = ["leave", "afk"].includes(reason);
       for (const s of [0, 1]) {
@@ -604,6 +617,13 @@ export class FriendRoom extends DurableObject {
       }
     }
     this.room.ranks = keepRanks;
+    const keepMastery = [];
+    for (const m of this.room.mastery ?? []) {  // 숙련도 점수(판 ID로 한 번만). 판 결과 행이 먼저 저장된 뒤라 몰아주기 판단에 이 판도 들어감
+      if (m.next > now) { keepMastery.push(m); continue; }
+      try { await rpc(this.env, "mastery_add", { p_match: m.job.matchId, p_rows: m.job.rows, p_early: m.job.early, p_cfg: m.job.cfg }); }
+      catch { if (m.tries + 1 < SAVE_MAX_TRIES) keepMastery.push({ ...m, tries: m.tries + 1, next: now + SAVE_RETRY_MS }); }
+    }
+    this.room.mastery = keepMastery;
     const keepEcon = [];
     for (const r of this.room.econs ?? []) {
       if (r.next > now) { keepEcon.push(r); continue; }
@@ -639,7 +659,7 @@ export class FriendRoom extends DurableObject {
   async schedule() {
     const r = this.room;
     if (!r) return;
-    const times = [r.expiresAt, r.phaseDeadline || Infinity, ...r.saves.map((s) => s.next), ...(r.ranks ?? []).map((x) => x.next), ...(r.econs ?? []).map((x) => x.next), ...(r.cups ?? []).map((x) => x.next)];
+    const times = [r.expiresAt, r.phaseDeadline || Infinity, ...r.saves.map((s) => s.next), ...(r.ranks ?? []).map((x) => x.next), ...(r.econs ?? []).map((x) => x.next), ...(r.cups ?? []).map((x) => x.next), ...(r.mastery ?? []).map((x) => x.next)];
     const g = r.game;
     if (g && r.phase === "battle") {
       times.push(...g.deadline);
@@ -686,8 +706,8 @@ export class FriendRoom extends DurableObject {
       }
     }
     if (r.game?.pendingDodge) await this.dodge(r.game.pendingDodge, now);
-    if (r.saves.length || (r.ranks ?? []).length || (r.econs ?? []).length || (r.cups ?? []).length) await this.flushSaves(now);  // 실패한 반영도 다시
-    if (now >= r.expiresAt && !["ban", "pick", "loadout", "battle"].includes(r.phase) && !r.saves.length && !(r.ranks ?? []).length && !(r.cups ?? []).length) {
+    if (r.saves.length || (r.ranks ?? []).length || (r.econs ?? []).length || (r.cups ?? []).length || (r.mastery ?? []).length) await this.flushSaves(now);  // 실패한 반영도 다시
+    if (now >= r.expiresAt && !["ban", "pick", "loadout", "battle"].includes(r.phase) && !r.saves.length && !(r.ranks ?? []).length && !(r.cups ?? []).length && !(r.mastery ?? []).length) {
       for (const ws of this.ctx.getWebSockets()) try { ws.close(1000, "room_expired"); } catch { /* */ }
       this.room = null;
       await this.ctx.storage.deleteAll();
@@ -717,6 +737,8 @@ export class FriendRoom extends DurableObject {
       myBan: g.bans[seat]?.id ?? null, oppBanDone: Boolean(g.bans[1 - seat]?.done),
       myPick: g.picks[seat], oppPickDone: Boolean(g.picks[1 - seat]),
       oppPick: ["loadout", "battle"].includes(r.phase) ? g.picks[1 - seat] : null,  // 픽은 동시·비공개, 스펠·덱 단계에서 공개
+      // 숙련도 테두리(기획지시 숙련도): 내 것은 언제나, 상대 것은 픽 공개 뒤 그 캐릭터만(밴 단계엔 보내지 않음)
+      mastery: { mine: g.mastery?.[seat] ?? {}, opp: ["loadout", "battle"].includes(r.phase) && g.picks[1 - seat] ? { [g.picks[1 - seat]]: g.mastery?.[1 - seat]?.[g.picks[1 - seat]] ?? 1 } : {} },
       myLoadout: g.loadouts[seat] ? { spells: g.loadouts[seat].spells, preset: g.loadouts[seat].preset } : null,
       oppLoadoutDone: Boolean(g.loadouts[1 - seat])
     };
@@ -794,3 +816,6 @@ export function matchEvents(room, g, { outcome, reason, now }) {
   }
   return rows;
 }
+
+// 사람 자리(AI 제외)
+function players2(room, self) { return [0, 1].filter((s) => room.members[s]?.acc && !self.isAi(s)); }

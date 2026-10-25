@@ -363,8 +363,8 @@ function liveData(){if(T.cache.live)return Promise.resolve(T.cache.live);return 
 var ro='<p class="sub">라이브 데이터(읽기 전용). 바꾸려면 xlsx를 고쳐 <b>데이터 배포</b>에서 올려요(xlsx가 숫자 기준).</p>';
 function kv(o){return Object.keys(o||{}).map(function(k){return k+'='+o[k]}).join('; ')||'<span class="muted">기본값</span>'}
 V.characters=function(){return liveData().then(function(j){var d=j.data,s=d.settings;
- return '<h2>캐릭터 <span class="tag ok">v'+j.version+'</span></h2>'+ro+'<div class="card">'+table(['ID','이름','진영·등급','역할','HP / ATK / DEF / SPD / CRIT','패시브','액티브'],Object.keys(d.characters).map(function(id){var c=d.characters[id];
-  return '<tr><td><b>'+id+'</b></td><td>'+esc(c.name)+'<div class="small muted">'+esc(c.job)+'</div></td><td>'+esc(c.faction)+' · '+esc(c.rarity)+'</td><td>'+esc(c.role)+'</td><td>'+[c.hp,c.atk,c.def,c.spd,c.crit].join(' / ')+'</td>'
+ return '<h2>캐릭터 <span class="tag ok">v'+j.version+'</span></h2>'+ro+'<div class="card">'+table(['ID','이름','진영·난이도','역할','HP / ATK / DEF / SPD / CRIT','패시브','액티브'],Object.keys(d.characters).map(function(id){var c=d.characters[id];
+  return '<tr><td><b>'+id+'</b></td><td>'+esc(c.name)+'<div class="small muted">'+esc(c.job)+'</div></td><td>'+esc(c.faction)+' · '+esc(({easy:'쉬움',normal:'보통',hard:'어려움'})[c.difficulty]||'난이도 없음')+'</td><td>'+esc(c.role)+'</td><td>'+[c.hp,c.atk,c.def,c.spd,c.crit].join(' / ')+'</td>'
   +'<td class="wrap"><b>'+esc(c.passive_name)+'</b> '+esc(c.passive_text)+'<div class="small muted">'+kv(c.passive_params)+'</div></td><td class="wrap"><b>'+esc(c.active_name)+'</b> '+esc(c.active_text)+'<div class="small muted">'+kv(c.active_params)+'</div></td></tr>'}))
   +'<p class="small muted">스탯 예산 기준 '+(s.stat_budget_target||'-')+' ±'+Math.round((s.stat_budget_tol||0)*100)+'% (설정값). 업로드 때 자동 검증해요.</p></div>'})};
 V.cards=function(){return liveData().then(function(j){var d=j.data;return '<h2>전투카드 <span class="tag ok">v'+j.version+'</span></h2>'+ro+'<div class="card">'+table(['ID','카드','종류','단계','비용','계수','타수','관통','소속','효과'],Object.keys(d.cards).sort().map(function(id){var c=d.cards[id];

@@ -118,7 +118,7 @@ def read_characters(wb, legacy):
                for slot, col, txt in (("passive", "패시브 수치", p_text), ("active", "액티브 수치", a_text))}
         out[cid] = dict(id=cid, name=name, job=norm(row[h["직업"]]), role=norm(row[h["역할"]]),
                         passive_params=kit["passive"], active_params=kit["active"],
-                        faction=norm(row[h["진영"]]), rarity=norm(row[h["등급"]]), offer=offer,
+                        faction=norm(row[h["진영"]]), rarity=norm(row[h["등급"]]) if "등급" in h else None, offer=offer,
                         hp=row[h["HP"]], atk=row[h["ATK"]], def_=row[h["DEF"]], spd=row[h["SPD"]], crit=row[h["CRIT(%)"]],
                         passive_name=p_name, passive_text=p_text, active_name=a_name, active_text=a_text)
     return out

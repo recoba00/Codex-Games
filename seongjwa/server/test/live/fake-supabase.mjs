@@ -12,6 +12,8 @@ export const saved = [];
 export const rankEvents = [];
 const ratings = new Map();  // acc|season -> row
 const mmr = new Map();
+const mastery = {};   // 계정 -> 캐릭터 -> {points, games, wins}
+const masteryLog = new Set();
 const season = { id: 1, starts_at: new Date(Date.now() - 86400000).toISOString(), ends_at: new Date(Date.now() + 27 * 86400000).toISOString() };
 
 function reply(res, status, body) {
@@ -57,6 +59,20 @@ export function startFakeSupabase(port) {
         ratings.set(key, { account_id: body.p_account, season_id: body.p_season, rp: body.p_rp, tier_no: body.p_tier, state: body.p_state, version: (cur?.version ?? 0) + 1 });
         if (body.p_mmr_delta) mmr.set(body.p_account, (mmr.get(body.p_account) ?? 800) + body.p_mmr_delta);
         return reply(res, 200, "ok");
+      }
+      if (url.pathname === "/rest/v1/rpc/mastery_get") {  // 숙련도(기획지시 숙련도): 실제 규칙은 DB 검사(step12_check)에서
+        return reply(res, 200, Object.fromEntries(body.p_accounts.filter((a) => mastery[a]).map((a) => [a, mastery[a]])));
+      }
+      if (url.pathname === "/rest/v1/rpc/mastery_add") {
+        if (!masteryLog.has(body.p_match)) {
+          masteryLog.add(body.p_match);
+          for (const r of body.p_rows) {
+            if (body.p_early || r.result === "leave") continue;
+            const m = ((mastery[r.acc] ??= {})[r.char] ??= { points: 0, games: 0, wins: 0 });
+            m.points += 1 + (r.result === "win" ? body.p_cfg.win_bonus ?? 1 : 0); m.games += 1; m.wins += r.result === "win" ? 1 : 0;
+          }
+        }
+        return reply(res, 200, []);
       }
       if (url.pathname === "/rest/v1/rpc/rank_board") {
         const rows = [...ratings.values()].filter((r) => r.season_id === body.p_season).sort((a, b) => b.rp - a.rp).map((r) => ({ account: r.account_id, name: "Player", rp: r.rp, tier: r.tier_no }));

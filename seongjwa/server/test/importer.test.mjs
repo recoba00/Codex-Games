@@ -22,7 +22,7 @@ test("가져오기: 오류·검수 차단·경고 0건, 라이브 데이터와 �
   const r = importWorkbook(await sheetsP);
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.blocks, []);
-  assert.deepEqual(r.warnings.map((w) => w.split(" →")[0]), ["시트 `랭크로드` 없음", "시트 `챔피언스컵` 없음"], "v8에는 랭크로드(17차)·챔피언스컵(23차) 시트가 없음");
+  assert.deepEqual(r.warnings.map((w) => w.split(" →")[0]), ["시트 `캐릭터`에 `난이도` 열 없음", "시트 `랭크로드` 없음", "시트 `챔피언스컵` 없음"], "v8에는 난이도 열·랭크로드(17차)·챔피언스컵(23차) 시트가 없음");
   assert.deepEqual(r.summary, { characters: 9, cards: 34, spells: 8, settings: 44, presets: 27, tables: ["missions", "rank_tiers", "leaver", "rank_rewards"] });
   const d = r.data;
   for (const [id, c] of Object.entries(FIX.characters)) {
@@ -96,6 +96,17 @@ const CUP_SHEET = () => [["챔피언스 컵 보상"], ["메모"], [],
   ["0~2승", 0, 2, 1000, "없음", "없음", 1500], ["3~4승", 3, 4, 2000, "없음", "없음", 3000],
   ["5~6승", 5, 6, 3000, "지급", "없음", 4500], ["7승", 7, 7, 3000, "지급", "지급", 4500]];
 
+// 기획지시 2026-10-25 숙련도: 시트 `캐릭터` C열 등급 → 난이도(가안: 쉬움 AU·PY·UM / 보통 SE·SI·MO / 어려움 IG·TE·SL)
+const DIFF_PLAN = { AU: "쉬움", PY: "쉬움", UM: "쉬움", SE: "보통", SI: "보통", MO: "보통", IG: "어려움", TE: "어려움", SL: "어려움" };
+function withDifficulty(s) {
+  const rows = s["캐릭터"];
+  const hr = rows.findIndex((r) => (r ?? []).includes("등급"));
+  const c = rows[hr].indexOf("등급"), idc = rows[hr].indexOf("ID");
+  rows[hr][c] = "난이도";
+  for (let r = hr + 1; r < rows.length; r += 1) if (rows[r]?.[idc] && DIFF_PLAN[rows[r][idc]]) rows[r][c] = DIFF_PLAN[rows[r][idc]];
+  return s;
+}
+
 // 기획답변 17차 시트 배치: 랭크로드(헤더 4행, 데이터 5~20행, 22행 합계), 시즌스킨(헤더 4행, 데이터 5행~), 설정값 39·40행
 function withV9(sheets) {
   const s = structuredClone(sheets);
@@ -107,6 +118,7 @@ function withV9(sheets) {
     [], ["합계", "", 2600]];
   s["시즌스킨"] = [["시즌 이벤트 스킨"], [], [], ["시즌", "상품 ID", "비고"], [1, "", "출시 스킨 0종"], [2, "", ""]];
   s["챔피언스컵"] = CUP_SHEET();
+  withDifficulty(s);
   const set = s["설정값"];
   const at = set.findIndex((r) => r?.[4] === "ai_subopt_gold_plat") + 1;
   set.splice(at, 0, ["몰아주기 기간", 24, "시간", "상세 13", "pair_window_hours"], ["몰아주기 판수", 2, "판", "상세 13", "pair_limit"]);
@@ -125,7 +137,8 @@ test("랭크로드·시즌스킨·몰아주기 설정 (기획답변 17차)", asy
   // 변경표: 랭크로드 16행 + 시즌스킨 2행 + 설정 2개 추가, 그 밖은 0
   const base = importWorkbook(await sheetsP).data;
   const diff = diffData(base, r.data);
-  assert.deepEqual([diff.filter((d) => d.id.startsWith("rank_road.")).length, diff.filter((d) => d.id.startsWith("season_skins.")).length, diff.filter((d) => d.id.startsWith("cup.")).length, diff.filter((d) => d.kind === "settings").length, diff.length], [16, 2, 4, 2, 24]);
+  assert.deepEqual([diff.filter((d) => d.id.startsWith("rank_road.")).length, diff.filter((d) => d.id.startsWith("season_skins.")).length, diff.filter((d) => d.id.startsWith("cup.")).length, diff.filter((d) => d.kind === "settings").length, diff.length], [16, 2, 4, 2, 42]);
+  assert.deepEqual([...new Set(diff.filter((d) => d.kind === "characters").map((d) => d.field))].sort(), ["difficulty", "rarity"], "캐릭터 9명 × (난이도 추가·등급 비움) = 18건");
   assert.deepEqual(r.data.tables.cup.tiers.map((t) => [t.min, t.max, t.gold, t.emote, t.frame]), [[0, 2, 1000, false, false], [3, 4, 2000, false, false], [5, 6, 3000, true, false], [7, 7, 3000, true, true]]);
   const gap = withV9(await sheetsP);
   gap["챔피언스컵"].splice(5, 1);
@@ -140,4 +153,13 @@ test("랭크로드·시즌스킨·몰아주기 설정 (기획답변 17차)", asy
   const e = importWorkbook(bad).errors.join(" / ");
   assert.match(e, /상품 ID 형식 오류/);
   assert.match(e, /15단계/);
+});
+
+test("난이도 열(기획지시 숙련도): 쉬움·보통·어려움 → easy·normal·hard, 등급 열 없어도 됨, 잘못된 값은 오류", async () => {
+  const r = importWorkbook(withV9(await sheetsP));
+  assert.deepEqual([r.data.characters.AU.difficulty, r.data.characters.SE.difficulty, r.data.characters.IG.difficulty, r.data.characters.AU.rarity], ["easy", "normal", "hard", null]);
+  const bad = withV9(await sheetsP);
+  const hr = bad["캐릭터"].findIndex((x) => (x ?? []).includes("난이도"));
+  bad["캐릭터"][hr + 1][bad["캐릭터"][hr].indexOf("난이도")] = "전설";
+  assert.match(importWorkbook(bad).errors.join(" / "), /난이도 값 오류 → '전설'/);
 });

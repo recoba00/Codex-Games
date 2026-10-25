@@ -12,6 +12,7 @@ const KIND = { "면역": "immune", "방어": "defense", "반격": "counter", "�
 const KIND_PHASE = { immune: 1, defense: 1, counter: 1, silence: 2, disrupt: 2, skill: 3, attack: 4 };
 const DEFAULT_STAT_RANGE = { hp: [600, 1500], atk: [60, 140], def: [20, 70], spd: [60, 140], crit: [0, 30] };
 const STYLE = { "공세": "aggro", "균형": "balance", "수비": "defense" };
+const DIFFICULTY = { "쉬움": "easy", "보통": "normal", "어려움": "hard" };  // 캐릭터 난이도 뱃지(기획지시 2026-10-25 숙련도, 등급 폐지)
 
 export function kitKeys() {
   const out = {};
@@ -184,15 +185,19 @@ export function importWorkbook(sheets) {
       const [pName, pText] = splitSkill(cell(row, h["패시브"]), `${where} 패시브`);
       const [aName, aText] = splitSkill(cell(row, h["액티브"]), `${where} 액티브`);
       if (name.length < 2 || name.length > 8) err(`${where}: 이름 2~8자 위반`);
+      const diffRaw = "난이도" in h ? norm(cell(row, h["난이도"])) : "";
+      const difficulty = DIFFICULTY[diffRaw] ?? null;
+      if ("난이도" in h && !difficulty) err(`${where}: 난이도 값 오류 → '${diffRaw}' (쉬움/보통/어려움)`);
       if (cid in chars) err(`${where}: ID 중복 ${cid}`);
       chars[cid] = {
-        id: cid, name, job: norm(cell(row, h["직업"])), role: norm(cell(row, h["역할"])), faction: norm(cell(row, h["진영"])), rarity: norm(cell(row, h["등급"])), offer,
+        id: cid, name, job: norm(cell(row, h["직업"])), role: norm(cell(row, h["역할"])), faction: norm(cell(row, h["진영"])), rarity: "등급" in h ? norm(cell(row, h["등급"])) || null : null, difficulty, offer,
         hp: cell(row, h.HP), atk: cell(row, h.ATK), def: cell(row, h.DEF), spd: cell(row, h.SPD), crit: cell(row, h["CRIT(%)"]),
         passive_name: pName, passive_text: pText, active_name: aName, active_text: aText,
         passive_params: readKit(cell(row, h["패시브 수치"]), cid, "passive", `${where} 패시브 수치`, pText, "패시브 수치" in h),
         active_params: readKit(cell(row, h["액티브 수치"]), cid, "active", `${where} 액티브 수치`, aText, "액티브 수치" in h)
       };
     }
+    if (!("난이도" in h)) warnings.push("시트 `캐릭터`에 `난이도` 열 없음 → 난이도 뱃지 없음(등급 열은 폐지 예정, 기획지시 2026-10-25)");
     const names = Object.values(chars).map((c) => c.name);
     if (new Set(names).size !== names.length) err("캐릭터: 이름 중복");
   }

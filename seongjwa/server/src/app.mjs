@@ -12,6 +12,7 @@ import { handleBo, runCron } from "./bo/api.mjs";
 import { claimRankRoad, rankRoadView } from "./season.mjs";
 import { pairRule } from "./queue-logic.mjs";
 import { assetManifest, loadAssets } from "./assets.mjs";
+import { masteryCfg, masteryView } from "./mastery.mjs";
 import { CUP, cupWindow, validRoster, cupBonusMission, cupWaitSec, cupRewardCfg, cupSeasonWeek } from "./cup.mjs";
 import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
@@ -515,6 +516,15 @@ export async function handle(request, env) {
       const claims = await authenticate(request, env);
       const input = await readJson(request);
       return json({ ok: true, ...(await startOrder(env, claims.sub, String(input.offerId ?? ""), Number(input.price))) });
+    }
+
+    case "GET /v1/mastery": {  // 숙련도(기획지시 숙련도): 내 것 또는 ?id=계정(프로필 보기). {캐릭터: {points, games, wins, tier, next}}
+      const claims = await authenticate(request, env);
+      const id = url.searchParams.get("id") || claims.sub;
+      if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("value_invalid");
+      const { snapshot: data } = await pinLive(env);
+      const all = await rpc(env, "mastery_get", { p_accounts: [id] });
+      return json({ ok: true, account: id, mastery: masteryView(all?.[id] ?? {}, data), cfg: masteryCfg(data) });
     }
 
     case "GET /v1/inventory": {

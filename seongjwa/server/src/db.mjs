@@ -38,7 +38,8 @@ export async function rpc(env, name, args, fetcher = fetch) {
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const message = body?.message ?? "";
-    throw new Error(PASS_THROUGH.has(message) ? message : "db_error");
+    if (PASS_THROUGH.has(message)) throw new Error(message);
+    throw Object.assign(new Error("db_error"), env.DEV_LOGIN === "1" ? { extra: { db: `${name}: ${String(message).slice(0, 200)}` } } : {});  // 개발 환경만 원인 표시
   }
   return body;
 }

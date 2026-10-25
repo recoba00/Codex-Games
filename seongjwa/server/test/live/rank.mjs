@@ -111,11 +111,18 @@ try {
   assert.equal(ma.code, mb.code);
   assert.equal(ma.mode, "ranked");
   await alice.room(ma.code); await bob.room(mb.code);
+  assert.deepEqual(alice.state.prep.mastery?.opp, {}, "밴·픽 단계엔 상대 숙련도 안 보냄");
   await prep([alice, bob], ["SE", "UM"]);
+  const oppPick = alice.state.prep.oppPick, aliceChar = alice.state.prep.myPick;
+  assert.deepEqual(Object.keys(alice.state.prep.mastery.opp), [oppPick], "픽 공개 뒤 상대 캐릭터 숙련도만");
   await playToTurn4([alice, bob]);
   if (alice.state.phase === "battle") { bob.send({ type: "surrender" }); }
   await alice.until((s) => s.phase === "result" && s.last?.rank, 10000);
   const r2 = alice.state.last;
+  let mast = null;  // 숙련도: 사람 상대 랭킹전 판당 +1, 승리 +1(기획지시 숙련도)
+  for (let i = 0; i < 20 && !Object.keys(mast?.mastery ?? {}).length; i += 1) { await sleep(300); mast = (await call("/v1/mastery", undefined, alice.token)).body; }
+  const aliceWon = r2.rank[alice.state.you]?.result === "win";
+  assert.deepEqual(mast?.mastery?.[aliceChar], { points: aliceWon ? 2 : 1, games: 1, wins: aliceWon ? 1 : 0, tier: 1, next: 40 }, JSON.stringify(mast));
   step(`랭킹전 매칭(같은 MMR 즉시) → 판 종료(${r2.reason}) → RP 반영 ${JSON.stringify(Object.values(r2.rank).map((x) => `${x.result} ${x.rpDelta >= 0 ? "+" : ""}${x.rpDelta}`))}`);
   const evs = rankEvents.filter((e) => e.mode === "ranked");
   assert.equal(evs.length, 2);
@@ -164,7 +171,7 @@ try {
 } catch (error) {
   console.error("FAIL:", error.message);
   if (process.env.GITHUB_ACTIONS) console.log(`::error title=live test::${String(error.message).replace(/\n/g, " ").slice(0, 900)}`);
-  console.error(wlog.split("\n").filter((l) => /error|Error|✘/.test(l)).slice(-20).join("\n"));
+  console.error(wlog.split("\n").filter((l) => /error|Error|✘/.test(l)).slice(-20).join("\n")); if (process.env.WLOG_FILE) (await import("node:fs")).writeFileSync(process.env.WLOG_FILE, wlog);
   process.exitCode = 1;
 } finally {
   wr.kill("SIGTERM");
