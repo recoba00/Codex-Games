@@ -394,6 +394,39 @@ export function importWorkbook(sheets) {
     tables.season_skins = { seasons };
   }
 
+  // ---------- 챔피언스컵(상세 08, 기획답변 23차): 승수 구간별 골드·감정표현·컵 프레임·칭호 ----------
+  if (!sheets["챔피언스컵"]) warnings.push("시트 `챔피언스컵` 없음 → 컵 보상은 서버 기본값(0~2승 1,000 / 3~4승 2,000 / 5~6승 3,000+감정표현 / 7승 3,000+감정표현+프레임·칭호)");
+  else {
+    const rows = sheets["챔피언스컵"];
+    const [r0, h] = headerIndex(rows, ["최소 승", "최대 승", "골드"], "챔피언스컵");
+    const colOf = (prefix) => Object.entries(h).find(([k]) => k.startsWith(prefix))?.[1];
+    const cEmote = colOf("감정표현"), cFrame = colOf("컵 프레임"), cName = colOf("승수 구간");
+    const flag = (v, where) => {
+      const t = norm(v);
+      if (["지급", "있음", "O", "o", "예", "1", "true", "TRUE"].includes(t) || v === true) return true;
+      if (["", "없음", "-", "X", "x", "아니오", "0", "false", "FALSE"].includes(t) || v === false) return false;
+      err(`${where}: 지급/없음 중 하나 → ${JSON.stringify(v)}`);
+      return false;
+    };
+    const tiers = [];
+    for (let r = r0 + 1; r < rows.length; r += 1) {
+      const row = rows[r] ?? [];
+      const min = cell(row, h["최소 승"]), max = cell(row, h["최대 승"]), gold = cell(row, h["골드"]);
+      if (min === null && max === null) continue;
+      const where = `챔피언스컵 ${r + 1}행`;
+      if (!isInt(min) || !isInt(max) || min < 0 || max < min || max > 7) { err(`${where}: 최소·최대 승은 0~7 정수(최소 ≤ 최대)`); continue; }
+      if (!isInt(gold) || gold < 0) err(`${where}: 골드는 0 이상 정수 → ${JSON.stringify(gold)}`);
+      tiers.push({ no: tiers.length + 1, name: norm(cell(row, cName)) || `${min}~${max}승`, min, max, gold: isInt(gold) ? gold : 0,
+        emote: flag(cell(row, cEmote), `${where} 감정표현`), frame: flag(cell(row, cFrame), `${where} 컵 프레임·칭호`) });
+    }
+    tiers.sort((a, b) => a.min - b.min);
+    let next = 0;
+    for (const t of tiers) { if (t.min !== next) err(`챔피언스컵: ${next}승 구간이 비었거나 겹침`); next = t.max + 1; }
+    if (next !== 8) err("챔피언스컵: 0승부터 7승까지 빈틈없이 채워야 함");
+    tiers.forEach((t, i) => { t.no = i + 1; });
+    tables.cup = { tiers };
+  }
+
   // ---------- 상세 14 자동 검증: 스탯 범위·예산(검수 차단), 스펠 개수(알림) ----------
   {
     const [, hc] = headerIndex(charRows, ["HP", "ATK", "DEF", "SPD", "CRIT(%)"], "캐릭터");

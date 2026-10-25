@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { cupMatchTick, cupWindow, validRoster } from "../src/cup.mjs";
+import { cupBonusMission, cupMatchTick, cupRewardCfg, cupSeasonWeek, cupWaitSec, cupWindow, validRoster } from "../src/cup.mjs";
 
 const DATA = JSON.parse(readFileSync(new URL("./fixtures/data_v1.json", import.meta.url)));
 const kst = (s) => Date.parse(`${s}+09:00`);
@@ -43,5 +43,25 @@ test("부계정 K값: 누적 5~19판 승률 70% 이상이면 ×2(상세 13), 설
   assert.equal(smurfKMult(DATA, { games: 10, wins: 5 }), 1);
   assert.equal(smurfKMult(DATA, { games: 3, wins: 3 }), 1, "판수 너무 적음");
   assert.equal(smurfKMult(DATA, { games: 25, wins: 25 }), 1, "초반 구간 지남");
+  assert.equal(smurfKMult({ settings: { smurf_games: 19 } }, { games: 19, wins: 19 }), 2, "19판까지 포함(기획답변 23차)");
+  assert.equal(smurfKMult({ settings: { smurf_games: 19 } }, { games: 20, wins: 20 }), 1);
   assert.equal(smurfKMult({ settings: { smurf_k_mult: 1.5 } }, { games: 10, wins: 9 }), 1.5);
+});
+
+test("기획답변 23차: 추가 참가권 미션 번호, 최대 대기, 특별 주간, 보상 구간", () => {
+  assert.equal(cupBonusMission({ settings: { cup_bonus_mission: 1 } }), "W01");
+  assert.equal(cupBonusMission({ settings: { cup_bonus_mission: 12 } }), "W12");
+  assert.equal(cupBonusMission({ settings: { cup_bonus_mission: "W05" } }), "W05");
+  assert.equal(cupBonusMission({ settings: { cup_bonus_mission: 0 } }), null, "0이면 보너스 없음");
+  assert.equal(cupBonusMission({}), null);
+  assert.equal(cupWaitSec({ settings: { cup_wait_sec: 300 } }), 300);
+  assert.equal(cupWaitSec({}), 300);
+  // 10/17(토) 10시 시작 시즌 → 10/17 주 1주차, 10/31 주 3주차
+  assert.deepEqual(["2026-10-17", "2026-10-24", "2026-10-31", "2026-11-07"].map((w) => cupSeasonWeek("2026-10-17T01:00:00Z", w)), [1, 2, 3, 4]);
+  assert.equal(cupSeasonWeek("2026-10-26T20:00:00Z", "2026-10-31"), 1, "월 05시 시작(한국 날짜 기준)");
+  const cfg = cupRewardCfg({ settings: { cup_special_mult: 1.5 }, tables: {} });
+  assert.deepEqual([cfg.special_week, cfg.special_mult, cfg.tiers.length, cfg.tiers[3].frame], [3, 1.5, 4, true]);
+  assert.equal(cfg.tiers.find((t) => t.min <= 7 && 7 <= t.max).gold, 3000);
+  const custom = cupRewardCfg({ tables: { cup: { tiers: [{ no: 1, min: 0, max: 7, gold: 5, emote: false, frame: false }] } } });
+  assert.deepEqual([custom.tiers.length, custom.special_mult], [1, 1]);
 });

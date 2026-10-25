@@ -226,7 +226,7 @@ export async function handleBo(request, env, url) {
       const set = data?.settings ?? {};
       const pick = (k, d) => Number(set[k] ?? d);
       const cfg = { days: Number(url.searchParams.get("days") ?? 7), macro_min_turns: pick("macro_min_turns", 30), macro_std_sec: pick("macro_std_sec", 0.7),
-        marathon_hours: pick("marathon_hours", 12), marathon_games: pick("marathon_games", 40), pair_games: 3,
+        marathon_hours: pick("marathon_hours", 12), marathon_games: pick("marathon_games", 100), pair_games: 3,
         smurf_days: pick("smurf_days", 14), smurf_games: pick("smurf_report_games", 10), smurf_winrate: pick("smurf_report_winrate", 0.75) };
       return json({ ok: true, cfg, ...(await rpc(env, "bo_suspects", { p_cfg: cfg })) });
     }

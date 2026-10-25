@@ -3,7 +3,11 @@ export const CUP = Object.freeze({
   minTier: 10,          // 플래티넘 III(랭크_승점 순번)
   wins: 7, losses: 3,
   widenAfterSec: 30,    // 같은 승패끼리 우선, 30초 넘으면 ±1승
-  rewards: { gold_0: 1000, gold_3: 2000, gold_5: 3000 }  // 0~2승 / 3~4승 / 5~6승(+감정표현), 7승 = + 컵 프레임 + 컵 우승자 칭호
+  waitSec: 300,         // 최대 대기(설정값 cup_wait_sec)
+  specialWeek: 3,       // 시즌 3주차 = 특별 주간(상세 11), 골드만 cup_special_mult배
+  // 시트 `챔피언스컵`이 없을 때 기본값(기획답변 23차와 같음)
+  tiers: [{ no: 1, min: 0, max: 2, gold: 1000, emote: false, frame: false }, { no: 2, min: 3, max: 4, gold: 2000, emote: false, frame: false },
+    { no: 3, min: 5, max: 6, gold: 3000, emote: true, frame: false }, { no: 4, min: 7, max: 7, gold: 3000, emote: true, frame: true }]
 });
 const KST = 9 * 3600 * 1000;
 const DAY = 86400000;
@@ -60,4 +64,21 @@ export function cupNextWake(entries, now, { maxWaitSec = 300 } = {}) {
   return times.length ? Math.min(...times) : null;
 }
 
-export const cupRewardCfg = (data) => ({ ...CUP.rewards, emote_item: data?.settings?.cup_emote_item || null });
+const num = (v, d) => (Number.isFinite(Number(v)) && v !== null && v !== "" ? Number(v) : d);
+export const cupTiers = (data) => data?.tables?.cup?.tiers?.length ? data.tables.cup.tiers : CUP.tiers;
+export const cupWaitSec = (data) => Math.max(30, num(data?.settings?.cup_wait_sec, CUP.waitSec));
+// 추가 참가권 미션: 설정값은 숫자 번호(1 = W01, 0 = 없음, 기획답변 23차). 문자 "W01"도 받는다
+export function cupBonusMission(data) {
+  const v = data?.settings?.cup_bonus_mission;
+  if (typeof v === "string" && /^W\d{2,}$/.test(v.trim())) return v.trim();
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? `W${String(n).padStart(2, "0")}` : null;
+}
+// 그 주가 시즌 몇 주차인지(시즌 시작일 기준, 한국 날짜). week = 컵 토요일 YYYY-MM-DD
+export function cupSeasonWeek(seasonStartsAt, week) {
+  const start = Date.parse(new Date(Date.parse(seasonStartsAt) + KST).toISOString().slice(0, 10));
+  return Math.floor((Date.parse(week) - start) / (7 * DAY)) + 1;
+}
+// 보상 설정(DB 함수 cup_finish로 넘김). 특별 주간 판단은 DB가 참가 기록의 시즌 시작일로 한다
+export const cupRewardCfg = (data) => ({ tiers: cupTiers(data), emote_item: data?.settings?.cup_emote_item || null,
+  special_week: CUP.specialWeek, special_mult: num(data?.settings?.cup_special_mult, 1) });

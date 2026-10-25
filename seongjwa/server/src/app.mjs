@@ -12,7 +12,7 @@ import { handleBo, runCron } from "./bo/api.mjs";
 import { claimRankRoad, rankRoadView } from "./season.mjs";
 import { pairRule } from "./queue-logic.mjs";
 import { assetManifest } from "./assets.mjs";
-import { CUP, cupWindow, validRoster } from "./cup.mjs";
+import { CUP, cupWindow, validRoster, cupBonusMission, cupWaitSec, cupRewardCfg, cupSeasonWeek } from "./cup.mjs";
 import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
 
@@ -266,7 +266,7 @@ export async function handle(request, env) {
       const allowed = 1 + (st.bonus ? 1 : 0) - (st.penalty ? 1 : 0);
       return json({ ok: true, open: w.open, week: w.week, startsAt: new Date(w.start).toISOString(), endsAt: new Date(w.end).toISOString(),
         eligible: (st.best ?? 0) >= CUP.minTier, best: st.best ?? 0, minTier: CUP.minTier, entry: st.entry, used: st.used, allowed: Math.max(0, allowed),
-        left: st.left, bonus: st.bonus, penalty: st.penalty, history: st.history, sevenWins: st.sevenWins, rules: CUP });
+        left: st.left, bonus: st.bonus, penalty: st.penalty, history: st.history, sevenWins: st.sevenWins, ...cupView((await pinLive(env)).snapshot, season, w.week) });
     }
     case "POST /v1/cup/enter": {  // { roster: [{char, preset}] × 3 } 기간 안, 플래티넘 III 이상
       const claims = await authenticate(request, env);
@@ -289,7 +289,7 @@ export async function handle(request, env) {
       const sanction = await rpc(env, "sanction_status", { p_account: claims.sub });
       if (sanction?.rankUntil) throw Object.assign(new Error("rank_restricted"), { extra: { until: sanction.rankUntil } });
       const e = st.entry;
-      const entry = { acc: claims.sub, cup: { entryId: e.id, roster: e.roster, wins: e.wins, losses: e.losses }, wins: e.wins, losses: e.losses, notBefore: 0, seasonId: season.id, defaults: input.defaults ?? {} };
+      const entry = { acc: claims.sub, cup: { entryId: e.id, roster: e.roster, wins: e.wins, losses: e.losses }, wins: e.wins, losses: e.losses, notBefore: 0, seasonId: season.id, defaults: input.defaults ?? {}, waitSec: cupWaitSec((await pinLive(env)).snapshot) };
       const res = await env.QUEUE.get(env.QUEUE.idFromName("cup")).fetch("https://queue/ticket", { method: "POST", body: JSON.stringify({ acc: claims.sub, entry }) });
       return json({ ...(await res.json()), record: [e.wins, e.losses] });
     }
@@ -465,7 +465,7 @@ export async function handle(request, env) {
         (state, ctx) => ({ ...claimMissions(state, kind, id, ctx.cfg), reason: "mission", detail: { kind } }));
       if (r.duplicate) throw new Error("mission_claimed");
       // 챔피언스 컵 추가 참가권(상세 08): 설정값 cup_bonus_mission에 적은 주간 미션을 받으면 그 주(다가오는 주말) 1회
-      const bonusId = String(data.settings?.cup_bonus_mission ?? "");
+      const bonusId = cupBonusMission(data);
       let cupBonus = false;
       if (kind === "weekly" && bonusId && r.ids.includes(bonusId)) cupBonus = Boolean(await rpc(env, "cup_bonus_grant", { p_account: claims.sub, p_week: cupWindow().week }).catch(() => false));
       return json({ ok: true, gold: r.gold, balance: r.balance, claimed: r.ids, econ: r.view, cupBonus });
@@ -652,7 +652,17 @@ export const app = {
       const code = error instanceof Error ? error.message : "internal_error";
       const known = STATUS[code] ?? (/^[a-z_]+$/.test(code) ? 400 : 500);
       if (known === 500) console.error("internal_error", new URL(request.url).pathname, code.slice(0, 300));
-      return json({ ok: false, error: known === 500 ? "internal_error" : code, ...(error.extra ?? {}) }, known);
+      return json({ ok: false, error: known === 500 ? "internal_error" : code, ...(error.extra ?? {}), ...(known === 500 && env.DEV_LOGIN === "1" ? { debug: code.slice(0, 200) } : {}) }, known);
     }
   }
 };
+
+// 컵 규칙·보상표(시트 `챔피언스컵`)·특별 주간(시즌 3주차 골드 cup_special_mult배) — 클라이언트 표시용
+function cupView(data, season, week) {
+  const cfg = cupRewardCfg(data);
+  const special = Boolean(season?.starts_at) && cupSeasonWeek(season.starts_at, week) === cfg.special_week && cfg.special_mult !== 1;
+  const mult = special ? cfg.special_mult : 1;
+  return { rules: { minTier: CUP.minTier, wins: CUP.wins, losses: CUP.losses, widenAfterSec: CUP.widenAfterSec, waitSec: cupWaitSec(data), bonusMission: cupBonusMission(data) },
+    special, specialMult: cfg.special_mult,
+    rewards: cfg.tiers.map((t) => ({ ...t, gold: Math.round(t.gold * mult), emote: t.emote && Boolean(cfg.emote_item) })) };
+}

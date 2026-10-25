@@ -79,6 +79,7 @@ try {
   // 1) 자격·참가: 플래티넘 III 미만 거부, 등록 검사, 참가권
   const st0 = await ok(a.get("/v1/cup"));
   assert.equal(st0.eligible, false);
+  assert.deepEqual([st0.rewards.length, st0.rewards[0].gold, st0.rules.waitSec, typeof st0.special], [4, st0.special ? 1500 : 1000, 300, "boolean"], "보상표·최대 대기·특별 주간(기획답변 23차)");
   const sid = (await sql("select id from public.seasons where starts_at <= now() and ends_at > now() order by id desc limit 1"))[0].id;
   await sql("insert into public.ratings (account_id, season_id, rp, tier_no, state) values ($1, $3, 1000, 11, '{\"best\":11}'), ($2, $3, 900, 10, '{\"best\":10}') on conflict (account_id, season_id) do update set state = excluded.state, tier_no = excluded.tier_no", [a.acc, b.acc, sid]);
   await err(c.post("/v1/cup/enter", { roster: R("AU", "SE", "UM") }), "cup_not_eligible");
@@ -158,7 +159,7 @@ try {
 } catch (error) {
   console.error("FAIL:", error.message, error.stack?.split("\n").slice(1, 3).join(" "));
   if (process.env.GITHUB_ACTIONS) console.log(`::error title=cup live test::${String(error.message).replace(/\n/g, " ").slice(0, 900)}`);
-  console.error(wlog.split("\n").filter((l) => /error|Error|✘/.test(l)).slice(-20).join("\n"));
+  console.error(wlog.split("\n").filter((l) => /error|Error|✘/.test(l)).slice(-20).join("\n")); if (process.env.WLOG_FILE) (await import("node:fs")).writeFileSync(process.env.WLOG_FILE, wlog);
   process.exitCode = 1;
 } finally {
   wr.kill("SIGTERM");

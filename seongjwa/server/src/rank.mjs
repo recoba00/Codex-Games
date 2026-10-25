@@ -51,7 +51,7 @@ export function netExemptAvailable(recent, now = Date.now()) {
 export function smurfKMult(data, stats) {
   const s = data?.settings ?? {};
   const games = Number(stats?.games ?? 0), wins = Number(stats?.wins ?? 0);
-  if (games < num(s, "smurf_min_games", 5) || games >= num(s, "smurf_games", 20)) return 1;
+  if (games < num(s, "smurf_min_games", 5) || games > num(s, "smurf_games", 19)) return 1;  // 5~19판 사이(양끝 포함, 기획답변 23차)
   return wins / games >= num(s, "smurf_winrate", 0.7) ? num(s, "smurf_k_mult", 2) : 1;
 }
 

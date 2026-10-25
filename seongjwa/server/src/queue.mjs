@@ -109,14 +109,15 @@ export class MatchQueue extends DurableObject {
 
   // 챔피언스 컵(상세 08): 같은 승패끼리, 30초 넘으면 ±1승. AI·몰아주기 기록 없음
   async cupTick(entries, now) {
-    const { pairs, timeout } = cupMatchTick(entries, now);
+    const maxWaitSec = Number(entries[0]?.waitSec ?? 300);  // 설정값 cup_wait_sec(티켓에 담겨 옴)
+    const { pairs, timeout } = cupMatchTick(entries, now, { maxWaitSec });
     for (const [a, b] of pairs) await this.start("cup", [a, b], now);
     const props = (e) => ({ wait_sec: waitOf(e, now), mode: "cup", record: `${e.wins}-${e.losses}` });
     this.log([...pairs.flatMap(([a, b]) => [ev(a, "match_found", now, props(a)), ev(b, "match_found", now, props(b))]),
       ...timeout.map((a) => ev(a, "match_cancel", now, { ...props(a), reason: "timeout" }))]);
     for (const a of timeout) { send(a.ws, { type: "timeout" }); try { a.ws.close(1000, "timeout"); } catch { /* */ } }
     const left = this.entries();
-    const wake = cupNextWake(left, now);
+    const wake = cupNextWake(left, now, { maxWaitSec });
     if (wake) await this.ctx.storage.setAlarm(wake);
     for (const e of left) send(e.ws, { type: "waiting", waitSec: Math.floor((now - e.since) / 1000), record: `${e.wins}-${e.losses}` });
   }
