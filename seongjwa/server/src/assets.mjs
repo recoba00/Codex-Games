@@ -1,6 +1,7 @@
 // 에셋 등록(상세 14 '에셋 등록'·'이미지 업로드·압축', 상세 10 규격, 기획답변 18·19차).
 // 저장소: Supabase Storage 공개 버킷 `assets`(결제 수단 없는 무료 플랜). 파일명에 내용 해시를 붙여 바뀐 파일만 내려받는다.
-// 데이터: 슬롯 파일은 tables.assets.slots, 캐릭터·스킨 이미지와 영역 좌표는 tables.art — 데이터 배포 흐름(초안 → 검수 → 배포 → 롤백)을 그대로 탄다.
+// 데이터: 표 asset_files(키 slot:ID / art:캐릭터:스킨:full|thumb|face|regions). 데이터 버전과 분리 — 사람이 승인하면 바로 반영,
+// 파일마다 직전 1개 보관·되돌리기(기획지시 2026-10-25 에셋분리).
 
 export const BUCKET = "assets";
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;  // 서버 하드 상한(버킷 상한과 같음). 권장 상한은 설정값 asset_full_max_kb·asset_face_max_kb(경고)
@@ -108,16 +109,48 @@ export async function storagePut(env, path, bytes, fetcher = fetch) {
   if (!res.ok) throw Object.assign(new Error("storage_failed"), { extra: { status: res.status, detail: (await res.text().catch(() => "")).slice(0, 200) } });
 }
 
-// 게임 클라이언트용 목록: 라이브 데이터의 슬롯·캐릭터 이미지(전체 주소 + 해시 이름). 없는 슬롯은 게임 내장 기본 이미지를 쓴다
-export function assetManifest(data, env) {
+export const slotKey = (id) => `slot:${id}`;
+export const artKey = (ch, skin, kind) => `art:${ch}:${skin}:${kind}`;
+
+// asset_list() 결과 → { slots: {ID: 파일}, art: {캐릭터: {스킨: {full, thumb, face, card, faceRect}}} } (pick = "cur" | "prev")
+export function shapeAssets(rows = {}, pick = "cur") {
+  const slots = {}, art = {};
+  for (const [key, r] of Object.entries(rows)) {
+    const v = r?.[pick];
+    if (!v) continue;
+    const p = key.split(":");
+    if (p[0] === "slot") slots[p[1]] = v;
+    else if (p[0] === "art") {
+      const s = ((art[p[1]] ??= {})[p[2]] ??= {});
+      if (p[3] === "regions") { if (v.card) s.card = v.card; if (v.faceRect) s.faceRect = v.faceRect; } else s[p[3]] = v;
+    }
+  }
+  return { slots, art };
+}
+
+// 지금 쓰는 에셋(워커 안 60초 캐시, 백오피스에서 바꾸면 그 워커는 바로 비움)
+let cache = null;
+export async function loadAssets(env, rpcFn, { fresh = false } = {}) {
+  if (!fresh && cache && Date.now() - cache.at < Number(env.LIVE_TTL_MS ?? 60000)) return cache;
+  const rows = await rpcFn(env, "asset_list", {});
+  const shaped = shapeAssets(rows);
+  const json = JSON.stringify(shaped);
+  const rev = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(json)))].slice(0, 8).map((x) => x.toString(16).padStart(2, "0")).join("");
+  cache = { at: Date.now(), rows, shaped, rev };
+  return cache;
+}
+export const dropAssetCache = () => { cache = null; };
+
+// 게임 클라이언트용 목록(전체 주소 + 해시 이름). 없는 슬롯은 게임 내장 기본 이미지를 쓴다. rev = 목록 내용 해시
+export function assetManifest(shaped, env) {
   const base = publicBase(env);
   const file = (f) => (f?.path ? { url: base + f.path, path: f.path, w: f.w, h: f.h, bytes: f.bytes } : null);
-  const slots = Object.fromEntries(Object.entries(data?.tables?.assets?.slots ?? {}).map(([k, f]) => [k, file(f)]).filter(([, f]) => f));
+  const slots = Object.fromEntries(Object.entries(shaped?.slots ?? {}).map(([k, f]) => [k, file(f)]).filter(([, f]) => f));
   const art = {};
-  for (const [ch, skins] of Object.entries(data?.tables?.art ?? {})) {
-    art[ch] = {};
+  for (const [ch, skins] of Object.entries(shaped?.art ?? {})) {
     for (const [skin, a] of Object.entries(skins)) {
-      art[ch][skin] = { full: file(a.full), thumb: file(a.thumb), face: file(a.face), card: a.card ?? null, faceRect: a.faceRect ?? null };
+      if (!a.full) continue;  // 전신이 없는 스킨은 내보내지 않음
+      (art[ch] ??= {})[skin] = { full: file(a.full), thumb: file(a.thumb), face: file(a.face), card: a.card ?? null, faceRect: a.faceRect ?? null };
     }
   }
   return { base, slots, art };

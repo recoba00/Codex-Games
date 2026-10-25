@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { assetManifest, checkRegions, checkUpload, SLOTS, slotOf, webpInfo } from "../src/assets.mjs";
+import { assetManifest, checkRegions, checkUpload, shapeAssets, SLOTS, slotOf, webpInfo } from "../src/assets.mjs";
 
 const f = (n) => readFileSync(new URL(`./fixtures/assets/${n}`, import.meta.url));
 
@@ -46,11 +46,18 @@ test("영역: 카드는 3:4(크기·위치 자유), 얼굴은 1:1·이미지 안
   assert.throws(() => checkRegions(full, { x: 0, y: 0, w: 1, h: 0.75 }, { x: 0, y: 0, w: 0.4, h: 0.4 }), (e) => /1:1/.test(e.extra.detail));
 });
 
-test("클라이언트 목록: 공개 주소 + 해시 이름, 없는 슬롯은 빠짐(내장 기본 이미지)", () => {
-  const data = { tables: { assets: { slots: { TIER_GOLD: { path: "slots/TIER_GOLD.abc.webp", w: 512, h: 512, bytes: 10 } } },
-    art: { AU: { "000": { full: { path: "art/AU_000_full.x.webp", w: 1440, h: 2560, bytes: 9 }, card: { x: 0, y: 0, w: 1, h: 0.75 } } } } } };
-  const m = assetManifest(data, { SUPABASE_URL: "https://p.supabase.co/" });
+test("클라이언트 목록: 공개 주소 + 해시 이름, 없는 슬롯은 빠짐(내장 기본 이미지), 표 asset_files 키 → 모양", () => {
+  const rows = { "slot:TIER_GOLD": { cur: { path: "slots/TIER_GOLD.abc.webp", w: 512, h: 512, bytes: 10 }, prev: null },
+    "slot:CARD_BACK": { cur: null, prev: { path: "slots/CARD_BACK.old.webp" } },
+    "art:AU:000:full": { cur: { path: "art/AU_000_full.x.webp", w: 1440, h: 2560, bytes: 9 } },
+    "art:AU:000:regions": { cur: { card: { x: 0, y: 0, w: 1, h: 0.75 }, faceRect: { x: 0.3, y: 0.1, w: 0.2, h: 0.1125 } } },
+    "art:AU:001:regions": { cur: { card: { x: 0, y: 0, w: 1, h: 0.75 } } } };
+  const shaped = shapeAssets(rows);
+  assert.deepEqual(Object.keys(shaped.slots), ["TIER_GOLD"]);
+  assert.equal(shapeAssets(rows, "prev").slots.CARD_BACK.path, "slots/CARD_BACK.old.webp");
+  const m = assetManifest(shaped, { SUPABASE_URL: "https://p.supabase.co/" });
   assert.equal(m.slots.TIER_GOLD.url, "https://p.supabase.co/storage/v1/object/public/assets/slots/TIER_GOLD.abc.webp");
   assert.equal(m.art.AU["000"].face, null);
   assert.deepEqual(m.art.AU["000"].card, { x: 0, y: 0, w: 1, h: 0.75 });
+  assert.equal(m.art.AU["001"], undefined, "전신 없는 스킨은 내보내지 않음");
 });

@@ -157,13 +157,13 @@ function regionEditor(img,W,H,R){var host=$('aReg');if(!host)return;var mode='ca
 /* 목록 → 상세: 에셋 등록(목록: 캐릭터 카드·슬롯 카드) → 캐릭터 상세 / 슬롯 상세 */
 function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
-function assetsLoad(){T.av=T.av||Number(ssGet('bo_av'))||0;return api('/assets'+(T.av?'?version='+T.av:'')).then(function(d){T.ad=d;return d})}
+function assetsLoad(){return api('/assets').then(function(d){T.ad=d;return d})}
 function aImg(f,h,round){var d=T.ad;return f&&f.path?'<img src="'+esc(d.base+f.path)+'" style="height:'+h+'px;max-width:100%;object-fit:contain;background:repeating-conic-gradient(#8884 0 25%,transparent 0 50%) 0 0/12px 12px;border-radius:'+(round?'50%':'6px')+'" loading="lazy">':'<div class="muted small" style="height:'+h+'px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:6px;min-width:'+Math.round(h*0.6)+'px">내장 기본</div>'}
-function verBar(d){var P=T.perms,ed=d.editable&&P.data_edit;
- var opts=d.drafts.map(function(v){return '<option value="'+v.id+'"'+(v.id===d.version?' selected':'')+'>v'+v.id+' 초안 · '+esc(v.note)+' ('+esc(v.by||'-')+')</option>'}).join('')+'<option value="'+d.live+'"'+(d.live===d.version?' selected':'')+'>v'+d.live+' 라이브(보기만)</option>';
- return '<div class="card" style="margin-bottom:14px"><div class="row"><b>편집할 버전</b><select id="aVer">'+opts+'</select>'+(P.data_edit?'<button class="btn sm" id="aNew">에셋용 새 초안(라이브 v'+d.live+' 기준)</button>':'')+'</div><p class="small muted" style="margin:8px 0 0">'+(ed?'v'+d.version+' 초안을 고치는 중이에요. 다 고치면 데이터 배포(xlsx) 메뉴에서 검수 요청 → 승인 → 배포.':'이 버전은 보기만 할 수 있어요. 고치려면 편집 중인 초안을 고르거나 새로 만드세요.')+'</p></div>'}
-function bindVer(){if($('aVer'))$('aVer').onchange=function(e){T.av=Number(e.target.value);ssSet('bo_av',T.av);render()};
- if($('aNew'))$('aNew').onclick=function(){var note=prompt('초안 메모(감사 로그)','에셋 변경');if(note===null)return;api('/assets/draft',{note:note}).then(function(j){T.av=j.version;ssSet('bo_av',j.version);toast('v'+j.version+' 초안');render()}).catch(fail)}}
+function verBar(d){return '<div class="note" style="margin-bottom:14px">에셋은 데이터 버전(xlsx)과 별개예요. 압축 전후를 보고 승인하면 바로 게임에 반영되고, 파일마다 직전 파일 1개로 되돌릴 수 있어요. 기록은 감사 로그에 남아요(상세 14).'+(d.editable?'':' 지금 권한은 보기만 할 수 있어요.')+'</div>'}
+function bindVer(){}
+function metaOf(key){return (T.ad.meta||{})[key]||{}}
+function metaLine(key){var m=metaOf(key);return m.at?'<span class="small muted">'+fmt(m.at)+(m.by?' · '+esc(m.by):'')+'</span>':''}
+function revBtn(id,key,label){return T.ad.editable&&metaOf(key).hasPrev?'<button class="btn sm" id="'+id+'">↶ '+(label||'이전 파일로 되돌리기')+'</button>':''}
 function backBtn(){return '<button class="btn sm" id="aBack" style="margin-bottom:10px">← 에셋 목록</button>'}
 function bindBack(){if($('aBack'))$('aBack').onclick=function(){go('assets')}}
 
@@ -174,7 +174,7 @@ V.assets=function(){return assetsLoad().then(function(d){var tab=T.atab||ssGet('
   return '<button class="card acard" data-ach="'+c.id+'"><div style="display:flex;justify-content:center">'+aImg(base.thumb||base.full,150)+'</div><div style="margin-top:8px"><b>'+esc(c.name)+'</b> <span class="small muted">'+c.id+'</span></div><div class="small" style="margin-top:4px">'+(base.full?(ok?'<span class="tag ok">기본 완료</span>':'<span class="tag warn">영역 미지정</span>'):'<span class="tag">이미지 없음</span>')+(n>1?' <span class="tag">스킨 '+(n-1)+'</span>':'')+'</div></button>'}).join('');
  var slotHtml=Object.keys(groups).map(function(g){return '<h3 style="margin:14px 0 8px">'+g+' <span class="small muted">'+groups[g].filter(function(s){return slots[s.id]}).length+'/'+groups[g].length+'</span></h3><div class="agrid sm">'+groups[g].map(function(s){var f=slots[s.id];
   return '<button class="card acard" data-aslot="'+s.id+'"><div style="display:flex;justify-content:center">'+aImg(f,64)+'</div><div class="small" style="margin-top:6px"><b>'+esc(s.name)+'</b></div><div class="small muted">'+s.w+'×'+s.h+'</div></button>'}).join('')+'</div>'}).join('');
- return '<h2>에셋 등록</h2><p class="sub">카드를 눌러 상세 화면에서 이미지를 올려요. 규격·투명 검사 → WebP 압축 → 사람이 승인해야 저장, 바뀐 내용은 데이터 초안에 들어가 검수 → 배포 → 롤백을 따라요(상세 14).</p>'
+ return '<h2>에셋 등록</h2><p class="sub">카드를 눌러 상세 화면에서 이미지를 올려요. 규격·투명 검사 → WebP 압축 → 사람이 압축 전후를 보고 승인하면 바로 반영돼요(상세 14).</p>'
  +verBar(d)+'<div class="card" style="margin-bottom:14px"><h3>저장소 사용량</h3>'+usageBox(d.usage)+'</div>'
  +'<div class="row" style="margin-bottom:12px"><button class="btn sm'+(tab==='chars'?' pri':'')+'" data-atab="chars">캐릭터 '+d.characters.length+'</button><button class="btn sm'+(tab==='slots'?' pri':'')+'" data-atab="slots">슬롯 '+filled+'/'+d.spec.slots.length+'</button></div>'
  +(tab==='chars'?'<div class="agrid">'+chars+'</div>':slotHtml)})};
@@ -190,41 +190,47 @@ function askUpload(file,kind,slot,onSaved){$('aPrep').innerHTML='<p class="small
    $('aNo').onclick=function(){$('aPrep').innerHTML=''};
    $('aOk').onclick=function(){$('aOk').disabled=true;onSaved(P).then(function(){toast('저장했어요');render()}).catch(function(e){$('aOk').disabled=false;fail(e)})}}
   show();$('aPrep').scrollIntoView({block:'nearest'})}).catch(function(e){$('aPrep').innerHTML='<div class="note">⚠ '+esc(e.message)+'</div>'})}
-function upQ(kind,extra){return 'version='+T.ad.version+'&kind='+kind+(extra||'')}
+function upQ(kind,extra){return 'kind='+kind+(extra||'')}
 
 /* 캐릭터 상세 */
 V.assetChar=function(){T.ach=T.ach||ssGet('bo_ach');T.askin=T.askin||ssGet('bo_askin')||'000';return assetsLoad().then(function(d){var c=d.characters.find(function(x){return x.id===T.ach});if(!c){go('assets');return ''}
- var ed=d.editable&&T.perms.data_edit,skins=d.art[c.id]||{},ids=Object.keys(skins);if(ids.indexOf('000')<0)ids.unshift('000');if(ids.indexOf(T.askin)<0)ids.push(T.askin);ids.sort();
+ var ed=d.editable&&T.perms.data_edit,skins=d.art[c.id]||{},K=function(k){return 'art:'+c.id+':'+T.askin+':'+k},st=c.stats||{},ids=Object.keys(skins);Object.keys(((d.prev||{}).art||{})[c.id]||{}).forEach(function(k){if(ids.indexOf(k)<0)ids.push(k)});if(ids.indexOf('000')<0)ids.unshift('000');if(ids.indexOf(T.askin)<0)ids.push(T.askin);ids.sort();
  var cur=skins[T.askin]||{};
  return backBtn()+'<h2>'+esc(c.name)+' <span class="small muted">'+c.id+'</span></h2>'+verBar(d)
+ +'<p class="small muted" style="margin:-6px 0 12px">라이브 v'+d.live+' 수치(읽기 전용, xlsx로 바꿈): HP '+st.hp+' · ATK '+st.atk+' · DEF '+st.def+' · SPD '+st.spd+' · CRIT '+st.crit+'%. 스킨은 외형만 바뀌고 수치는 캐릭터 값 그대로예요(총괄 4장).</p>'
  +'<div class="card" style="margin-bottom:14px"><div class="row"><b>스킨</b>'+ids.map(function(s){return '<button class="btn sm'+(s===T.askin?' pri':'')+'" data-askin="'+s+'">'+(s==='000'?'000 기본':s)+(skins[s]&&skins[s].full?'':' ·비어 있음')+'</button>'}).join('')+(ed?'<input id="aSkinNew" placeholder="새 스킨 ID(숫자 3자리)" size="12" maxlength="3"><button class="btn sm" id="aSkinAdd">추가</button>':'')+'</div></div>'
  +'<div class="card" style="margin-bottom:14px"><h3>스킨 '+T.askin+' 이미지</h3><div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">전신(9:16)</div>'+aImg(cur.full,220)+'</div><div><div class="small muted">밴픽 축소본</div>'+aImg(cur.thumb,110)+'</div><div><div class="small muted">얼굴 파일(선택)</div>'+aImg(cur.face,80,true)+'</div></div>'
- +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+'</div>'
- +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+'</div>':'')
+ +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes)+' '+metaLine(K('full')):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+'</div>'
+ +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+revBtn('aFullRev',K('full'),'전신 이전 파일로')+revBtn('aFaceRev',K('face'),'얼굴 파일 이전으로')+'</div>':'')
  +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경(상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
- +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button></div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
+ +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button>'+revBtn('aRegRev',K('regions'),'이전 영역으로')+' '+metaLine(K('regions'))+'</div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
 V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var cur=((d.art[T.ach]||{})[T.askin])||{},ch='&char='+T.ach+'&skin='+T.askin;
  $('view').onclick=function(e){var s=e.target.closest('[data-askin]');if(s){T.askin=s.dataset.askin;ssSet('bo_askin',T.askin);render()}};
  if($('aSkinAdd'))$('aSkinAdd').onclick=function(){var s=val('aSkinNew');if(!/^\d{3}$/.test(s))return toast('스킨 ID는 숫자 3자리');T.askin=s;ssSet('bo_askin',s);render()};
  if($('aFull'))$('aFull').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'full',null,function(P){return upload(P.blob,upQ('full',ch)).then(function(j){if(j.warnings&&j.warnings.length)toast(j.warnings[0]);return upload(P.thumb,upQ('thumb',ch))})})};
  if($('aFace'))$('aFace').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'face',null,function(P){return upload(P.blob,upQ('face',ch))})};
- if($('aFaceDel'))$('aFaceDel').onclick=function(){if(!confirm('얼굴 파일을 빼면 얼굴 영역으로 잘라 써요. 뺄까요?'))return;api('/assets/remove',{version:d.version,char:T.ach,skin:T.askin,kind:'face'}).then(function(){toast('뺐어요');render()}).catch(fail)};
- if($('aSkinDel'))$('aSkinDel').onclick=function(){if(!confirm('스킨 '+T.askin+' 이미지와 영역을 모두 뺄까요?'))return;api('/assets/remove',{version:d.version,char:T.ach,skin:T.askin,kind:'skin'}).then(function(){T.askin='000';ssSet('bo_askin','000');toast('뺐어요');render()}).catch(fail)};
+ if($('aFaceDel'))$('aFaceDel').onclick=function(){if(!confirm('얼굴 파일을 빼면 얼굴 영역으로 잘라 써요. 뺄까요?'))return;api('/assets/remove',{char:T.ach,skin:T.askin,kind:'face'}).then(function(){toast('뺐어요');render()}).catch(fail)};
+ if($('aSkinDel'))$('aSkinDel').onclick=function(){if(!confirm('스킨 '+T.askin+' 이미지와 영역을 모두 뺄까요?'))return;api('/assets/remove',{char:T.ach,skin:T.askin,kind:'skin'}).then(function(){T.askin='000';ssSet('bo_askin','000');toast('뺐어요');render()}).catch(fail)};
+ var rv=function(kind,msg){return function(){if(!confirm(msg))return;api('/assets/revert',{char:T.ach,skin:T.askin,kind:kind}).then(function(){toast('되돌렸어요');render()}).catch(fail)}};
+ if($('aFullRev'))$('aFullRev').onclick=rv('full','전신(과 밴픽 축소본)을 직전 파일로 되돌릴까요? 한 번 더 누르면 다시 지금 파일로 돌아와요.');
+ if($('aFaceRev'))$('aFaceRev').onclick=rv('face','얼굴 파일을 직전 파일로 되돌릴까요?');
+ if($('aRegRev'))$('aRegRev').onclick=rv('regions','카드·얼굴 영역을 직전 값으로 되돌릴까요?');
  if(cur.full&&$('aReg'))loadImg(d.base+cur.full.path).then(function(img){var R={card:cur.card,face:cur.faceRect};regionEditor(img,cur.full.w,cur.full.h,R);
-  if($('aRegSave'))$('aRegSave').onclick=function(){api('/assets/regions',{version:d.version,char:T.ach,skin:T.askin,card:R.card,face:R.face}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
+  if($('aRegSave'))$('aRegSave').onclick=function(){api('/assets/regions',{char:T.ach,skin:T.askin,card:R.card,face:R.face}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
 
 /* 슬롯 상세 */
 V.assetSlot=function(){T.aslot=T.aslot||ssGet('bo_aslot');return assetsLoad().then(function(d){var s=d.spec.slots.find(function(x){return x.id===T.aslot});if(!s){go('assets');return ''}
  var ed=d.editable&&T.perms.data_edit,f=(d.assets.slots||{})[s.id],same=d.spec.slots.filter(function(x){return x.group===s.group}),i=same.indexOf(s);
  return backBtn()+'<h2>'+esc(s.name)+' <span class="small muted">'+s.id+'</span></h2>'+verBar(d)
- +'<div class="card"><div class="row" style="align-items:flex-start;gap:16px"><div>'+aImg(f,s.w>=s.h?140:220)+'</div><div class="small"><div>규격 <b>'+s.w+'×'+s.h+'</b> · '+(s.alpha===false?'불투명':s.alpha==='corners'?'모서리 투명':'투명')+'</div><div style="margin-top:4px">'+(f?'현재 '+f.w+'×'+f.h+' · '+kb(f.bytes)+' · '+fmt(f.at):'비어 있음 → 게임 내장 기본 이미지')+'</div>'
+ +'<div class="card"><div class="row" style="align-items:flex-start;gap:16px"><div>'+aImg(f,s.w>=s.h?140:220)+'</div><div class="small"><div>규격 <b>'+s.w+'×'+s.h+'</b> · '+(s.alpha===false?'불투명':s.alpha==='corners'?'모서리 투명':'투명')+'</div><div style="margin-top:4px">'+(f?'현재 '+f.w+'×'+f.h+' · '+kb(f.bytes)+' '+metaLine('slot:'+s.id):'비어 있음 → 게임 내장 기본 이미지')+'</div>'
  +'<div class="muted" style="margin-top:4px">같은 비율의 큰 이미지는 규격 크기로 줄여 저장해요.</div></div></div>'
- +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">올리기<input type="file" id="aSlotFile" accept="image/png,image/webp" hidden></label>'+(f?'<button class="btn sm" id="aSlotDel">빼기(내장 기본으로)</button>':'')+'</div>':'')
+ +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">올리기<input type="file" id="aSlotFile" accept="image/png,image/webp" hidden></label>'+(f?'<button class="btn sm" id="aSlotDel">빼기(내장 기본으로)</button>':'')+revBtn('aSlotRev','slot:'+s.id)+'</div>':'')
  +'<div id="aPrep"></div><div class="row" style="margin-top:12px">'+(i>0?'<button class="btn sm" data-anext="'+same[i-1].id+'">← '+esc(same[i-1].name)+'</button>':'')+'<span class="sp"></span>'+(i<same.length-1?'<button class="btn sm" data-anext="'+same[i+1].id+'">'+esc(same[i+1].name)+' →</button>':'')+'</div></div>'})};
 V.assetSlot.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var s=d.spec.slots.find(function(x){return x.id===T.aslot});
  $('view').onclick=function(e){var n=e.target.closest('[data-anext]');if(n){T.aslot=n.dataset.anext;ssSet('bo_aslot',T.aslot);render()}};
  if($('aSlotFile'))$('aSlotFile').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'slot',s,function(P){return upload(P.blob,upQ('slot','&slot='+s.id))})};
- if($('aSlotDel'))$('aSlotDel').onclick=function(){if(!confirm(s.id+' 파일을 빼고 내장 기본 이미지를 쓸까요?'))return;api('/assets/remove',{version:d.version,slot:s.id}).then(function(){toast('뺐어요');render()}).catch(fail)}};
+ if($('aSlotRev'))$('aSlotRev').onclick=function(){if(!confirm(s.id+'을(를) 직전 파일로 되돌릴까요?'))return;api('/assets/revert',{slot:s.id}).then(function(){toast('되돌렸어요');render()}).catch(fail)};
+ if($('aSlotDel'))$('aSlotDel').onclick=function(){if(!confirm(s.id+' 파일을 빼고 내장 기본 이미지를 쓸까요?'))return;api('/assets/remove',{slot:s.id}).then(function(){toast('뺐어요');render()}).catch(fail)}};
 
 /* ---------- 어뷰징 의심(상세 13): 자동 탐지 → 사람이 판단·제재 ---------- */
 function who(id,name){return '<button class="btn sm" data-uid="'+id+'">'+esc(name||'-')+'</button>'}

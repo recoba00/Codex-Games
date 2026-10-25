@@ -12,7 +12,7 @@ function base(env) {
 }
 
 // DB 함수가 raise한 코드(account_banned 등)는 그대로 넘기고, 나머지는 db_error로 감춘다.
-const PASS_THROUGH = new Set(["account_banned", "account_deleted", "ttl_invalid", "rank_conflict",
+const PASS_THROUGH = new Set(["asset_no_previous", "account_banned", "account_deleted", "ttl_invalid", "rank_conflict",
   // 5단계 경제·상점·우편
   "econ_conflict", "gold_short", "price_changed", "already_owned", "offer_unavailable", "gold_not_allowed", "cash_not_allowed",
   "too_many_orders", "order_invalid", "order_closed", "item_invalid", "item_not_owned", "name_invalid",

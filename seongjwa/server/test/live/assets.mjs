@@ -53,46 +53,57 @@ try {
     await ok(call("/bo/v1/data/publish", { version: up.version, reason: "seed" }, admin));
   }
 
-  // 1) API: 에셋 초안 → 슬롯·전신·축소본·얼굴 업로드(규격 검사) → 영역 → 저장소에 해시 이름
-  const v = (await ok(call("/bo/v1/assets/draft", { note: "에셋 시험" }, admin))).version;
-  const put = (q, file) => call(`/bo/v1/assets/upload?version=${v}&${q}`, readFileSync(fx(file)), admin, true, "image/webp");
+  // 1) API: 슬롯·전신·축소본·얼굴 업로드(규격 검사) → 영역 → 저장소에 해시 이름. 초안 없이 바로 반영(기획지시 에셋분리)
+  await sql("update public.asset_files set cur = null, prev = null");
+  const put = (q, file) => call(`/bo/v1/assets/upload?${q}`, readFileSync(fx(file)), admin, true, "image/webp");
   const tier = await ok(put("kind=slot&slot=TIER_GOLD", "tier_vp8.webp"));
   assert.match(tier.path, /^slots\/TIER_GOLD\.[0-9a-f]{16}\.webp$/);
   assert.ok(storage.has(tier.path));
   await err(put("kind=slot&slot=CARD_BACK", "tier_vp8.webp"), "asset_spec");
   await err(put("kind=full&char=AU&skin=000", "full_bad.webp"), "asset_spec");
   await err(put("kind=full&char=ZZ&skin=000", "full_1080.webp"), "asset_char_invalid");
-  await err(call(`/bo/v1/assets/upload?version=${v}&kind=face&char=AU&skin=000`, Buffer.from("not a webp file at all ............"), admin, true, "image/webp"), "asset_not_webp");
+  await err(call(`/bo/v1/assets/upload?kind=face&char=AU&skin=000`, Buffer.from("not a webp file at all ............"), admin, true, "image/webp"), "asset_not_webp");
   await ok(put("kind=full&char=AU&skin=000", "full_1080.webp"));
   await ok(put("kind=thumb&char=AU&skin=000", "thumb.webp"));
   await ok(put("kind=face&char=AU&skin=000", "face.webp"));
-  await err(call("/bo/v1/assets/regions", { version: v, char: "AU", skin: "000", card: { x: 0, y: 0.5, w: 1, h: 0.75 }, face: { x: 0, y: 0, w: 0.5, h: 0.28125 } }, admin), "asset_region");
-  const reg = await ok(call("/bo/v1/assets/regions", { version: v, char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.75 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } }, admin));
+  await err(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.5, w: 1, h: 0.75 }, face: { x: 0, y: 0, w: 0.5, h: 0.28125 } }, admin), "asset_region");
+  const reg = await ok(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.75 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } }, admin));
   assert.match(reg.warnings[0], /432px/);
-  const view = await ok(call(`/bo/v1/assets?version=${v}`, undefined, admin));
+  const view = await ok(call("/bo/v1/assets", undefined, admin));
   assert.equal(view.editable, true);
   assert.deepEqual(Object.keys(view.art.AU["000"]).sort(), ["card", "face", "faceRect", "full", "thumb"]);
-  step("에셋 초안 → 슬롯·전신·축소본·얼굴 업로드(크기·비율·WebP 검사, 해시 이름), 영역 저장(카드 너비 전체 3:4·얼굴 1:1, 512px 미만 경고)");
+  assert.equal(typeof view.characters.find((c) => c.id === "AU").stats.hp, "number", "라이브 수치 읽기 전용");
+  step("슬롯·전신·축소본·얼굴 업로드(크기·비율·WebP 검사, 해시 이름), 영역 저장(카드 3:4·얼굴 1:1, 512px 미만 경고) — 초안 없이 바로 반영");
 
-  // 2) 검수 → 배포 → 게임 목록(/v1/assets)·파일 내려받기, 검수 요청 뒤엔 못 고침, xlsx 업로드가 에셋을 이어받음, 롤백
-  await ok(call("/bo/v1/data/review", { version: v, action: "request" }, admin));
-  await err(put("kind=slot&slot=TIER_SILVER", "tier_vp8.webp"), "state_invalid");
-  await ok(call("/bo/v1/data/review", { version: v, action: "approve" }, admin));
-  await ok(call("/bo/v1/data/publish", { version: v, reason: "에셋" }, admin));
-  await sleep(700);
+  // 2) 게임 목록(/v1/assets) 바로 반영·ETag, 데이터 버전 배포·롤백·xlsx 업로드와 무관, 이전 파일로 되돌리기, 감사 로그
   const man = await ok(call("/v1/assets"));
-  assert.equal(man.version, v);
+  assert.match(man.rev, /^[0-9a-f]{16}$/);
   assert.ok(man.slots.TIER_GOLD.url.endsWith(tier.path));
   assert.deepEqual(man.art.AU["000"].card, { x: 0, y: 0.1, w: 1, h: 0.75 });
   const file = await fetch(man.art.AU["000"].full.url);
   assert.equal(file.status, 200);
   assert.equal((await file.arrayBuffer()).byteLength, readFileSync(fx("full_1080.webp")).length);
+  assert.equal((await fetch(`${API}/v1/assets`, { headers: { "if-none-match": `"a-${man.rev}"` } })).status, 304);
   const up = await ok(call("/bo/v1/data/import?note=xlsx", XLSX, admin, true));
-  const vd = await sql("select name from public.data_tables where version_id = $1 order by name", [up.version]);
-  assert.ok(vd.some((x) => x.name === "assets") && vd.some((x) => x.name === "art"), "xlsx 초안이 에셋을 이어받음");
-  assert.ok(!up.diff.some((x) => /^(assets|art)\./.test(x.id)), "변경표에 에셋 변경 없음");
-  await ok(call("/bo/v1/data/review", { version: up.version, action: "discard" }, admin));
-  step(`검수 요청 뒤 잠김 → 승인·배포(v${v}) → 게임 목록·파일 내려받기, xlsx 업로드 초안이 에셋을 이어받음(변경표 0건)`);
+  assert.ok(!up.diff.some((x) => /^(assets|art)\./.test(x.id)), "변경표에 에셋 없음");
+  await ok(call("/bo/v1/data/review", { version: up.version, action: "request" }, admin));
+  await ok(call("/bo/v1/data/review", { version: up.version, action: "approve" }, admin));
+  await ok(call("/bo/v1/data/publish", { version: up.version, reason: "xlsx" }, admin));
+  await sleep(700);
+  assert.ok((await ok(call("/v1/assets"))).slots.TIER_GOLD, "데이터 배포해도 에셋 그대로");
+  await err(call("/bo/v1/assets/revert", { slot: "TIER_SILVER" }, admin), "asset_no_previous");
+  const tier2 = await ok(put("kind=slot&slot=TIER_GOLD", "tier_alt.webp"));
+  await ok(call("/bo/v1/assets/revert", { slot: "TIER_GOLD" }, admin));
+  const back = (await ok(call("/bo/v1/assets", undefined, admin)));
+  assert.equal(back.assets.slots.TIER_GOLD.path, tier.path, "직전 파일로 되돌림");
+  assert.equal(back.prev.slots.TIER_GOLD.path, tier2.path, "되돌린 파일이 직전으로");
+  await ok(call("/bo/v1/assets/remove", { char: "AU", skin: "000", kind: "face" }, admin));
+  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].face, null, "빼기 바로 반영");
+  await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "face" }, admin));
+  assert.ok((await ok(call("/v1/assets"))).art.AU["000"].face, "빼기도 되돌림");
+  const audit = await sql("select action from public.audit_log where target like '에셋 %' order by id desc limit 20");
+  assert.ok(audit.some((a) => a.action === "이전 파일로 되돌리기") && audit.some((a) => a.action === "슬롯 파일 교체"));
+  step("게임 목록 바로 반영(ETag 304), xlsx 배포와 무관, 직전 파일 되돌리기(한 번 더 = 원복), 빼기 되돌리기, 감사 로그");
 
   // 3) 실제 브라우저(휴대폰 크기)로 백오피스 화면: 초안 만들기 → PNG 슬롯 올리기(압축 확인 → 승인) → 전신 PNG(큰 것 → 1440×2560 축소) → 영역 지정 저장 → 불투명 배경 검사
   const { chromium } = await import("playwright").catch(() => createRequire("/usr/lib/node_modules/")("playwright"));  // CI는 npm i --no-save playwright
@@ -105,9 +116,7 @@ try {
   await page.evaluate((t) => sessionStorage.setItem("bo_tok", t), admin);
   await page.goto(`${API}/bo#assets`);
   await page.reload();
-  await page.waitForSelector("#aVer", { timeout: 10000 }).catch(async (e) => { console.error("PAGE", (await page.textContent("body")).slice(0, 500), perr); throw e; });
-  await page.click("#aNew");
-  await page.waitForFunction(() => document.querySelector("#aVer option:checked")?.textContent.includes("초안"));
+  await page.waitForSelector('[data-atab="slots"]', { timeout: 10000 }).catch(async (e) => { console.error("PAGE", (await page.evaluate(() => document.querySelector("#view")?.innerText ?? "")).slice(0, 800), perr); throw e; });
   await page.click('[data-atab="slots"]');
   await page.click('[data-aslot="TIER_SILVER"]');
   await page.waitForSelector("#aSlotFile", { state: "attached" });
@@ -153,8 +162,7 @@ try {
   await page.click('[data-askin="000"]');
   await page.fill("#aSkinNew", "001"); await page.click("#aSkinAdd");
   await page.waitForFunction(() => document.body.textContent.includes("스킨 001 이미지"));
-  const draft = Number(await page.$eval("#aVer", (s) => s.value));
-  const art = (await sql("select body from public.data_tables where version_id = $1 and name = 'art'", [draft]))[0].body;
+  const art = (await ok(call("/bo/v1/assets", undefined, admin))).art;
   assert.equal(art.SE["000"].full.w, 1440);
   assert.equal(art.SE["000"].thumb.h, 1024);
   const cd = art.SE["000"].card;
@@ -162,7 +170,7 @@ try {
   assert.ok(Math.abs(cd.h * 2560 - (cd.w * 1440 * 4) / 3) < 3, "카드 3:4 유지");
   assert.ok(Math.abs(art.SE["000"].faceRect.x + art.SE["000"].faceRect.w / 2 - 0.5) < 0.02);
   assert.deepEqual(perr, []);
-  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: 에셋 초안 → PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로 → 영역 편집기(카드 위아래·얼굴 끌기) 저장");
+  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로 → 영역 편집기(카드 위아래·얼굴 끌기) 저장");
 
   console.log(`\n에셋 통합 테스트 ${steps.length}단계 통과`);
 } catch (error) {
