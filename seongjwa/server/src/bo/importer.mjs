@@ -71,7 +71,10 @@ export function importWorkbook(sheets) {
       const key = norm(cell(row, 4));
       if (!/^[a-z][a-z0-9_]{1,63}$/.test(key)) { err(`설정값 ${r}행 '${norm(cell(row, h["항목"]))}': 영문 키 없음/형식 오류 → '${key}'`); continue; }
       if (key in settings) err(`설정값 ${r}행: 키 중복 ${key}`);
-      if (!(isNum(val) || typeof val === "boolean")) err(`설정값 ${r}행 ${key}: 값이 숫자가 아님 → ${JSON.stringify(val)}`);
+      // 상품 ID 키(…_item, 예: mastery_emote_item·cup_emote_item)만 문자 값 허용: 영문 대문자·숫자·밑줄(상점 상품 ID)
+      const itemKey = key.endsWith("_item") && typeof val === "string";
+      if (itemKey && !/^[A-Z][A-Z0-9_]{1,47}$/.test(val.trim())) err(`설정값 ${r}행 ${key}: 상품 ID 형식 오류 → ${JSON.stringify(val)}`);
+      if (!itemKey && !(isNum(val) || typeof val === "boolean")) err(`설정값 ${r}행 ${key}: 값이 숫자가 아님 → ${JSON.stringify(val)}`);
       settings[key] = { value: val, unit: "단위" in h ? norm(cell(row, h["단위"])) : "",
         desc: [norm(cell(row, h["항목"])), "설명" in h ? norm(cell(row, h["설명"])) : ""].filter(Boolean).join(" ") };
     }

@@ -163,3 +163,18 @@ test("난이도 열(기획지시 숙련도): 쉬움·보통·어려움 → easy�
   bad["캐릭터"][hr + 1][bad["캐릭터"][hr].indexOf("난이도")] = "전설";
   assert.match(importWorkbook(bad).errors.join(" / "), /난이도 값 오류 → '전설'/);
 });
+
+test("설정값 상품 ID 키(…_item)는 문자 허용(LoL식 정리 mastery_emote_item), 다른 키는 숫자만", async () => {
+  const s0 = withV9(await sheetsP);
+  const set = s0["설정값"];
+  const at = set.findIndex((r) => r?.[4] === "pair_limit") + 1;
+  set.splice(at, 0, ["숙련 감정표현", "EMOTE_MASTERY", "", "", "mastery_emote_item"], ["단계", 3, "", "", "mastery_emote_stage"]);
+  const r = importWorkbook(s0);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.data.settings.mastery_emote_item.value, "EMOTE_MASTERY");
+  set[at][1] = "감정 표현!";
+  set.splice(at + 1, 1, ["단계", "셋", "", "", "mastery_emote_stage"]);
+  const e = importWorkbook(s0).errors.join(" / ");
+  assert.match(e, /mastery_emote_item: 상품 ID 형식 오류/);
+  assert.match(e, /mastery_emote_stage: 값이 숫자가 아님/);
+});
