@@ -22,7 +22,9 @@ const CARD = [800, 1120];
 export const SLOTS = Object.freeze([
   ...["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "LEGEND"].map((t, i) =>
     S(`TIER_${t}`, "티어", `티어 엠블럼 ${["브론즈", "실버", "골드", "플래티넘", "다이아", "마스터", "레전드"][i]}`, 512, 512, true)),
-  ...[1, 2, 3, 4].map((n) => S(`MASTERY_${n}`, "카드", `숙련도 테두리 ${n}단계`, ...CARD, true)),  // 등급 테두리 RARITY_* 대체(기획지시 숙련도)
+  ...[1, 2, 3, 4].map((n) => S(`MASTERY_${n}`, "카드", `숙련도 뱃지 ${n}단계`, 256, 256, true)),  // 카드 우상단 뱃지 1:1(기획지시 숙련도뱃지)
+  ...[["BRONZE", "브론즈"], ["SILVER", "실버"], ["GOLD", "골드"], ["PLATINUM", "플래티넘"], ["DIAMOND", "다이아"], ["MASTER", "마스터"], ["LEGEND", "레전드"]]
+    .map(([k, n]) => S(`FRAME_${k}`, "카드", `티어 프레임 ${n}`, ...CARD, true)),  // 카드 프레임 = 현재 티어(LoL식 정리)
   ...[["IMMUNE", "면역"], ["DEFENSE", "방어"], ["COUNTER", "반격"], ["SILENCE", "침묵"], ["DISRUPT", "방해"], ["SKILL", "스킬"], ["ATTACK", "공격"]]
     .map(([k, n]) => S(`KIND_${k}`, "카드", `카드 종류 아이콘 ${n}`, 256, 256, true)),
   ...[["FIRE", "불"], ["WATER", "물"], ["WIND", "바람"], ["NEUTRAL", "중립"]].map(([k, n]) => S(`CARD_BG_${k}`, "카드", `카드 배경 ${n}`, ...CARD, "corners")),
@@ -67,7 +69,7 @@ export function checkUpload(kind, info, bytes, slot = null) {
     if (info.w !== slot.w || info.h !== slot.h) throw bad(`${slot.id}: ${slot.w}×${slot.h}이어야 함 (올린 파일 ${info.w}×${info.h})`);
     return;
   }
-  if (kind === "full") {
+  if (kind === "full" || kind === "combined") {  // 합본도 전신과 같은 규격(같은 위치로 겹쳐야 카드 영역이 맞음)
     const s = ART.full;
     if (info.w * s.ratio[1] !== info.h * s.ratio[0]) throw bad(`전신은 9:16 (올린 파일 ${info.w}×${info.h})`);
     if (info.w < s.min[0] || info.w > s.max[0]) throw bad(`전신 너비 ${s.min[0]}~${s.max[0]} (올린 파일 ${info.w})`);
@@ -110,7 +112,11 @@ export async function storagePut(env, path, bytes, fetcher = fetch) {
 }
 
 export const slotKey = (id) => `slot:${id}`;
-export const artKey = (ch, skin, kind) => `art:${ch}:${skin}:${kind}`;
+// combined(배경+캐릭터 합본, "기본 배경 사용 안 함")은 표 키 규칙상 slot 이름공간에 둔다: slot:ART_<캐릭터>_<스킨>_COMBINED
+export const artKey = (ch, skin, kind) => (kind === "combined" ? `slot:ART_${ch}_${skin}_COMBINED` : `art:${ch}:${skin}:${kind}`);
+const COMBINED_RE = /^ART_([A-Z]{2,3})_(\d{3})_COMBINED$/;
+// 캐릭터 카드 기본 배경: 진영별 슬롯(불·물·바람). 합본이 있으면 합본을 쓴다
+export const FACTION_BG = { "불": "CARD_BG_FIRE", "물": "CARD_BG_WATER", "바람": "CARD_BG_WIND" };
 
 // asset_list() 결과 → { slots: {ID: 파일}, art: {캐릭터: {스킨: {full, thumb, face, card, faceRect}}} } (pick = "cur" | "prev")
 export function shapeAssets(rows = {}, pick = "cur") {
@@ -119,7 +125,9 @@ export function shapeAssets(rows = {}, pick = "cur") {
     const v = r?.[pick];
     if (!v) continue;
     const p = key.split(":");
-    if (p[0] === "slot") slots[p[1]] = v;
+    const cm = p[0] === "slot" ? p[1].match(COMBINED_RE) : null;
+    if (cm) ((art[cm[1]] ??= {})[cm[2]] ??= {}).combined = v;
+    else if (p[0] === "slot") slots[p[1]] = v;
     else if (p[0] === "art") {
       const s = ((art[p[1]] ??= {})[p[2]] ??= {});
       if (p[3] === "regions") { if (v.card) s.card = v.card; if (v.faceRect) s.faceRect = v.faceRect; } else s[p[3]] = v;
@@ -142,7 +150,7 @@ export async function loadAssets(env, rpcFn, { fresh = false } = {}) {
 export const dropAssetCache = () => { cache = null; };
 
 // 게임 클라이언트용 목록(전체 주소 + 해시 이름). 없는 슬롯은 게임 내장 기본 이미지를 쓴다. rev = 목록 내용 해시
-export function assetManifest(shaped, env) {
+export function assetManifest(shaped, env, factions = {}) {
   const base = publicBase(env);
   const file = (f) => (f?.path ? { url: base + f.path, path: f.path, w: f.w, h: f.h, bytes: f.bytes } : null);
   const slots = Object.fromEntries(Object.entries(shaped?.slots ?? {}).map(([k, f]) => [k, file(f)]).filter(([, f]) => f));
@@ -150,7 +158,9 @@ export function assetManifest(shaped, env) {
   for (const [ch, skins] of Object.entries(shaped?.art ?? {})) {
     for (const [skin, a] of Object.entries(skins)) {
       if (!a.full) continue;  // 전신이 없는 스킨은 내보내지 않음
-      (art[ch] ??= {})[skin] = { full: file(a.full), thumb: file(a.thumb), face: file(a.face), card: a.card ?? null, faceRect: a.faceRect ?? null };
+      // bg: 카드 그림 창 배경. "combined" = 합본 이미지(배경+캐릭터)를 카드 영역으로 잘라 씀, 아니면 진영 기본 배경 슬롯 위에 전신(투명)을 얹음
+      (art[ch] ??= {})[skin] = { full: file(a.full), thumb: file(a.thumb), face: file(a.face), combined: file(a.combined), card: a.card ?? null, faceRect: a.faceRect ?? null,
+        bg: a.combined ? "combined" : FACTION_BG[factions[ch]] ?? "CARD_BG_NEUTRAL" };
     }
   }
   return { base, slots, art };

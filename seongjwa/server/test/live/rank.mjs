@@ -112,9 +112,12 @@ try {
   assert.equal(ma.mode, "ranked");
   await alice.room(ma.code); await bob.room(mb.code);
   assert.deepEqual(alice.state.prep.mastery?.opp, {}, "밴·픽 단계엔 상대 숙련도 안 보냄");
+  assert.equal(alice.state.prep.frame?.opp, null, "밴·픽 단계엔 상대 티어 프레임 안 보냄");
+  assert.ok(alice.state.prep.frame?.mine?.frame, "내 티어 프레임");
   await prep([alice, bob], ["SE", "UM"]);
   const oppPick = alice.state.prep.oppPick, aliceChar = alice.state.prep.myPick;
   assert.deepEqual(Object.keys(alice.state.prep.mastery.opp), [oppPick], "픽 공개 뒤 상대 캐릭터 숙련도만");
+  assert.ok(alice.state.prep.frame.opp?.frame, "픽 공개 뒤 상대 티어 프레임");
   await playToTurn4([alice, bob]);
   if (alice.state.phase === "battle") { bob.send({ type: "surrender" }); }
   await alice.until((s) => s.phase === "result" && s.last?.rank, 10000);

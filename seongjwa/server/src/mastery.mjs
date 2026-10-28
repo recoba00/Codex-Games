@@ -5,7 +5,9 @@ const num = (s, k, d) => (Number.isFinite(Number(s?.[k])) && s?.[k] !== null && 
 export function masteryCfg(data) {
   const s = data?.settings ?? {};
   return { winBonus: num(s, "mastery_win_bonus", 1), t2: num(s, "mastery_t2", 40), t3: num(s, "mastery_t3", 150), t4: num(s, "mastery_t4", 400),
-    t4Winrate: num(s, "mastery_t4_winrate", 0) };
+    t4Winrate: num(s, "mastery_t4_winrate", 0),
+    // 단계 보상(LoL식 정리): emoteStage 처음 도달 → 공용 감정표현(상품 ID mastery_emote_item, 비면 없음), titleStage → '<캐릭터명> 장인' 칭호
+    emoteStage: num(s, "mastery_emote_stage", 3), titleStage: num(s, "mastery_title_stage", 4), emoteItem: typeof s.mastery_emote_item === "string" && s.mastery_emote_item.trim() ? s.mastery_emote_item.trim() : null };
 }
 
 // 단계 1~4. 4단계는 점수 + 최소 승률(mastery_t4_winrate, 0이면 조건 없음)
@@ -35,3 +37,10 @@ export function masteryTiers(chars = {}, data) {
 }
 
 export const MASTERY_PAIR = { days: 7, games: 3, early: 2 };  // 몰아주기 탐지와 같은 기준(상세 13, 백오피스 어뷰징 의심)
+
+// DB mastery_add에 넘기는 설정(점수·단계·단계 보상)
+export function masteryDbCfg(data) {
+  const c = masteryCfg(data);
+  return { win_bonus: c.winBonus, t2: c.t2, t3: c.t3, t4: c.t4, t4_winrate: c.t4Winrate, emote_stage: c.emoteStage, title_stage: c.titleStage, emote_item: c.emoteItem,
+    pair_days: MASTERY_PAIR.days, pair_games: MASTERY_PAIR.games, pair_early: MASTERY_PAIR.early };
+}

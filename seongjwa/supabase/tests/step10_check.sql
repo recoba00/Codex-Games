@@ -24,7 +24,7 @@ begin
   for i in 1..7 loop perform public.cup_record((e->>'id')::bigint, gen_random_uuid(), 'win', '{}'); end loop;
   e := public.cup_record((e->>'id')::bigint, gen_random_uuid(), 'win', '{}');
   assert e->>'status' = 'done' and (e->>'wins')::integer = 7 and e->>'rewarded_at' is not null, 'seven wins ' || e::text;
-  assert (select rewards @> '[{"id":"FRAME_CUP"},{"id":"TITLE_CUP_20261031"}]' from public.mail where account_id = a and ref like 'cup:%'), 'cup mail';
+  assert (select rewards @> '[{"id":"TITLE_CUP_20261031"}]' and rewards::text not like '%FRAME_CUP%' from public.mail where account_id = a and ref like 'cup:%'), 'cup mail: title only';
   -- 참가권: 무료 1회 사용 → 다시 못 함, 보너스로 1회 더
   failed := false;
   begin perform public.cup_enter(a, wk, sid, '[]', 10); exception when others then failed := sqlerrm = 'cup_no_ticket'; end;

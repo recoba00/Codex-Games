@@ -188,14 +188,17 @@ try {
   for (let i = 0; i < 30 && !mailB; i += 1) { mailB = (await ok(b.get("/v1/mail"))).mail.find((m) => m.title === `시즌 ${sid} 보상`); if (!mailB) await sleep(300); }
   assert.ok(mailB, "시즌 보상 우편");
   assert.equal(mailB.rewards[0].amount, 2000, "최고 도달 골드 티어 기준");
-  assert.ok(mailB.rewards.some((r) => r.id === `FRAME_S${sid}_GOLD`));
+  assert.ok(!mailB.rewards.some((r) => String(r.id ?? "").startsWith("FRAME_")), "프레임 아이템 지급 중단(LoL식 정리)");
   const mailA = (await ok(a.get("/v1/mail"))).mail.find((m) => m.title === `시즌 ${sid} 보상`);
-  assert.ok(mailA.rewards.some((r) => r.id === `FRAME_S${sid}_MASTER`) && mailA.rewards.some((r) => r.id === `TITLE_S${sid}`), JSON.stringify(mailA.rewards));
-  const claimB = await ok(b.post("/v1/mail/claim", {}));
-  assert.ok(claimB.items.includes(`FRAME_S${sid}_GOLD`));
-  assert.ok((await ok(b.get("/v1/inventory"))).items.some((i) => i.id === `FRAME_S${sid}_GOLD` && i.kind === "frame"));
+  assert.ok(mailA.rewards.some((r) => r.id === `TITLE_S${sid}`), JSON.stringify(mailA.rewards));
+  // 홀로 연출 등급 = 시즌 최고 티어(골드 1, 마스터 3) → 다음 시즌 동안 계정 속성, 프로필에 시즌별 최고 티어
+  const profB = await ok(b.get("/v1/profile"));
+  assert.equal(profB.holo, 1, JSON.stringify(profB));
+  assert.ok(profB.seasons.some((x) => x.season === sid && x.best === 8 && x.bestName === "골드 II"), JSON.stringify(profB.seasons));
+  assert.equal((await ok(a.get("/v1/profile"))).holo, 3);
+  assert.ok(["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", "LEGEND"].includes(profB.frame));
   assert.equal((await sql("select rewarded_at is not null as done from public.seasons where id = $1", [sid]))[0].done, true);
-  step(`시즌 ${sid} 종료 → 크론이 최고 티어 기준 우편(골드 2,000 + 시즌 골드 프레임, 마스터는 프레임·칭호) → 받기 → 보관함`);
+  step(`시즌 ${sid} 종료 → 크론이 최고 티어 기준 우편(골드 2,000, 마스터 칭호) + 홀로 연출 등급(골드 1·마스터 3) → 프로필 시즌 기록`);
 
   console.log(`\n소셜·시즌 통합 테스트 ${steps.length}단계 통과`);
 } catch (error) {

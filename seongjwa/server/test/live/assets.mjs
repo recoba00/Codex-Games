@@ -83,7 +83,9 @@ try {
   const file = await fetch(man.art.AU["000"].full.url);
   assert.equal(file.status, 200);
   assert.equal((await file.arrayBuffer()).byteLength, readFileSync(fx("full_1080.webp")).length);
-  assert.equal((await fetch(`${API}/v1/assets`, { headers: { "if-none-match": `"a-${man.rev}"` } })).status, 304);
+  const etag = (await fetch(`${API}/v1/assets`)).headers.get("etag");
+  assert.ok(etag.includes(man.rev));
+  assert.equal((await fetch(`${API}/v1/assets`, { headers: { "if-none-match": etag } })).status, 304);
   const up = await ok(call("/bo/v1/data/import?note=xlsx", XLSX, admin, true));
   assert.ok(!up.diff.some((x) => /^(assets|art)\./.test(x.id)), "변경표에 에셋 없음");
   await ok(call("/bo/v1/data/review", { version: up.version, action: "request" }, admin));
@@ -101,9 +103,19 @@ try {
   assert.equal((await ok(call("/v1/assets"))).art.AU["000"].face, null, "빼기 바로 반영");
   await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "face" }, admin));
   assert.ok((await ok(call("/v1/assets"))).art.AU["000"].face, "빼기도 되돌림");
+  // 합본(기본 배경 사용 안 함, 2026-10-29): 전신과 같은 규격, 게임 목록 bg = combined, 빼면 진영 기본 배경, 되돌리기
+  await ok(put("kind=combined&char=AU&skin=000", "full_1080.webp"));
+  let mm = await ok(call("/v1/assets"));
+  assert.deepEqual([mm.art.AU["000"].bg, Boolean(mm.art.AU["000"].combined)], ["combined", true]);
+  await err(put("kind=combined&char=AU&skin=000", "thumb.webp"), "asset_spec");
+  await ok(call("/bo/v1/assets/remove", { char: "AU", skin: "000", kind: "combined" }, admin));
+  mm = await ok(call("/v1/assets"));
+  assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].combined], ["CARD_BG_FIRE", null], "아우렐(불) 기본 배경");
+  await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "combined" }, admin));
+  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].bg, "combined");
   const audit = await sql("select action from public.audit_log where target like '에셋 %' order by id desc limit 20");
   assert.ok(audit.some((a) => a.action === "이전 파일로 되돌리기") && audit.some((a) => a.action === "슬롯 파일 교체"));
-  step("게임 목록 바로 반영(ETag 304), xlsx 배포와 무관, 직전 파일 되돌리기(한 번 더 = 원복), 빼기 되돌리기, 감사 로그");
+  step("게임 목록 바로 반영(ETag 304), xlsx 배포와 무관, 직전 파일 되돌리기(한 번 더 = 원복), 빼기 되돌리기, 합본(기본 배경 안 씀)·진영 기본 배경, 감사 로그");
 
   // 3) 실제 브라우저(휴대폰 크기)로 백오피스 화면: 초안 만들기 → PNG 슬롯 올리기(압축 확인 → 승인) → 전신 PNG(큰 것 → 1440×2560 축소) → 영역 지정 저장 → 불투명 배경 검사
   const { chromium } = await import("playwright").catch(() => createRequire("/usr/lib/node_modules/")("playwright"));  // CI는 npm i --no-save playwright
@@ -127,6 +139,17 @@ try {
   assert.match(await page.textContent("#aPrep"), /WebP 512×512/);
   await page.click("#aOk");
   await page.waitForFunction(() => [...document.querySelectorAll("img")].some((i) => i.src.includes("TIER_SILVER")));
+  // 확인 창은 페이지 안 창(일부 앱 내 브라우저가 confirm을 막아 버튼이 안 먹히던 문제): 빼기 → 확인 → 되돌리기 → 확인
+  await page.click("#aSlotDel"); await page.click('.dlg [data-x="1"]');
+  await page.waitForFunction(() => !document.querySelector("#aSlotDel") && document.querySelector("#aSlotRev"));
+  await page.click("#aSlotRev"); await page.click('.dlg [data-x="1"]');
+  await page.waitForSelector("#aSlotDel");
+  // 투명 아닌 PNG도 올라감(경고만, 2026-10-29)
+  await page.click('[data-anext="TIER_GOLD"]');
+  await page.waitForFunction(() => document.querySelector("h2")?.textContent.includes("TIER_GOLD"));
+  await page.setInputFiles("#aSlotFile", fx("opaque.png"));
+  await page.waitForSelector("#aOk");
+  assert.match(await page.textContent("#aPrep"), /참고: .*그대로 올려도 돼요/);
   await page.click("#aBack");
   await page.waitForSelector('[data-aslot="TIER_SILVER"] img');
   await page.locator('[data-aslot="TIER_SILVER"]').scrollIntoViewIfNeeded();
@@ -162,6 +185,11 @@ try {
   await page.waitForFunction(() => document.body.textContent.includes("카드 영역 지정됨"));
   await page.waitForSelector("#rgFull"); await page.locator("#aReg").scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_regions.png` });
+  // 카드 배경: 기본 배경 해제 → 합본 올리기 칸, 다시 켜면 기본 배경
+  await page.uncheck("#aUseBg");
+  await page.waitForSelector("#aComb", { state: "attached" });
+  await page.check("#aUseBg");
+  await page.waitForFunction(() => !document.querySelector("#aComb"));
   await page.click('[data-askin="000"]');
   await page.fill("#aSkinNew", "001"); await page.click("#aSkinAdd");
   await page.waitForFunction(() => document.body.textContent.includes("스킨 001 이미지"));
@@ -172,9 +200,18 @@ try {
   assert.ok(Math.abs(cd.w - 0.6) < 0.01 && Math.abs(cd.x + cd.w / 2 - 0.5) < 0.02 && Math.abs(cd.y + cd.h / 2 - 0.4) < 0.04, JSON.stringify(cd));
   assert.ok(Math.abs(cd.h * 2560 - (cd.w * 1440 * 4) / 3) < 3, "카드 3:4 유지");
   assert.ok(Math.abs(art.SE["000"].faceRect.x + art.SE["000"].faceRect.w / 2 - 0.5) < 0.02);
+  // 데이터 배포 버튼(사용자 보고 2026-10-29: 앱 안 브라우저에서 안 먹힘 → 페이지 안 확인 창): 승인된 초안 → 배포 → 확인 → 라이브
+  const up2 = await ok(call("/bo/v1/data/import?note=browser", XLSX, admin, true));
+  await ok(call("/bo/v1/data/review", { version: up2.version, action: "request" }, admin));
+  await ok(call("/bo/v1/data/review", { version: up2.version, action: "approve" }, admin));
+  await page.goto(`${API}/bo#data`); await page.reload();
+  await page.click(`[data-act="publish"][data-v="${up2.version}"]`);
+  await page.click('.dlg [data-x="1"]');
+  for (let i = 0; i < 30 && Number((await sql("select version_id from public.data_live"))[0].version_id) !== up2.version; i += 1) await sleep(200);
+  assert.equal(Number((await sql("select version_id from public.data_live"))[0].version_id), up2.version, "배포 버튼 → 라이브");
   assert.deepEqual(perr, []);
   assert.ok(reqs.includes("/bo/vendor/webp_enc.wasm"), "libwebp 인코더 사용");
-  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로(브라우저 WebP 없을 때 libwebp 인코더) → 영역 편집기(카드 위아래·얼굴 끌기) 저장");
+  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로(브라우저 WebP 없을 때 libwebp 인코더) → 영역 편집기(카드 위아래·얼굴 끌기) 저장, 카드 배경 토글, 확인 창(빼기·되돌리기·데이터 배포)");
 
   console.log(`\n에셋 통합 테스트 ${steps.length}단계 통과`);
 } catch (error) {

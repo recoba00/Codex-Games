@@ -65,8 +65,11 @@ begin
     'legends', jsonb_build_array(a)));
   assert sid = 3, 'mailed 3';
   assert (select rewards->0->>'amount' from public.mail where account_id = b and ref = 'season:90') = '2000', 'best tier gold, not current';
-  assert (select rewards from public.mail where account_id = a and ref = 'season:90') @> '[{"type":"item","id":"FRAME_S90_LEGEND"},{"type":"item","id":"TITLE_S90_LEGEND"}]', 'legend items';
-  assert (select name from public.catalog_items where id = 'FRAME_S90_GOLD') = '시즌 90 골드 프레임', 'frame item';
+  -- 13단계(LoL식 정리): 프레임 아이템 대신 홀로 연출 등급(다음 시즌 동안), 칭호는 그대로
+  assert (select rewards from public.mail where account_id = a and ref = 'season:90') @> '[{"type":"item","id":"TITLE_S90_LEGEND"}]', 'legend items';
+  assert not exists (select 1 from public.mail where ref = 'season:90' and rewards::text like '%FRAME_%'), 'no frame items';
+  assert (select holo_grade from public.accounts where id = a) = 4 and (select holo_grade from public.accounts where id = b) = 1, 'holo grade';
+  assert (select holo_grade from public.accounts where id = c) is null and (select holo_season from public.accounts where id = a) = 90, 'bronze no holo';
   assert public.season_payout(90, '{}') = 0, 'once';
   assert public.hall_of_fame_list(90)->0->>'name' = 'Alpha', 'hall of fame';
   raise notice 'step7 OK';

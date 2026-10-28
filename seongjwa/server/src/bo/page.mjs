@@ -43,6 +43,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--panel2)}
 .checks li::before{content:"✓";color:var(--ok);font-weight:600;width:14px;flex:none}.checks li.no::before{content:"✕";color:var(--bad)}.checks li.wn::before{content:"!";color:var(--warn)}
 .note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13px}
 .code{font-family:ui-monospace,monospace;font-size:20px;letter-spacing:2px;color:var(--accent);user-select:all}
+.dlgw{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:30;padding:16px}.dlg{background:var(--panel);color:var(--ink);border-radius:14px;padding:18px;width:100%;max-width:420px;box-shadow:0 10px 40px rgba(0,0,0,.3)}.dlgm{white-space:pre-wrap;line-height:1.5}
 .toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;max-width:420px}
 .toast.on{opacity:1;transform:none}.hr{height:1px;background:var(--line);margin:12px 0}
 .login{max-width:380px;margin:12vh auto;display:grid;gap:12px}
@@ -59,11 +60,20 @@ var ERR={name_banned:'금칙어가 들어간 닉네임',word_exists:'이미 있�
  validation_failed:'검증 차단 항목이 있어 검수 요청을 할 수 없어요',state_invalid:'지금 상태에서는 할 수 없는 작업이에요',reason_required:'사유를 적어 주세요',not_approved:'승인된 초안만 배포할 수 있어요',
  invite_invalid:'초대 코드가 틀렸거나 만료·사용됐어요',login_taken:'이미 쓰는 아이디예요',password_weak:'비밀번호는 10자 이상',gold_short:'잔액보다 많이 회수할 수 없어요',last_admin:'관리자가 최소 1명은 있어야 해요',
  schedule_invalid:'예약 시각은 지금 이후여야 해요',session_ended:'로그인이 끝났어요. 다시 로그인해 주세요',auth_expired:'로그인이 끝났어요. 다시 로그인해 주세요',xlsx_invalid:'xlsx 파일을 읽지 못했어요',
- days_required:'기간(일)을 적어 주세요',query_too_short:'2자 이상 입력',sanction_invalid:'이미 해제된 제재예요',reward_invalid:'보상 형식 오류',price_required:'골드 또는 원화 가격 하나는 있어야 해요'};
+ days_required:'기간(일)을 적어 주세요',query_too_short:'2자 이상 입력',sanction_invalid:'이미 해제된 제재예요',reward_invalid:'보상 형식 오류',price_required:'가격이 필요해요(캐릭터·감정표현은 골드 가격)',offer_frame_not_sold:'프레임은 판매하지 않아요(현재 티어로 자동 표시)',offer_cash_only:'스킨·홀로 업그레이드는 현금 전용이에요(골드 가격을 비워 주세요)',offer_gold_only:'캐릭터·감정표현은 골드 전용이에요(원화 가격을 비워 주세요)',item_not_found:'상품(아이템) ID가 없어요'};
 function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(function(){t.classList.remove('on')},3200)}
 function api(path,body,raw){return fetch('/bo/v1'+path,{method:body===undefined?'GET':'POST',headers:Object.assign(raw?{'content-type':'application/octet-stream'}:{'content-type':'application/json'},T.token?{authorization:'Bearer '+T.token}:{}),body:body===undefined?undefined:(raw?body:JSON.stringify(body))})
  .then(function(r){return r.json().catch(function(){return {ok:false,error:'http_'+r.status}}).then(function(j){if(!j.ok&&j.error!=='validation_errors'){if(j.error==='session_ended'||j.error==='auth_expired'||j.error==='auth_invalid'){logout(true)}var e=new Error(ERR[j.error]||j.error);e.body=j;throw e}return j})})}
-function fail(e){toast('⚠ '+e.message)}
+function fail(e){if(e&&e.cancel)return;toast('⚠ '+e.message)}
+/* 확인·입력 창: 브라우저 기본 confirm·prompt는 일부 앱 내 브라우저에서 막혀(버튼이 안 먹힘) 페이지 안 창으로 대신. 취소하면 {cancel:true}로 끝남 */
+function dlg(msg,opt){opt=opt||{};return new Promise(function(ok,no){var w=document.createElement('div');w.className='dlgw';
+ w.innerHTML='<div class="dlg" role="dialog" aria-modal="true"><div class="dlgm"></div>'+(opt.input?'<input class="dlgi" style="width:100%;margin-top:10px">':'')+'<div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" data-x="0">취소</button><button class="btn pri" data-x="1">확인</button></div></div>';
+ w.querySelector('.dlgm').textContent=msg;document.body.appendChild(w);var inp=w.querySelector('.dlgi');if(inp){inp.value=opt.def||'';setTimeout(function(){inp.focus()},30)}
+ function done(go){if(go&&inp&&!inp.value.trim()){inp.focus();return}w.remove();if(go)ok(inp?inp.value.trim():true);else no({cancel:true})}
+ w.onclick=function(e){var b=e.target.closest('[data-x]');if(b)done(b.dataset.x==='1');else if(e.target===w)done(false)};
+ w.onkeydown=function(e){if(e.key==='Enter'&&inp)done(true);if(e.key==='Escape')done(false)}})}
+function ask(msg){return dlg(msg)}
+function askText(msg,def){return dlg(msg,{input:true,def:def})}
 function fmt(t){if(!t)return '-';var d=new Date(t);var p=function(n){return String(n).padStart(2,'0')};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
 function num(n){return n==null?'-':Number(n).toLocaleString()}
 function logout(silent){if(T.token&&!silent)api('/logout',{}).catch(function(){});T.token=null;T.me=null;sessionStorage.removeItem('bo_tok');render()}
@@ -121,15 +131,15 @@ function alphaCheck(cv,need){var g=cv.getContext('2d'),W=cv.width,H=cv.height;
  var cs=[[0,0],[W-8,0],[0,H-8],[W-8,H-8]];for(var k=0;k<4;k++){var p=g.getImageData(cs[k][0],cs[k][1],8,8).data,clear=false;for(var j=3;j<p.length;j+=4)if(p[j]<250){clear=true;break}if(!clear)return '모서리가 투명하지 않아요(체크무늬가 박힌 이미지는 안 돼요)'}return null}
 /* 규격 맞추기: kind=full(9:16, 1080~1440 너비, 큰 건 1440×2560으로), slot/face(정해진 크기, 같은 비율이면 줄임) */
 function prepare(file,kind,slot){var A=T.ad.spec.art;return loadImg(URL.createObjectURL(file)).then(function(img){var W=img.naturalWidth,H=img.naturalHeight,tw,th,need;
- if(kind==='full'){if(W*16!==H*9)throw new Error('전신은 9:16이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<A.full.min[0])throw new Error('전신은 최소 '+A.full.min.join('×')+' (올린 파일 '+W+'×'+H+')');
-  tw=Math.min(W,A.full.max[0]);th=tw*16/9;if(tw%4||th%4)throw new Error('전신 가로·세로는 4의 배수여야 해요 ('+tw+'×'+th+')');need=true}
+ if(kind==='full'||kind==='combined'){if(W*16!==H*9)throw new Error((kind==='combined'?'합본':'전신')+'은 9:16이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<A.full.min[0])throw new Error('전신은 최소 '+A.full.min.join('×')+' (올린 파일 '+W+'×'+H+')');
+  tw=Math.min(W,A.full.max[0]);th=tw*16/9;if(tw%4||th%4)throw new Error('전신 가로·세로는 4의 배수여야 해요 ('+tw+'×'+th+')');need=kind==='full'?true:null}
  else{var ex=kind==='face'?A.face.exact:[slot.w,slot.h];if(W*ex[1]!==H*ex[0])throw new Error('비율이 달라요: '+ex[0]+'×'+ex[1]+' 비율이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<ex[0])throw new Error('최소 '+ex[0]+'×'+ex[1]+'이어야 해요 (올린 파일 '+W+'×'+H+')');tw=ex[0];th=ex[1];need=kind==='face'?true:slot.alpha}
- var cv=drawTo(img,tw,th),bad=alphaCheck(cv,need);if(bad)throw new Error(bad);
- var q=(kind==='full'||kind==='face'||(slot&&slot.alpha===false))?0.9:1;
- return {img:img,cv:cv,kind:kind,slot:slot,w:tw,h:th,orig:file.size,origW:W,origH:H,q:q,src:URL.createObjectURL(file)}})}
+ var cv=drawTo(img,tw,th),warn=need===null||need===undefined?null:alphaCheck(cv,need);  // 투명 검사는 경고만(사용자가 알아서 투명 처리, 2026-10-29)
+ var q=(kind==='full'||kind==='combined'||kind==='face'||(slot&&slot.alpha===false))?0.9:1;
+ return {img:img,cv:cv,kind:kind,slot:slot,w:tw,h:th,orig:file.size,origW:W,origH:H,q:q,warn:warn,src:URL.createObjectURL(file)}})}
 function compress(P){return toWebp(P.cv,P.q).then(function(b){P.blob=b;P.url=URL.createObjectURL(b);if(P.kind!=='full')return P;var A=T.ad.spec.art.thumb.exact;return toWebp(drawTo(P.img,A[0],A[1]),0.85).then(function(t){P.thumb=t;return P})})}
-function compareBox(P){var cap=P.kind==='full'?T.ad.spec.fullMaxKb:P.kind==='face'?T.ad.spec.faceMaxKb:null,over=cap&&P.blob.size>cap*1024;
- return '<div class="card" style="margin-top:12px"><h3>압축 확인 — 사람이 승인해야 저장돼요</h3><div class="small">원본 '+P.origW+'×'+P.origH+' '+kb(P.orig)+' → WebP '+P.w+'×'+P.h+' <b>'+kb(P.blob.size)+'</b> (−'+Math.max(0,Math.round((1-P.blob.size/P.orig)*100))+'%)'+(P.thumb?' · 밴픽 축소본 '+kb(P.thumb.size):'')+(over?' <span class="tag bad">목표 '+cap+'KB 초과</span>':'')+'</div>'
+function compareBox(P){var cap=(P.kind==='full'||P.kind==='combined')?T.ad.spec.fullMaxKb:P.kind==='face'?T.ad.spec.faceMaxKb:null,over=cap&&P.blob.size>cap*1024;
+ return '<div class="card" style="margin-top:12px"><h3>압축 확인 — 사람이 승인해야 저장돼요</h3><div class="small">원본 '+P.origW+'×'+P.origH+' '+kb(P.orig)+' → WebP '+P.w+'×'+P.h+' <b>'+kb(P.blob.size)+'</b> (−'+Math.max(0,Math.round((1-P.blob.size/P.orig)*100))+'%)'+(P.thumb?' · 밴픽 축소본 '+kb(P.thumb.size):'')+(over?' <span class="tag bad">목표 '+cap+'KB 초과</span>':'')+'</div>'+(P.warn?'<div class="note" style="margin-top:6px">참고: '+esc(P.warn)+' — 그대로 올려도 돼요</div>':'')
  +'<div class="row" style="margin:8px 0"><label class="small">품질 <select id="aQ">'+[0.75,0.8,0.85,0.9,0.95,1].map(function(q){return '<option value="'+q+'"'+(q===P.q?' selected':'')+'>'+(q===1?'최고(무손실에 가까움)':Math.round(q*100))+'</option>'}).join('')+'</select></label><span class="small muted">확대 비교(가운데 부분 2배): 왼쪽 원본, 오른쪽 압축</span></div>'
  +'<div class="row"><canvas id="cmpA" width="240" height="240" style="border:1px solid var(--line);max-width:48%"></canvas><canvas id="cmpB" width="240" height="240" style="border:1px solid var(--line);max-width:48%"></canvas></div>'
  +'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aOk">승인·저장</button><button class="btn sm" id="aNo">취소</button></div></div>'}
@@ -189,12 +199,12 @@ V.assets.bind=function(){bindVer();$('view').onclick=function(e){var t=e.target.
  if(s){T.aslot=s.dataset.aslot;ssSet('bo_aslot',T.aslot);go('assetSlot')}}};
 
 /* 공통: 파일 고르기 → 검사·압축 → 비교 → 승인 */
-function askUpload(file,kind,slot,onSaved){$('aPrep').innerHTML='<p class="small muted">검사·압축 중…</p>';
- prepare(file,kind,slot).then(compress).then(function(P){function show(){$('aPrep').innerHTML=compareBox(P);drawCompare(P);
+function askUpload(file,kind,slot,onSaved,box){var B=function(){return $(box||'aPrep')};B().innerHTML='<p class="small muted">검사·압축 중…</p>';
+ prepare(file,kind,slot).then(compress).then(function(P){function show(){B().innerHTML=compareBox(P);drawCompare(P);
    $('aQ').onchange=function(e){P.q=Number(e.target.value);compress(P).then(show)};
-   $('aNo').onclick=function(){$('aPrep').innerHTML=''};
+   $('aNo').onclick=function(){B().innerHTML=''};
    $('aOk').onclick=function(){$('aOk').disabled=true;onSaved(P).then(function(){toast('저장했어요');render()}).catch(function(e){$('aOk').disabled=false;fail(e)})}}
-  show();$('aPrep').scrollIntoView({block:'nearest'})}).catch(function(e){$('aPrep').innerHTML='<div class="note">⚠ '+esc(e.message)+'</div>'})}
+  show();B().scrollIntoView({block:'nearest'})}).catch(function(e){B().innerHTML='<div class="note">⚠ '+esc(e.message)+'</div>'})}
 function upQ(kind,extra){return 'kind='+kind+(extra||'')}
 
 /* 캐릭터 상세 */
@@ -207,21 +217,39 @@ V.assetChar=function(){T.ach=T.ach||ssGet('bo_ach');T.askin=T.askin||ssGet('bo_a
  +'<div class="card" style="margin-bottom:14px"><h3>스킨 '+T.askin+' 이미지</h3><div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">전신(9:16)</div>'+aImg(cur.full,220)+'</div><div><div class="small muted">밴픽 축소본</div>'+aImg(cur.thumb,110)+'</div><div><div class="small muted">얼굴 파일(선택)</div>'+aImg(cur.face,80,true)+'</div></div>'
  +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes)+' '+metaLine(K('full')):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+'</div>'
  +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+revBtn('aFullRev',K('full'),'전신 이전 파일로')+revBtn('aFaceRev',K('face'),'얼굴 파일 이전으로')+'</div>':'')
- +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경(상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
+ +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경 권장(투명이 아니어도 올릴 수 있어요, 상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
+ +bgCard(d,c,cur,ed,K)
  +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button>'+revBtn('aRegRev',K('regions'),'이전 영역으로')+' '+metaLine(K('regions'))+'</div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
 V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var cur=((d.art[T.ach]||{})[T.askin])||{},ch='&char='+T.ach+'&skin='+T.askin;
  $('view').onclick=function(e){var s=e.target.closest('[data-askin]');if(s){T.askin=s.dataset.askin;ssSet('bo_askin',T.askin);render()}};
  if($('aSkinAdd'))$('aSkinAdd').onclick=function(){var s=val('aSkinNew');if(!/^\d{3}$/.test(s))return toast('스킨 ID는 숫자 3자리');T.askin=s;ssSet('bo_askin',s);render()};
  if($('aFull'))$('aFull').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'full',null,function(P){return upload(P.blob,upQ('full',ch)).then(function(j){if(j.warnings&&j.warnings.length)toast(j.warnings[0]);return upload(P.thumb,upQ('thumb',ch))})})};
  if($('aFace'))$('aFace').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'face',null,function(P){return upload(P.blob,upQ('face',ch))})};
- if($('aFaceDel'))$('aFaceDel').onclick=function(){if(!confirm('얼굴 파일을 빼면 얼굴 영역으로 잘라 써요. 뺄까요?'))return;api('/assets/remove',{char:T.ach,skin:T.askin,kind:'face'}).then(function(){toast('뺐어요');render()}).catch(fail)};
- if($('aSkinDel'))$('aSkinDel').onclick=function(){if(!confirm('스킨 '+T.askin+' 이미지와 영역을 모두 뺄까요?'))return;api('/assets/remove',{char:T.ach,skin:T.askin,kind:'skin'}).then(function(){T.askin='000';ssSet('bo_askin','000');toast('뺐어요');render()}).catch(fail)};
- var rv=function(kind,msg){return function(){if(!confirm(msg))return;api('/assets/revert',{char:T.ach,skin:T.askin,kind:kind}).then(function(){toast('되돌렸어요');render()}).catch(fail)}};
+ if($('aFaceDel'))$('aFaceDel').onclick=function(){ask('얼굴 파일을 빼면 얼굴 영역으로 잘라 써요. 뺄까요?').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'face'})}).then(function(){toast('뺐어요');render()}).catch(fail)};
+ if($('aSkinDel'))$('aSkinDel').onclick=function(){ask('스킨 '+T.askin+' 이미지와 영역을 모두 뺄까요?').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'skin'})}).then(function(){T.askin='000';ssSet('bo_askin','000');toast('뺐어요');render()}).catch(fail)};
+ bindBg(d,cur,ch);
+ var rv=function(kind,msg){return function(){ask(msg).then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:kind})}).then(function(){toast('되돌렸어요');render()}).catch(fail)}};
  if($('aFullRev'))$('aFullRev').onclick=rv('full','전신(과 밴픽 축소본)을 직전 파일로 되돌릴까요? 한 번 더 누르면 다시 지금 파일로 돌아와요.');
  if($('aFaceRev'))$('aFaceRev').onclick=rv('face','얼굴 파일을 직전 파일로 되돌릴까요?');
  if($('aRegRev'))$('aRegRev').onclick=rv('regions','카드·얼굴 영역을 직전 값으로 되돌릴까요?');
  if(cur.full&&$('aReg'))loadImg(d.base+cur.full.path).then(function(img){var R={card:cur.card,face:cur.faceRect};regionEditor(img,cur.full.w,cur.full.h,R);
   if($('aRegSave'))$('aRegSave').onclick=function(){api('/assets/regions',{char:T.ach,skin:T.askin,card:R.card,face:R.face}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
+
+/* 카드 배경: 진영 기본 배경(CARD_BG_*) 또는 "기본 배경 사용 안 함" → 배경+캐릭터 합본(전신과 같은 9:16·같은 위치). 전신(단일 PNG)은 그대로 따로 */
+var BG_OF={'불':'CARD_BG_FIRE','물':'CARD_BG_WATER','바람':'CARD_BG_WIND'};
+function bgCard(d,c,cur,ed,K){var slot=BG_OF[c.faction]||'CARD_BG_NEUTRAL',key=c.id+':'+T.askin,useDef=!cur.combined&&T.noDefBg!==key,bg=(d.assets.slots||{})[slot];
+ return '<div class="card" style="margin-bottom:14px"><h3>카드 배경</h3><label class="row" style="gap:8px"><input type="checkbox" id="aUseBg"'+(useDef?' checked':'')+(ed?'':' disabled')+'> 진영 기본 배경 사용 ('+esc(c.faction||'-')+' → '+slot+')</label>'
+ +(useDef?'<div class="row" style="margin-top:8px;align-items:flex-end;gap:16px"><div><div class="small muted">기본 배경</div>'+aImg(bg,160)+'</div><div class="small muted" style="max-width:260px">카드 그림 창에는 이 배경 위에 전신(투명 PNG)을 카드 영역대로 얹어요. 배경 파일은 슬롯 목록의 \'카드 배경\'에서 바꿔요.</div></div>'
+  :'<p class="small muted" style="margin:8px 0">배경과 캐릭터가 한 장에 그려진 합본을 올려요. 전신과 같은 9:16·같은 위치로 그려야 카드 영역이 맞아요. 전신(캐릭터만 있는 PNG)은 위에서 따로 올려 밴픽·얼굴에 써요.</p>'
+  +'<div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">합본(배경+캐릭터)</div>'+aImg(cur.combined,220)+'</div><div class="small">'+(cur.combined?cur.combined.w+'×'+cur.combined.h+' · '+kb(cur.combined.bytes)+' '+metaLine(K('combined')):'아직 없음 → 기본 배경을 써요')+'</div></div>'
+  +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">합본 올리기<input type="file" id="aComb" accept="image/png,image/webp,image/jpeg" hidden></label>'+revBtn('aCombRev','slot:ART_'+c.id+'_'+T.askin+'_COMBINED','합본 이전 파일로')+'</div>':''))
+ +'<div id="aPrepBg"></div></div>'}
+function bindBg(d,cur,ch){var key=T.ach+':'+T.askin;
+ if($('aUseBg'))$('aUseBg').onchange=function(e){if(!e.target.checked){T.noDefBg=key;render();return}
+  if(!cur.combined){T.noDefBg=null;render();return}
+  ask('합본을 빼고 진영 기본 배경을 쓸까요? (합본은 직전 파일로 남아 되돌릴 수 있어요)').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'combined'})}).then(function(){T.noDefBg=null;toast('기본 배경으로');render()}).catch(function(er){e.target.checked=false;fail(er)})};
+ if($('aComb'))$('aComb').onchange=function(e){var f=e.target.files[0];if(!f)return;askUpload(f,'combined',null,function(P){return upload(P.blob,upQ('combined',ch))},'aPrepBg')};
+ if($('aCombRev'))$('aCombRev').onclick=function(){ask('합본을 직전 파일로 되돌릴까요?').then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:'combined'})}).then(function(){toast('되돌렸어요');render()}).catch(fail)}}
 
 /* 슬롯 상세 */
 V.assetSlot=function(){T.aslot=T.aslot||ssGet('bo_aslot');return assetsLoad().then(function(d){var s=d.spec.slots.find(function(x){return x.id===T.aslot});if(!s){go('assets');return ''}
@@ -234,8 +262,8 @@ V.assetSlot=function(){T.aslot=T.aslot||ssGet('bo_aslot');return assetsLoad().th
 V.assetSlot.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var s=d.spec.slots.find(function(x){return x.id===T.aslot});
  $('view').onclick=function(e){var n=e.target.closest('[data-anext]');if(n){T.aslot=n.dataset.anext;ssSet('bo_aslot',T.aslot);render()}};
  if($('aSlotFile'))$('aSlotFile').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'slot',s,function(P){return upload(P.blob,upQ('slot','&slot='+s.id))})};
- if($('aSlotRev'))$('aSlotRev').onclick=function(){if(!confirm(s.id+'을(를) 직전 파일로 되돌릴까요?'))return;api('/assets/revert',{slot:s.id}).then(function(){toast('되돌렸어요');render()}).catch(fail)};
- if($('aSlotDel'))$('aSlotDel').onclick=function(){if(!confirm(s.id+' 파일을 빼고 내장 기본 이미지를 쓸까요?'))return;api('/assets/remove',{slot:s.id}).then(function(){toast('뺐어요');render()}).catch(fail)}};
+ if($('aSlotRev'))$('aSlotRev').onclick=function(){ask(s.id+'을(를) 직전 파일로 되돌릴까요?').then(function(){return api('/assets/revert',{slot:s.id})}).then(function(){toast('되돌렸어요');render()}).catch(fail)};
+ if($('aSlotDel'))$('aSlotDel').onclick=function(){ask(s.id+' 파일을 빼고 내장 기본 이미지를 쓸까요?').then(function(){return api('/assets/remove',{slot:s.id})}).then(function(){toast('뺐어요');render()}).catch(fail)}};
 
 /* ---------- 어뷰징 의심(상세 13): 자동 탐지 → 사람이 판단·제재 ---------- */
 function who(id,name){return '<button class="btn sm" data-uid="'+id+'">'+esc(name||'-')+'</button>'}
@@ -298,11 +326,11 @@ V.words.bind=function(){var v=$('view');if(!$('wAdd'))return;
  $('wManyGo').onclick=function(){api('/words/check',{names:val('wMany')}).then(function(j){var bad=j.results.filter(function(r){return r.hits.length});$('wManyOut').innerHTML='<b>'+j.results.length+'개 중 '+bad.length+'개 걸림</b><br>'+j.results.map(function(r){return r.hits.length?'<span class="tag bad">'+esc(r.name)+' ← '+r.hits.map(function(h){return esc(h.word)+'('+WM[h.match]+')'}).join(', ')+'</span>':'<span class="tag ok">'+esc(r.name)+'</span>'}).join(' ')}).catch(fail)};
  $('wTry').onclick=function(){api('/words/test?name='+encodeURIComponent(val('wTest'))).then(function(j){$('wTestOut').innerHTML=j.hits.length?'<span class="tag bad">걸림: '+j.hits.map(function(h){return esc(h.word)}).join(', ')+'</span>':'<span class="tag ok">통과</span>'}).catch(fail)};
  if($('aGo'))$('aGo').onclick=function(){var t=val('aBulk');if(!t)return toast('단어를 넣어 주세요');api('/words/allowed',{text:t,note:val('aNote')}).then(function(j){toast('허용 단어 '+j.added+'개 추가'+(j.skipped.length?' · 이미 있음 '+j.skipped.length:''));render()}).catch(fail)};
- v.onchange=function(e){var m=e.target.closest('[data-wm]');if(!m)return;var why=prompt('방식 변경 사유(감사 로그)','오탐');if(!why){m.value=m.dataset.cur;return}api('/words/match',{id:Number(m.dataset.wm),match:m.value,reason:why}).then(function(){toast('방식 변경');render()}).catch(function(er){m.value=m.dataset.cur;fail(er)})};
+ v.onchange=function(e){var m=e.target.closest('[data-wm]');if(!m)return;askText('방식 변경 사유(감사 로그)','오탐').then(function(why){return api('/words/match',{id:Number(m.dataset.wm),match:m.value,reason:why})}).then(function(){toast('방식 변경');render()}).catch(function(er){m.value=m.dataset.cur;fail(er)})};
  v.onclick=function(e){var d=e.target.closest('[data-wdel]'),r=e.target.closest('[data-ren]'),ad=e.target.closest('[data-adel]');
-  if(ad){var w3=prompt('허용 단어 삭제 사유(감사 로그)');if(!w3)return;api('/words/allowed/remove',{id:Number(ad.dataset.adel),reason:w3}).then(function(){toast('삭제');render()}).catch(fail)}
-  if(d){var why=prompt('삭제 사유(감사 로그)');if(!why)return;api('/words/remove',{id:Number(d.dataset.wdel),reason:why}).then(function(){toast('삭제');render()}).catch(fail)}
-  if(r){var why2=prompt('강제 변경 사유(감사 로그·유저 경고)','부적절한 닉네임');if(!why2)return;api('/user/sanction',{account:r.dataset.ren,kind:'rename',reason:why2}).then(function(){toast('강제 변경 완료');render()}).catch(fail)}}};
+  if(ad){askText('허용 단어 삭제 사유(감사 로그)').then(function(w3){return api('/words/allowed/remove',{id:Number(ad.dataset.adel),reason:w3})}).then(function(){toast('삭제');render()}).catch(fail)}
+  if(d){askText('삭제 사유(감사 로그)').then(function(why){return api('/words/remove',{id:Number(d.dataset.wdel),reason:why})}).then(function(){toast('삭제');render()}).catch(fail)}
+  if(r){askText('강제 변경 사유(감사 로그·유저 경고)','부적절한 닉네임').then(function(why2){return api('/user/sanction',{account:r.dataset.ren,kind:'rename',reason:why2})}).then(function(){toast('강제 변경 완료');render()}).catch(fail)}}};
 
 /* ---------- 대시보드 ---------- */
 V.dashboard=function(){return api('/dashboard').then(function(d){var m=d.matchesToday||{};
@@ -350,12 +378,12 @@ V.data.bind=function(){var up=$('upGo');
    .catch(fail).then(function(){up.disabled=false})};
  $('view').onclick=function(e){var b=e.target.closest('button[data-act]');if(!b)return;var v=Number(b.dataset.v),act=b.dataset.act,p;
   if(act==='diff'){var bs=b.dataset.base;api('/data/diff?version='+v+(bs?'&base='+bs:'')).then(function(j){var o=$('diffOut');o.hidden=false;o.innerHTML='<h3>v'+j.base+' → v'+v+' 변경 '+j.diff.length+'건'+(bs?' (기준 버전 대비)':' (라이브 대비)')+'</h3>'+diffBox(j.diff);o.scrollIntoView({behavior:'smooth'})}).catch(fail);return}
-  if(act==='publish'){if(!confirm('v'+v+'를 지금 라이브로 배포할까요? 다음 판부터 적용돼요.'))return;p=api('/data/publish',{version:v})}
-  else if(act==='rollback'){var r=prompt('v'+v+' 내용으로 롤백(새 버전으로 기록). 사유(5자 이상):');if(!r)return;p=api('/data/rollback',{target:v,reason:r})}
-  else{var body={version:v,action:act};
-   if(act==='reject'){body.reason=prompt('반려 사유:');if(!body.reason)return}
+  if(act==='publish'){p=ask('v'+v+'를 지금 라이브로 배포할까요? 다음 판부터 적용돼요.').then(function(){return api('/data/publish',{version:v})})}
+  else if(act==='rollback'){p=askText('v'+v+' 내용으로 롤백(새 버전으로 기록). 사유(5자 이상):').then(function(r){return api('/data/rollback',{target:v,reason:r})})}
+  else{var body={version:v,action:act},pre=Promise.resolve();
+   if(act==='reject')pre=askText('반려 사유:').then(function(r){body.reason=r});
    if(act==='schedule'){var at=$('at'+v).value;if(!at){toast('예약 일시를 고르세요');return}body.at=new Date(at).toISOString()}
-   if(act==='discard'&&!confirm('v'+v+' 초안을 폐기할까요?'))return;p=api('/data/review',body)}
+   if(act==='discard')pre=ask('v'+v+' 초안을 폐기할까요?');p=pre.then(function(){return api('/data/review',body)})}
   p.then(function(){toast('완료');render()}).catch(fail)}};
 
 /* ---------- 라이브 데이터 보기 ---------- */
@@ -413,8 +441,8 @@ V.events.bind=function(){var d=T.cache.lobby;
   if(b.id==='mlSend'){var t=val('mlType'),arg=val('mlArg'),target={type:t};
    if(t==='accounts')target.ids=arg.split(/[\s,]+/).filter(Boolean);if(t==='tier')target.min=Number(arg);
    var rw=[];if(val('mlGold'))rw.push({type:'gold',amount:Number(val('mlGold'))});if(val('mlItem'))rw.push({type:'item',id:val('mlItem').toUpperCase()});
-   if(!confirm((t==='all'?'전체 유저':t==='tier'?'티어 '+arg+' 이상':target.ids.length+'명')+'에게 우편을 보낼까요?'))return;
-   api('/mail',{target:target,title:val('mlTitle'),body:$('mlBody').value,rewards:rw,days:Number(val('mlDays')||30),send_at:iso('mlAt'),reason:val('mlReason')}).then(function(j){toast(j.sent==null?'예약했어요':j.sent+'명에게 발송');render()}).catch(fail)}}};
+   ask((t==='all'?'전체 유저':t==='tier'?'티어 '+arg+' 이상':target.ids.length+'명')+'에게 우편을 보낼까요?').then(function(){return 
+   api('/mail',{target:target,title:val('mlTitle'),body:$('mlBody').value,rewards:rw,days:Number(val('mlDays')||30),send_at:iso('mlAt'),reason:val('mlReason')})}).then(function(j){toast(j.sent==null?'예약했어요':j.sent+'명에게 발송');render()}).catch(fail)}}};
 
 /* ---------- 유저 조회·제재 ---------- */
 var SK={warn:'경고',rank_restrict:'랭킹전 제한',season_wipe:'시즌 기록 처리',suspend:'계정 정지',rename:'닉네임 강제 변경'};
@@ -425,8 +453,8 @@ V.users.bind=function(){var search=function(){T.uq=val('uq');api('/users?q='+enc
  $('view').onclick=function(e){var r=e.target.closest('tr[data-u]');if(r){detail(r.dataset.u);return}var b=e.target.closest('button');if(!b||!T.uid)return;var id=T.uid,p;
   if(b.id==='gGo'){var dlt=Number(val('gAmt'))*(val('gDir')==='-'?-1:1);p=api('/user/gold',{account:id,delta:dlt,reason:val('gWhy')})}
   if(b.id==='iGo')p=api('/user/item',{account:id,item:val('iId').toUpperCase(),grant:val('iDir')==='+',reason:val('iWhy')});
-  if(b.id==='sGo'){if(!confirm(SK[val('sKind')]+' 제재를 할까요?'))return;p=api('/user/sanction',{account:id,kind:val('sKind'),days:val('sDays'),reason:val('sWhy')})}
-  if(b.dataset.rv){var r=prompt('제재 해제 사유:');if(!r)return;p=api('/user/sanction/revoke',{id:Number(b.dataset.rv),reason:r})}
+  if(b.id==='sGo'){p=ask(SK[val('sKind')]+' 제재를 할까요?').then(function(){return api('/user/sanction',{account:id,kind:val('sKind'),days:val('sDays'),reason:val('sWhy')})})}
+  if(b.dataset.rv){p=askText('제재 해제 사유:').then(function(r){return api('/user/sanction/revoke',{id:Number(b.dataset.rv),reason:r})})}
   if(p)p.then(function(){toast('완료');detail(id)}).catch(fail)}};
 function detail(id){T.uid=id;api('/user?id='+id).then(function(d){var a=d.account,rk=d.rank;
  $('uDetail').innerHTML='<div class="grid g3"><div class="card"><h3>'+esc(a.display_name)+' <span class="tag '+(a.status==='active'?'ok':'bad')+'">'+a.status+(a.banned_until?' ~'+fmt(a.banned_until):'')+'</span></h3><div class="small">'+a.id+'</div><div class="small muted">가입 '+fmt(a.created_at)+' · 마지막 접속 '+fmt(a.last_login_at)+'</div><div class="small">'+d.identities.map(function(i){return i.provider+' '+esc(i.uid)}).join(' · ')+'</div>'
@@ -462,7 +490,7 @@ V.staff=function(){var pw='<div class="card" style="margin-top:14px"><h3>내 비
  if(!T.perms.staff)return Promise.resolve('<h2>권한 관리</h2>'+soloCard()+perm+pw);
  return api('/staff').then(function(j){return '<h2>권한 관리</h2><p class="sub">직원 초대(초대 코드는 한 번만 보여요, 2일 유효)·역할 변경·비활성화. 관리자는 최소 1명.</p><div class="card">'+table(['아이디','이름','역할','상태','마지막 로그인',''],j.staff.map(function(s){return '<tr><td>'+esc(s.login)+'</td><td>'+esc(s.name)+'</td><td><select data-role="'+s.id+'">'+Object.keys(ROLE).map(function(r){return '<option value="'+r+'" '+(r===s.role?'selected':'')+'>'+ROLE[r]+'</option>'}).join('')+'</select></td><td>'+(s.active?'<span class="tag ok">사용</span>':'<span class="tag bad">비활성</span>')+'</td><td class="small">'+fmt(s.lastLoginAt)+'</td><td><button class="btn sm" data-act="'+s.id+'" data-on="'+!s.active+'">'+(s.active?'비활성화':'다시 사용')+'</button></td></tr>'}))
  +soloCard().replace('<div class="card" style="margin-top:14px">','<div class="hr"></div><div>')+'<div class="hr"></div><div class="row"><select id="invRole">'+Object.keys(ROLE).map(function(r){return '<option value="'+r+'">'+ROLE[r]+'</option>'}).join('')+'</select><button class="btn pri" id="invGo">초대 코드 만들기</button><span id="invOut"></span></div></div>'+perm+pw})};
-V.staff.bind=function(){var sg=$('soloGo');if(sg)sg.onclick=function(){var on=!T.solo;if(!confirm(on?'1인 운영 모드를 켤까요? 관리자가 자기 초안을 승인할 수 있게 됩니다.':'1인 운영 모드를 끌까요? 본인 초안 승인이 다시 금지됩니다.'))return;api('/settings',{key:'solo_mode',value:on,reason:val('soloWhy')}).then(function(){T.solo=on;toast(on?'1인 운영 모드 켬':'1인 운영 모드 끔');render()}).catch(fail)};var pg=$('pwGo');if(pg)pg.onclick=function(){api('/password',{current:$('pwCur').value,password:$('pwNew').value}).then(function(){toast('비밀번호를 바꿨어요')}).catch(fail)};
+V.staff.bind=function(){var sg=$('soloGo');if(sg)sg.onclick=function(){var on=!T.solo;ask(on?'1인 운영 모드를 켤까요? 관리자가 자기 초안을 승인할 수 있게 됩니다.':'1인 운영 모드를 끌까요? 본인 초안 승인이 다시 금지됩니다.').then(function(){return api('/settings',{key:'solo_mode',value:on,reason:val('soloWhy')})}).then(function(){T.solo=on;toast(on?'1인 운영 모드 켬':'1인 운영 모드 끔');render()}).catch(fail)};var pg=$('pwGo');if(pg)pg.onclick=function(){api('/password',{current:$('pwCur').value,password:$('pwNew').value}).then(function(){toast('비밀번호를 바꿨어요')}).catch(fail)};
  var ig=$('invGo');if(ig)ig.onclick=function(){api('/staff/invite',{role:val('invRole')}).then(function(j){$('invOut').innerHTML='초대 코드 <span class="code">'+j.code+'</span> <span class="small muted">('+j.expiresInDays+'일, 한 번만 표시)</span>'}).catch(fail)};
  $('view').onchange=function(e){var s=e.target.closest('select[data-role]');if(s)api('/staff/update',{id:s.dataset.role,role:s.value}).then(function(){toast('역할 변경')}).catch(function(er){fail(er);render()})};
  $('view').onclick=function(e){var b=e.target.closest('button[data-act]');if(b)api('/staff/update',{id:b.dataset.act,active:b.dataset.on==='true'}).then(function(){toast('변경');render()}).catch(fail)}};

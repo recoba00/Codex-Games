@@ -13,6 +13,7 @@ import { claimRankRoad, rankRoadView } from "./season.mjs";
 import { pairRule } from "./queue-logic.mjs";
 import { assetManifest, loadAssets } from "./assets.mjs";
 import { masteryCfg, masteryView } from "./mastery.mjs";
+import { frameOf, masterTierNo } from "./badges.mjs";
 import { CUP, cupWindow, validRoster, cupBonusMission, cupWaitSec, cupRewardCfg, cupSeasonWeek } from "./cup.mjs";
 import { BO_PAGE } from "./bo/page.mjs";
 import { newRefreshToken, sha256Hex, signAccess, verifyAccess } from "./tokens.mjs";
@@ -534,10 +535,12 @@ export async function handle(request, env) {
 
     case "GET /v1/assets": {  // 게임이 받는 이미지 목록(데이터 버전과 별개, 기획지시 에셋분리). 파일명이 내용 해시라 바뀐 것만 내려받으면 됨
       const a = await loadAssets(env, rpc);
-      const etag = `"a-${a.rev}"`;
+      const { version, snapshot: live } = await pinLive(env);  // 진영별 기본 배경 판단(데이터 버전도 ETag에 넣음)
+      const factions = Object.fromEntries(Object.entries(live?.characters ?? {}).map(([id, c]) => [id, c.faction]));
+      const etag = `"a-${a.rev}-v${version}"`;
       const headers = { etag, "cache-control": "public, max-age=60" };
       if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
-      return json({ ok: true, rev: a.rev, ...assetManifest(a.shaped, env) }, 200, headers);
+      return json({ ok: true, rev: a.rev, ...assetManifest(a.shaped, env, factions) }, 200, headers);
     }
 
     // ---------- 지표 로그(상세 12) ----------
@@ -588,7 +591,21 @@ export async function handle(request, env) {
       return json({ ok: true, ...(await rpc(env, "profile_rename", { p_account: claims.sub, p_name: name, p_cost: econConfig(data).econ_name_change_gold, p_ref: `name:${input.requestId}` })) });
     }
 
-    case "POST /v1/profile/equip": {  // { skins:{AU:id}, cardback, frame, title, emotes:[최대 4] } 가진 것만
+    case "GET /v1/profile": {  // 프로필(LoL식 정리): 현재 티어 프레임·홀로 연출 등급·숙련도·시즌별 최고 티어 기록. ?id=다른 계정
+      const claims = await authenticate(request, env);
+      const id = url.searchParams.get("id") || claims.sub;
+      if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("value_invalid");
+      const { snapshot: data } = await pinLive(env);
+      const season = await currentSeason(env);
+      const [prof, badges, mast] = await Promise.all([rpc(env, "profile_get", { p_account: id }), rpc(env, "badges_get", { p_accounts: [id], p_season: season.id, p_master_tier: masterTierNo(data) }),
+        rpc(env, "mastery_get", { p_accounts: [id] })]);
+      if (!prof) throw new Error("account_not_found");
+      return json({ ok: true, id, name: prof.name, ...frameOf(data, badges?.[id]), holoSeason: prof.holoSeason, title: prof.equipped?.title ?? null,
+        mastery: masteryView(mast?.[id] ?? {}, data),
+        seasons: (prof.seasons ?? []).map((s) => ({ season: s.season, best: s.best, bestName: tierName(data, s.best), excluded: s.excluded })) });
+    }
+
+    case "POST /v1/profile/equip": {  // { skins:{AU:id}, cardback, title, emotes:[최대 4] } 가진 것만. 프레임은 현재 티어 자동(장착 없음)
       const claims = await authenticate(request, env);
       const input = await readJson(request);
       const { snapshot: data } = await pinLive(env);
@@ -603,7 +620,7 @@ export async function handle(request, env) {
           if (id) eq.skins[c] = need(String(id), (it) => it.kind.startsWith("skin") && it.character === c);
         }
       }
-      for (const [slot, kind] of [["cardback", "cardback"], ["frame", "frame"], ["title", "title"]]) {
+      for (const [slot, kind] of [["cardback", "cardback"], ["title", "title"]]) {
         if (input[slot]) eq[slot] = need(String(input[slot]), (it) => it.kind === kind);
       }
       if (input.emotes) {
@@ -682,5 +699,5 @@ function cupView(data, season, week) {
   const mult = special ? cfg.special_mult : 1;
   return { rules: { minTier: CUP.minTier, wins: CUP.wins, losses: CUP.losses, widenAfterSec: CUP.widenAfterSec, waitSec: cupWaitSec(data), bonusMission: cupBonusMission(data) },
     special, specialMult: cfg.special_mult,
-    rewards: cfg.tiers.map((t) => ({ ...t, gold: Math.round(t.gold * mult), emote: t.emote && Boolean(cfg.emote_item) })) };
+    rewards: cfg.tiers.map(({ frame, ...t }) => ({ ...t, gold: Math.round(t.gold * mult), emote: t.emote && Boolean(cfg.emote_item), title: Boolean(frame) })) };  // F열 '지급' = 칭호만(LoL식 정리)
 }

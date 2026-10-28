@@ -7,6 +7,7 @@ import { importWorkbook } from "./importer.mjs";
 import { readXlsx } from "./xlsx.mjs";
 import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
+import { offerRule } from "../shop-rules.mjs";
 import { cupRewardCfg, cupWindow } from "../cup.mjs";
 import { ART, SLOTS, artKey, assetPath, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storagePut, webpInfo } from "../assets.mjs";
 
@@ -310,7 +311,7 @@ export async function handleBo(request, env, url) {
       const ch = url.searchParams.get("char"), skin = url.searchParams.get("skin") ?? "000";
       const { snapshot: live } = await pinLive(env);
       if (kind !== "slot") {
-        if (!["full", "thumb", "face"].includes(kind)) throw new Error("asset_kind_invalid");
+        if (!["full", "thumb", "face", "combined"].includes(kind)) throw new Error("asset_kind_invalid");
         if (!/^\d{3}$/.test(skin)) throw new Error("asset_skin_invalid");
         if (!live?.characters?.[ch]) throw new Error("asset_char_invalid");
       }
@@ -321,9 +322,9 @@ export async function handleBo(request, env, url) {
       await storagePut(env, path, bytes);
       const value = { path, w: info.w, h: info.h, bytes: bytes.length, alpha: info.alpha, at: new Date().toISOString() };
       await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: kind === "slot" ? slotKey(slot.id) : artKey(ch, skin, kind), p_value: value,
-        p_action: kind === "slot" ? "슬롯 파일 교체" : `캐릭터 이미지 교체(${kind})`, p_detail: { path, bytes: bytes.length, w: info.w, h: info.h } });
+        p_action: kind === "slot" ? "슬롯 파일 교체" : kind === "combined" ? "합본 이미지 교체(배경+캐릭터, 기본 배경 안 씀)" : `캐릭터 이미지 교체(${kind})`, p_detail: { path, bytes: bytes.length, w: info.w, h: info.h } });
       dropAssetCache();
-      const capKb = kind === "face" ? Number(live?.settings?.asset_face_max_kb ?? 100) : kind === "full" ? Number(live?.settings?.asset_full_max_kb ?? 1024) : null;
+      const capKb = kind === "face" ? Number(live?.settings?.asset_face_max_kb ?? 100) : ["full", "combined"].includes(kind) ? Number(live?.settings?.asset_full_max_kb ?? 1024) : null;
       const warnings = capKb && bytes.length > capKb * 1024 ? [`${kind} ${Math.round(bytes.length / 1024)}KB — 목표 ${capKb}KB 초과(상세 14)`] : [];
       return json({ ok: true, path, url: publicBase(env) + path, ...value, warnings });
     }
@@ -339,7 +340,7 @@ export async function handleBo(request, env, url) {
       dropAssetCache();
       return json({ ok: true, ...r });
     }
-    case "POST /assets/remove": {  // { slot } 슬롯 파일 빼기(게임 내장 기본 이미지로) 또는 { char, skin, kind: "face"|"skin" }. 직전 파일로 남아 되돌릴 수 있음
+    case "POST /assets/remove": {  // { slot } 슬롯 파일 빼기(게임 내장 기본 이미지로) 또는 { char, skin, kind: "face"|"combined"|"skin" }. 직전 파일로 남아 되돌릴 수 있음
       const st = await staffOf(request, env); allow(st, "data_edit");
       const b = await body(request);
       const put = (key, action) => rpc(env, "bo_asset_put", { p_staff: st.id, p_key: key, p_value: null, p_action: action, p_detail: {} });
@@ -347,9 +348,10 @@ export async function handleBo(request, env, url) {
         if (!slotOf(b.slot)) throw new Error("asset_slot_invalid");
         await put(slotKey(b.slot), "슬롯 파일 빼기(내장 기본 이미지)");
       } else {
-        if (!["face", "skin"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
+        if (!["face", "combined", "skin"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
         if (b.kind === "face") await put(artKey(b.char, b.skin, "face"), "얼굴 파일 빼기(영역으로 잘라 씀)");
-        else for (const k of ["full", "thumb", "face", "regions"]) await put(artKey(b.char, b.skin, k), "스킨 이미지 빼기");
+        else if (b.kind === "combined") await put(artKey(b.char, b.skin, "combined"), "합본 빼기(진영 기본 배경 사용)");
+        else for (const k of ["full", "thumb", "face", "regions", "combined"]) await put(artKey(b.char, b.skin, k), "스킨 이미지 빼기");
       }
       dropAssetCache();
       return json({ ok: true });
@@ -360,7 +362,7 @@ export async function handleBo(request, env, url) {
       let keys;
       if (b.slot) { if (!slotOf(b.slot)) throw new Error("asset_slot_invalid"); keys = [slotKey(b.slot)]; }
       else {
-        if (!["full", "face", "regions"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
+        if (!["full", "face", "regions", "combined"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
         keys = b.kind === "full" ? [artKey(b.char, b.skin, "full"), artKey(b.char, b.skin, "thumb")] : [artKey(b.char, b.skin, b.kind)];
       }
       await rpc(env, "bo_asset_revert", { p_staff: st.id, p_key: keys[0] });
@@ -530,6 +532,8 @@ export async function handleBo(request, env, url) {
       const of = await body(request);
       if (!/^[A-Z0-9_]{2,40}$/.test(String(of.id ?? ""))) throw new Error("id_invalid");
       if (!of.price_gold && !of.price_krw) throw new Error("price_required");
+      const cat = await rpc(env, "bo_catalog", {});
+      offerRule((cat.items ?? []).find((x) => x.id === of.item_id)?.kind, of);
       await rpc(env, "bo_offer_upsert", { p_offer: of, p_staff: st.id });
       return json({ ok: true });
     }

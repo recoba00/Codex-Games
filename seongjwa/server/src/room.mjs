@@ -14,7 +14,8 @@ import { settleEconomy } from "./econ-db.mjs";
 import { sha256Hex } from "./tokens.mjs";
 import { rpc } from "./db.mjs";
 import { cupRewardCfg } from "./cup.mjs";
-import { MASTERY_PAIR, masteryCfg, masteryTiers } from "./mastery.mjs";
+import { masteryDbCfg, masteryTiers } from "./mastery.mjs";
+import { frameOf, masterTierNo } from "./badges.mjs";
 
 export const PREP = Object.freeze({ ban_sec: 10, pick_sec: 15, loadout_sec: 15, grace_ms: 500 });
 const LOBBY_TTL_MS = 30 * 60 * 1000;
@@ -317,9 +318,13 @@ export class FriendRoom extends DurableObject {
     });
     const accs = room.members.filter((m) => !m.ai && m.acc).map((m) => m.acc);
     const mast = accs.length && this.env.SUPABASE_URL ? await rpc(this.env, "mastery_get", { p_accounts: accs }).catch(() => ({})) : {};
+    const season = room.seasonId ?? (accs.length && this.env.SUPABASE_URL ? (await currentSeason(this.env).catch(() => null))?.id : null);
+    const badges = season ? await rpc(this.env, "badges_get", { p_accounts: accs, p_season: season, p_master_tier: masterTierNo(pinned.snapshot) }).catch(() => ({})) : {};
     room.game = {
       id: crypto.randomUUID(), startedAt: now, dataVersion: pinned.version, data: pinned.snapshot,
       mastery: room.members.map((m) => (m.ai ? {} : masteryTiers(mast?.[m.acc] ?? {}, pinned.snapshot))),  // 숙련도 단계(능력치 영향 없음)
+      // 카드 프레임 = 현재 티어, 홀로 연출 = 계정 속성(LoL식 정리). AI는 표시 티어(랭킹 AI) 또는 브론즈, 홀로 없음
+      frames: room.members.map((m) => (m.ai ? frameOf(pinned.snapshot, { cur: { tier_no: m.tier ?? room.members.find((x) => !x.ai)?.tier ?? 1 } }) : frameOf(pinned.snapshot, badges?.[m.acc]))),
       bans: [null, null], picks: [null, null], loadouts: [null, null],
       battle: null, deadline: [0, 0], timebank: [0, 0], away: [null, null], warned: [0, 0], log: []
     };
@@ -550,9 +555,9 @@ export class FriendRoom extends DurableObject {
       const rows = [0, 1].map((s) => {
         const mine = s === 0 ? "a" : "b";
         const leftSide = ["leave", "afk"].includes(reason) && outcome !== mine && outcome !== "draw";
-        return { acc: room.members[s].acc, char: g.picks[s], result: leftSide ? "leave" : outcome === "draw" ? "draw" : outcome === mine ? "win" : "loss" };
+        return { acc: room.members[s].acc, char: g.picks[s], name: g.data.characters?.[g.picks[s]]?.name ?? "", result: leftSide ? "leave" : outcome === "draw" ? "draw" : outcome === mine ? "win" : "loss" };
       });
-      (room.mastery ??= []).push({ tries: 0, next: now, job: { matchId: g.id, rows, early, cfg: { win_bonus: masteryCfg(g.data).winBonus, pair_days: MASTERY_PAIR.days, pair_games: MASTERY_PAIR.games, pair_early: MASTERY_PAIR.early } } });
+      (room.mastery ??= []).push({ tries: 0, next: now, job: { matchId: g.id, rows, early, cfg: masteryDbCfg(g.data) } });
     }
     if (mode === "cup" && outcome !== "void") {  // 컵 성적(상세 08): 랭크·골드 영향 없음, 7승·3패에서 끝나면 서버가 보상 우편
       const left = ["leave", "afk"].includes(reason);
@@ -739,6 +744,8 @@ export class FriendRoom extends DurableObject {
       oppPick: ["loadout", "battle"].includes(r.phase) ? g.picks[1 - seat] : null,  // 픽은 동시·비공개, 스펠·덱 단계에서 공개
       // 숙련도 테두리(기획지시 숙련도): 내 것은 언제나, 상대 것은 픽 공개 뒤 그 캐릭터만(밴 단계엔 보내지 않음)
       mastery: { mine: g.mastery?.[seat] ?? {}, opp: ["loadout", "battle"].includes(r.phase) && g.picks[1 - seat] ? { [g.picks[1 - seat]]: g.mastery?.[1 - seat]?.[g.picks[1 - seat]] ?? 1 } : {} },
+      // 티어 프레임·홀로 연출: 내 것은 언제나, 상대 것은 픽 공개 뒤(밴·픽 단계 null)
+      frame: { mine: g.frames?.[seat] ?? null, opp: ["loadout", "battle"].includes(r.phase) && g.picks[1 - seat] ? g.frames?.[1 - seat] ?? null : null },
       myLoadout: g.loadouts[seat] ? { spells: g.loadouts[seat].spells, preset: g.loadouts[seat].preset } : null,
       oppLoadoutDone: Boolean(g.loadouts[1 - seat])
     };
