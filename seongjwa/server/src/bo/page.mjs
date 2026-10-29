@@ -235,19 +235,35 @@ V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bind
  if(cur.full&&$('aReg'))loadImg(d.base+cur.full.path).then(function(img){var R={card:cur.card,face:cur.faceRect};regionEditor(img,cur.full.w,cur.full.h,R);
   if($('aRegSave'))$('aRegSave').onclick=function(){api('/assets/regions',{char:T.ach,skin:T.askin,card:R.card,face:R.face}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
 
-/* 카드 배경: 진영 기본 배경(CARD_BG_*) 또는 "기본 배경 사용 안 함" → 배경+캐릭터 합본(전신과 같은 9:16·같은 위치). 전신(단일 PNG)은 그대로 따로 */
+/* 카드 배경 3가지(기획지시 2026-10-30 배경방식): 기본(진영 슬롯) / 컬러(12색, 세로 그라데이션) / 합본(배경+캐릭터 한 장). 방식을 바꿔도 다른 방식의 파일·색은 그대로 */
 var BG_OF={'불':'CARD_BG_FIRE','물':'CARD_BG_WATER','바람':'CARD_BG_WIND'};
-function bgCard(d,c,cur,ed,K){var slot=BG_OF[c.faction]||'CARD_BG_NEUTRAL',key=c.id+':'+T.askin,useDef=!cur.combined&&T.noDefBg!==key,bg=(d.assets.slots||{})[slot];
- return '<div class="card" style="margin-bottom:14px"><h3>카드 배경</h3><label class="row" style="gap:8px"><input type="checkbox" id="aUseBg"'+(useDef?' checked':'')+(ed?'':' disabled')+'> 진영 기본 배경 사용 ('+esc(c.faction||'-')+' → '+slot+')</label>'
- +(useDef?'<div class="row" style="margin-top:8px;align-items:flex-end;gap:16px"><div><div class="small muted">기본 배경</div>'+aImg(bg,160)+'</div><div class="small muted" style="max-width:260px">카드 그림 창에는 이 배경 위에 전신(투명 PNG)을 카드 영역대로 얹어요. 배경 파일은 슬롯 목록의 \'카드 배경\'에서 바꿔요.</div></div>'
-  :'<p class="small muted" style="margin:8px 0">배경과 캐릭터가 한 장에 그려진 합본을 올려요. 전신과 같은 9:16·같은 위치로 그려야 카드 영역이 맞아요. 전신(캐릭터만 있는 PNG)은 위에서 따로 올려 밴픽·얼굴에 써요.</p>'
-  +'<div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">합본(배경+캐릭터)</div>'+aImg(cur.combined,220)+'</div><div class="small">'+(cur.combined?cur.combined.w+'×'+cur.combined.h+' · '+kb(cur.combined.bytes)+' '+metaLine(K('combined')):'아직 없음 → 기본 배경을 써요')+'</div></div>'
-  +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">합본 올리기<input type="file" id="aComb" accept="image/png,image/webp,image/jpeg" hidden></label>'+revBtn('aCombRev','slot:ART_'+c.id+'_'+T.askin+'_COMBINED','합본 이전 파일로')+'</div>':''))
- +'<div id="aPrepBg"></div></div>'}
-function bindBg(d,cur,ch){var key=T.ach+':'+T.askin;
- if($('aUseBg'))$('aUseBg').onchange=function(e){if(!e.target.checked){T.noDefBg=key;render();return}
-  if(!cur.combined){T.noDefBg=null;render();return}
-  ask('합본을 빼고 진영 기본 배경을 쓸까요? (합본은 직전 파일로 남아 되돌릴 수 있어요)').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'combined'})}).then(function(){T.noDefBg=null;toast('기본 배경으로');render()}).catch(function(er){e.target.checked=false;fail(er)})};
+var BG_PAL=['#C8452E','#2E6FC8','#2EA06A','#D9A32B','#8E44AD','#E06A9A','#1FA3A3','#6B7A8F','#3B3F8C','#8A5A2B','#B83A3A','#2B2B33'];  /* 가안: 불·물·바람 + 9색, 디자인 시안 후 확정 */
+function darken(hex,p){var n=parseInt(hex.slice(1),16),f=function(x){return Math.round(x*(1-p))};return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
+function bgModeOf(cur){var o=cur.bgOpt||{};return {mode:o.mode||(cur.combined?'combined':'faction'),color:o.color||null}}
+/* 미리보기: 카드 그림 창(3:4) = 배경층 + 전신을 카드 영역대로 */
+function cardPreview(d,cur,slotBg,m,W){W=W||150;var H=Math.round(W*4/3),c=cur.card,f=cur.full,layers=[];
+ var place=function(img){if(!img||!img.path)return null;if(!c)return 'url('+d.base+img.path+') center/contain no-repeat';var sw=W/c.w,sh=sw*img.h/img.w;return 'url('+d.base+img.path+') '+(-c.x*sw).toFixed(1)+'px '+(-c.y*sh).toFixed(1)+'px/'+sw.toFixed(1)+'px '+sh.toFixed(1)+'px no-repeat'};
+ if(m.mode==='combined'&&cur.combined)layers.push(place(cur.combined));
+ else{if(f)layers.push(place(f));if(m.mode==='color'&&m.color)layers.push('linear-gradient(180deg,'+m.color+','+darken(m.color,0.35)+')');else if(slotBg&&slotBg.path)layers.push('url('+d.base+slotBg.path+') center/cover no-repeat');else layers.push('#556')}
+ return '<div style="width:'+W+'px;height:'+H+'px;border-radius:8px;border:1px solid var(--line);background:'+layers.filter(Boolean).join(',')+'"></div>'}
+function bgCard(d,c,cur,ed,K){var slot=BG_OF[c.faction]||'CARD_BG_NEUTRAL',bg=(d.assets.slots||{})[slot],m=bgModeOf(cur);if(T.bgPick&&T.bgPick.key===c.id+':'+T.askin)m={mode:T.bgPick.mode,color:T.bgPick.color||m.color};
+ var radio=function(v,l){return '<label class="row" style="gap:6px"><input type="radio" name="aBgMode" value="'+v+'"'+(m.mode===v?' checked':'')+(ed?'':' disabled')+'> '+l+'</label>'};
+ var warn=m.mode==='combined'&&!cur.combined?'<div class="note" style="margin-top:6px">합본이 아직 없어 게임에는 진영 기본 배경으로 보여요.</div>':m.mode==='color'&&!m.color?'<div class="note" style="margin-top:6px">색을 골라 주세요.</div>':'';
+ return '<div class="card" style="margin-bottom:14px"><h3>카드 배경</h3><div class="row" style="gap:14px">'+radio('faction','기본(진영: '+esc(c.faction||'-')+')')+radio('color','컬러 선택')+radio('combined','합본')+'</div>'
+ +'<div class="row" style="margin-top:10px;align-items:flex-start;gap:16px"><div><div class="small muted">미리보기(카드 그림 창)</div>'+cardPreview(d,cur,bg,m)+'</div><div style="flex:1;min-width:200px">'
+ +(m.mode==='faction'?'<div class="small muted">진영 기본 배경 '+slot+' 위에 전신(투명)을 카드 영역대로 얹어요. 배경 파일은 슬롯 목록의 \'카드\' 묶음에서 바꿔요.</div>':'')
+ +(m.mode==='color'?'<div class="small muted" style="margin-bottom:6px">위에서 아래로 고른 색 → 같은 색 35% 어둡게(가안).</div><div class="row" style="gap:6px;flex-wrap:wrap">'+BG_PAL.map(function(h){return '<button class="btn sm" data-bgc="'+h+'" title="'+h+'" style="width:34px;height:34px;padding:0;background:'+h+';border:'+(m.color===h?'3px solid var(--ink)':'1px solid var(--line)')+'"'+(ed?'':' disabled')+'></button>'}).join('')+'</div>':'')
+ +(m.mode==='combined'?'<div class="small muted" style="margin-bottom:6px">배경과 캐릭터가 한 장에 그려진 합본. 전신과 같은 9:16·같은 위치로 그려야 카드 영역이 맞아요. 전신(캐릭터만)은 위에서 따로 올려 밴픽·얼굴에 써요.</div>'
+   +'<div class="row" style="align-items:flex-end;gap:12px"><div>'+aImg(cur.combined,160)+'</div><div class="small">'+(cur.combined?cur.combined.w+'×'+cur.combined.h+' · '+kb(cur.combined.bytes)+' '+metaLine(K('combined')):'아직 없음')+'</div></div>'
+   +(ed?'<div class="row" style="margin-top:8px"><label class="btn pri sm">합본 올리기<input type="file" id="aComb" accept="image/png,image/webp,image/jpeg" hidden></label>'+revBtn('aCombRev','slot:ART_'+c.id+'_'+T.askin+'_COMBINED','합본 이전 파일로')+'</div>':''):'')
+ +warn+(ed?'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aBgSave">배경 방식 저장</button>'+revBtn('aBgRev','slot:ART_'+c.id+'_'+T.askin+'_BG','이전 방식으로')+' '+metaLine('slot:ART_'+c.id+'_'+T.askin+'_BG')+'</div>':'')
+ +'</div></div><div id="aPrepBg"></div></div>'}
+function bindBg(d,cur,ch){var key=T.ach+':'+T.askin,m=bgModeOf(cur);
+ var pick=function(mode,color){T.bgPick={key:key,mode:mode,color:color||(T.bgPick&&T.bgPick.key===key?T.bgPick.color:null)||m.color};render()};
+ document.querySelectorAll('input[name="aBgMode"]').forEach(function(r){r.onchange=function(){pick(r.value)}});
+ document.querySelectorAll('[data-bgc]').forEach(function(b){b.onclick=function(){pick('color',b.dataset.bgc)}});
+ if($('aBgSave'))$('aBgSave').onclick=function(){var p=T.bgPick&&T.bgPick.key===key?T.bgPick:m;api('/assets/bg',{char:T.ach,skin:T.askin,mode:p.mode,color:p.mode==='color'?p.color:undefined}).then(function(){T.bgPick=null;toast('배경 방식 저장');render()}).catch(fail)};
+ if($('aBgRev'))$('aBgRev').onclick=function(){ask('배경 방식을 직전 값으로 되돌릴까요?').then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:'bg'})}).then(function(){T.bgPick=null;toast('되돌렸어요');render()}).catch(fail)};
  if($('aComb'))$('aComb').onchange=function(e){var f=e.target.files[0];if(!f)return;askUpload(f,'combined',null,function(P){return upload(P.blob,upQ('combined',ch))},'aPrepBg')};
  if($('aCombRev'))$('aCombRev').onclick=function(){ask('합본을 직전 파일로 되돌릴까요?').then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:'combined'})}).then(function(){toast('되돌렸어요');render()}).catch(fail)}}
 

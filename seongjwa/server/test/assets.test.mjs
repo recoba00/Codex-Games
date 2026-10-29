@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { artKey, assetManifest, checkRegions, checkUpload, shapeAssets, SLOTS, slotOf, webpInfo } from "../src/assets.mjs";
+import { artKey, assetManifest, bgOf, checkBg, checkRegions, checkUpload, shapeAssets, SLOTS, slotOf, webpInfo } from "../src/assets.mjs";
 
 const f = (n) => readFileSync(new URL(`./fixtures/assets/${n}`, import.meta.url));
 
@@ -74,5 +74,13 @@ test("클라이언트 목록: 공개 주소 + 해시 이름, 없는 슬롯은 �
   assert.deepEqual([m2.art.AU["000"].bg, m2.art.AU["000"].combined.path], ["combined", "art/AU_000_combined.c.webp"]);
   assert.equal(assetManifest(shaped, { SUPABASE_URL: "x" }, { AU: "물" }).art.AU["000"].bg, "CARD_BG_WATER");
   assert.equal(artKey("SE", "001", "combined"), "slot:ART_SE_001_COMBINED");
+  // 배경 3가지(기획지시 배경방식): 방식 값 없는 옛 스킨은 합본 있으면 combined, 고른 방식 파일·색이 없으면 진영 배경으로 대체
+  assert.deepEqual(bgOf({}, "CARD_BG_FIRE"), { bg: "CARD_BG_FIRE", bgMode: "faction", bgColor: null, bgSlot: "CARD_BG_FIRE" });
+  assert.deepEqual(bgOf({ bgOpt: { mode: "color", color: "#112233" } }, "S"), { bg: "color", bgMode: "color", bgColor: "#112233", bgSlot: "S" });
+  assert.equal(bgOf({ bgOpt: { mode: "combined" } }, "S").bg, "S", "합본 없으면 진영");
+  assert.equal(bgOf({ combined: { path: "x" }, bgOpt: { mode: "faction" } }, "S").bg, "S", "합본이 있어도 기본을 고르면 진영");
+  assert.equal(shapeAssets({ "slot:ART_AU_000_BG": { cur: { mode: "color", color: "#ABCDEF" } } }).art.AU["000"].bgOpt.color, "#ABCDEF");
+  assert.throws(() => checkBg("color", "red"), /value_invalid/);
+  assert.deepEqual(checkBg("color", "#abcdef"), { mode: "color", color: "#ABCDEF" });
   checkUpload("combined", webpInfo(f("full_1080.webp")), 10000);
 });

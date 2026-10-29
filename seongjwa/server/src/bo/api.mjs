@@ -9,7 +9,7 @@ import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
 import { offerRule } from "../shop-rules.mjs";
 import { cupRewardCfg, cupWindow } from "../cup.mjs";
-import { ART, SLOTS, artKey, assetPath, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storagePut, webpInfo } from "../assets.mjs";
+import { ART, SLOTS, artKey, checkBg, assetPath, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storagePut, webpInfo } from "../assets.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -357,13 +357,24 @@ export async function handleBo(request, env, url) {
       dropAssetCache();
       return json({ ok: true });
     }
+    case "POST /assets/bg": {  // { char, skin, mode: faction|color|combined, color: "#RRGGBB" } 카드 배경 방식(기획지시 배경방식). 다른 방식의 파일·색은 그대로 둠
+      const st = await staffOf(request, env); allow(st, "data_edit");
+      const b = await body(request);
+      if (!/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? "000"))) throw new Error("value_invalid");
+      const cur = shapeAssets(await rpc(env, "asset_list", {})).art?.[b.char]?.[String(b.skin ?? "000")]?.bgOpt ?? {};
+      const v = checkBg(String(b.mode ?? ""), b.color || cur.color || null);  // 색을 안 보내면 전에 고른 색 유지
+      await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(b.char, String(b.skin ?? "000"), "bg"), p_value: v,
+        p_action: `카드 배경 방식: ${{ faction: "기본(진영)", color: "컬러", combined: "합본" }[v.mode]}${v.color ? " " + v.color : ""}`, p_detail: v });
+      dropAssetCache();
+      return json({ ok: true, ...v });
+    }
     case "POST /assets/revert": {  // { slot } 또는 { char, skin, kind: "full"|"face"|"regions" } 이전 파일로 되돌리기(전신은 밴픽 축소본도 함께)
       const st = await staffOf(request, env); allow(st, "data_edit");
       const b = await body(request);
       let keys;
       if (b.slot) { if (!slotOf(b.slot)) throw new Error("asset_slot_invalid"); keys = [slotKey(b.slot)]; }
       else {
-        if (!["full", "face", "regions", "combined"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
+        if (!["full", "face", "regions", "combined", "bg"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
         keys = b.kind === "full" ? [artKey(b.char, b.skin, "full"), artKey(b.char, b.skin, "thumb")] : [artKey(b.char, b.skin, b.kind)];
       }
       await rpc(env, "bo_asset_revert", { p_staff: st.id, p_key: keys[0] });

@@ -113,6 +113,16 @@ try {
   assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].combined], ["CARD_BG_FIRE", null], "아우렐(불) 기본 배경");
   await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "combined" }, admin));
   assert.equal((await ok(call("/v1/assets"))).art.AU["000"].bg, "combined");
+  // 배경 방식(기획지시 배경방식): 컬러로 바꿔도 합본 파일은 그대로, 다시 합본으로 돌아오면 합본
+  await err(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color" }, admin), "value_invalid");
+  await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color", color: "#1fa3a3" }, admin));
+  mm = await ok(call("/v1/assets"));
+  assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].bgColor, Boolean(mm.art.AU["000"].combined)], ["color", "#1FA3A3", true]);
+  await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "combined" }, admin));
+  mm = await ok(call("/v1/assets"));
+  assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].bgMode], ["combined", "combined"]);
+  await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color" }, admin));  // 색을 안 보내면 전에 고른 색 유지
+  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].bgColor, "#1FA3A3");
   const audit = await sql("select action from public.audit_log where target like '에셋 %' order by id desc limit 20");
   assert.ok(audit.some((a) => a.action === "이전 파일로 되돌리기") && audit.some((a) => a.action === "슬롯 파일 교체"));
   step("게임 목록 바로 반영(ETag 304), xlsx 배포와 무관, 직전 파일 되돌리기(한 번 더 = 원복), 빼기 되돌리기, 합본(기본 배경 안 씀)·진영 기본 배경, 감사 로그");
@@ -185,11 +195,17 @@ try {
   await page.waitForFunction(() => document.body.textContent.includes("카드 영역 지정됨"));
   await page.waitForSelector("#rgFull"); await page.locator("#aReg").scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_regions.png` });
-  // 카드 배경: 기본 배경 해제 → 합본 올리기 칸, 다시 켜면 기본 배경
-  await page.uncheck("#aUseBg");
+  // 카드 배경 3가지(기획지시 배경방식): 합본 → 업로드 칸, 컬러 → 칩 고르기 → 저장
+  await page.check('input[name="aBgMode"][value="combined"]');
   await page.waitForSelector("#aComb", { state: "attached" });
-  await page.check("#aUseBg");
-  await page.waitForFunction(() => !document.querySelector("#aComb"));
+  await page.check('input[name="aBgMode"][value="color"]');
+  await page.click('[data-bgc="#8E44AD"]');
+  await page.click("#aBgSave");
+  for (let i = 0; i < 20 && (await ok(call("/v1/assets"))).art.SE?.["000"]?.bg !== "color"; i += 1) await sleep(200);
+  await page.waitForSelector('[data-bgc="#8E44AD"]'); await page.locator("#aBgSave").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_card_bg.png` });
+  const seBg = (await ok(call("/v1/assets"))).art.SE["000"];
+  assert.deepEqual([seBg.bg, seBg.bgMode, seBg.bgColor, seBg.bgSlot], ["color", "color", "#8E44AD", "CARD_BG_WATER"], JSON.stringify(seBg));
   await page.click('[data-askin="000"]');
   await page.fill("#aSkinNew", "001"); await page.click("#aSkinAdd");
   await page.waitForFunction(() => document.body.textContent.includes("스킨 001 이미지"));

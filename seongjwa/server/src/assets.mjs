@@ -114,9 +114,17 @@ export async function storagePut(env, path, bytes, fetcher = fetch) {
 }
 
 export const slotKey = (id) => `slot:${id}`;
-// combined(배경+캐릭터 합본, "기본 배경 사용 안 함")은 표 키 규칙상 slot 이름공간에 둔다: slot:ART_<캐릭터>_<스킨>_COMBINED
-export const artKey = (ch, skin, kind) => (kind === "combined" ? `slot:ART_${ch}_${skin}_COMBINED` : `art:${ch}:${skin}:${kind}`);
-const COMBINED_RE = /^ART_([A-Z]{2,3})_(\d{3})_COMBINED$/;
+// 표 키 규칙상 slot 이름공간에 두는 스킨별 값: 합본 이미지 slot:ART_<캐릭터>_<스킨>_COMBINED, 배경 방식 slot:ART_<캐릭터>_<스킨>_BG({mode, color})
+export const artKey = (ch, skin, kind) => (kind === "combined" ? `slot:ART_${ch}_${skin}_COMBINED` : kind === "bg" ? `slot:ART_${ch}_${skin}_BG` : `art:${ch}:${skin}:${kind}`);
+const ART_SLOT_RE = /^ART_([A-Z]{2,3})_(\d{3})_(COMBINED|BG)$/;
+// 캐릭터 카드 배경 3가지(기획지시 2026-10-30 배경방식): faction(진영 슬롯, 기본) / color(#RRGGBB 세로 그라데이션) / combined(합본)
+export const BG_MODES = ["faction", "color", "combined"];
+export function checkBg(mode, color) {
+  if (!BG_MODES.includes(mode)) throw new Error("value_invalid");
+  if (color != null && color !== "" && !/^#[0-9A-Fa-f]{6}$/.test(String(color))) throw new Error("value_invalid");
+  if (mode === "color" && !color) throw new Error("value_invalid");
+  return { mode, color: color ? String(color).toUpperCase() : null };
+}
 // 캐릭터 카드 기본 배경: 진영별 슬롯(불·물·바람). 합본이 있으면 합본을 쓴다
 export const FACTION_BG = { "불": "CARD_BG_FIRE", "물": "CARD_BG_WATER", "바람": "CARD_BG_WIND" };
 
@@ -127,8 +135,8 @@ export function shapeAssets(rows = {}, pick = "cur") {
     const v = r?.[pick];
     if (!v) continue;
     const p = key.split(":");
-    const cm = p[0] === "slot" ? p[1].match(COMBINED_RE) : null;
-    if (cm) ((art[cm[1]] ??= {})[cm[2]] ??= {}).combined = v;
+    const cm = p[0] === "slot" ? p[1].match(ART_SLOT_RE) : null;
+    if (cm) ((art[cm[1]] ??= {})[cm[2]] ??= {})[cm[3] === "BG" ? "bgOpt" : "combined"] = v;
     else if (p[0] === "slot") slots[p[1]] = v;
     else if (p[0] === "art") {
       const s = ((art[p[1]] ??= {})[p[2]] ??= {});
@@ -160,10 +168,19 @@ export function assetManifest(shaped, env, factions = {}) {
   for (const [ch, skins] of Object.entries(shaped?.art ?? {})) {
     for (const [skin, a] of Object.entries(skins)) {
       if (!a.full) continue;  // 전신이 없는 스킨은 내보내지 않음
-      // bg: 카드 그림 창 배경. "combined" = 합본 이미지(배경+캐릭터)를 카드 영역으로 잘라 씀, 아니면 진영 기본 배경 슬롯 위에 전신(투명)을 얹음
       (art[ch] ??= {})[skin] = { full: file(a.full), thumb: file(a.thumb), face: file(a.face), combined: file(a.combined), card: a.card ?? null, faceRect: a.faceRect ?? null,
-        bg: a.combined ? "combined" : FACTION_BG[factions[ch]] ?? "CARD_BG_NEUTRAL" };
+        ...bgOf(a, FACTION_BG[factions[ch]] ?? "CARD_BG_NEUTRAL") };
     }
   }
   return { base, slots, art };
+}
+
+// 카드 배경(기획지시 배경방식): bgMode = 고른 방식, bg = 실제로 그릴 것("combined" | "color" | 진영 슬롯 ID, 27차 bg와 같은 자리·호환),
+// bgColor = color일 때 #RRGGBB, bgSlot = 진영 슬롯(언제나, 대체용). 고른 방식의 파일·색이 없으면 진영 배경으로 대체.
+// 방식 값이 없던 옛 스킨: 합본이 있으면 combined(27차 동작 그대로), 없으면 faction
+export function bgOf(a, slot) {
+  const mode = a?.bgOpt?.mode ?? (a?.combined ? "combined" : "faction");
+  const color = a?.bgOpt?.color ?? null;
+  const bg = mode === "combined" && a?.combined ? "combined" : mode === "color" && color ? "color" : slot;
+  return { bg, bgMode: mode, bgColor: bg === "color" ? color : null, bgSlot: slot };
 }
