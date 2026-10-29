@@ -16,7 +16,10 @@ test("슬롯 74개(상세 14 표 + 티어 프레임 7 + 카드 일러스트 16),
   assert.equal(SLOTS.length, 74);
   assert.equal(new Set(SLOTS.map((s) => s.id)).size, 74);
   assert.deepEqual([slotOf("CARD_ART_C16").w, slotOf("CARD_ART_C16").h, slotOf("CARD_ART_C01").alpha, slotOf("CARD_ART_C17")], [800, 1120, false, null]);
-  assert.deepEqual([slotOf("MASTERY_3").w, slotOf("MASTERY_3").h, slotOf("FRAME_LEGEND").w, slotOf("FRAME_LEGEND").h, slotOf("RARITY_EPIC")], [256, 256, 800, 1120, null]);
+  assert.deepEqual([slotOf("MASTERY_3").w, slotOf("MASTERY_3").h, slotOf("FRAME_LEGEND").w, slotOf("FRAME_LEGEND").h, slotOf("RARITY_EPIC")], [256, 256, 928, 1248, null]);
+  assert.deepEqual([slotOf("CARD_FRAME").w, slotOf("CARD_ART_C01").group], [800, "카드 일러스트"], "티어 프레임만 928×1248(기획지시 프레임여백)");
+  checkUpload("slot", { w: 928, h: 1248 }, 10, slotOf("FRAME_GOLD"));
+  assert.throws(() => checkUpload("slot", { w: 800, h: 1120 }, 10, slotOf("FRAME_GOLD")), /asset_spec/);
   assert.deepEqual([slotOf("TIER_GOLD").w, slotOf("STATUS_BURN").w, slotOf("CARD_BACK").h, slotOf("BG_LOBBY").w], [512, 256, 1120, 2560]);
   assert.equal(slotOf("BG_BATTLE").alpha, false);
   assert.ok(SLOTS.every((s) => s.w % 4 === 0 && s.h % 4 === 0), "모두 4의 배수");
