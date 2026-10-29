@@ -12,9 +12,10 @@ test("WebP 헤더: 손실(VP8)·무손실(VP8L)·확장(VP8X, 알파) 크기 읽
   assert.equal(webpInfo(new TextEncoder().encode("‰PNG not webp at all, padding padding")), null);
 });
 
-test("슬롯 58개(상세 14 표 + 티어 프레임 7), 규격: 엠블럼 512, 아이콘·숙련도 뱃지 256, 카드 관련 800×1120, 배경 2560×1440", () => {
-  assert.equal(SLOTS.length, 58);
-  assert.equal(new Set(SLOTS.map((s) => s.id)).size, 58);
+test("슬롯 74개(상세 14 표 + 티어 프레임 7 + 카드 일러스트 16), 규격: 엠블럼 512, 아이콘·숙련도 뱃지 256, 카드 관련 800×1120, 배경 2560×1440", () => {
+  assert.equal(SLOTS.length, 74);
+  assert.equal(new Set(SLOTS.map((s) => s.id)).size, 74);
+  assert.deepEqual([slotOf("CARD_ART_C16").w, slotOf("CARD_ART_C16").h, slotOf("CARD_ART_C01").alpha, slotOf("CARD_ART_C17")], [800, 1120, false, null]);
   assert.deepEqual([slotOf("MASTERY_3").w, slotOf("MASTERY_3").h, slotOf("FRAME_LEGEND").w, slotOf("FRAME_LEGEND").h, slotOf("RARITY_EPIC")], [256, 256, 800, 1120, null]);
   assert.deepEqual([slotOf("TIER_GOLD").w, slotOf("STATUS_BURN").w, slotOf("CARD_BACK").h, slotOf("BG_LOBBY").w], [512, 256, 1120, 2560]);
   assert.equal(slotOf("BG_BATTLE").alpha, false);

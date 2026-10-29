@@ -297,7 +297,7 @@ export async function handleBo(request, env, url) {
       const rows = await rpc(env, "asset_list", {});
       const stat = (c) => ({ hp: c.hp, atk: c.atk, def: c.def, spd: c.spd, crit: c.crit });
       return json({ ok: true, live: version, editable: (PERMS.data_edit ?? []).includes(st.role), base: publicBase(env),
-        spec: { art: ART, slots: SLOTS, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), faceMaxKb: Number(live?.settings?.asset_face_max_kb ?? 100) },
+        spec: { art: ART, slots: SLOTS, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), faceMaxKb: Number(live?.settings?.asset_face_max_kb ?? 100), cardMaxKb: Number(live?.settings?.asset_card_max_kb ?? 300) },
         characters: Object.entries(live?.characters ?? {}).map(([id, c]) => ({ id, name: c.name, faction: c.faction, stats: stat(c) })),
         assets: { slots: shapeAssets(rows).slots }, art: shapeAssets(rows).art, prev: shapeAssets(rows, "prev"), meta: Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, { at: r.at, by: r.by, hasPrev: Boolean(r.prev) }])),
         usage: await assetUsage(env) });
@@ -324,7 +324,8 @@ export async function handleBo(request, env, url) {
       await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: kind === "slot" ? slotKey(slot.id) : artKey(ch, skin, kind), p_value: value,
         p_action: kind === "slot" ? "슬롯 파일 교체" : kind === "combined" ? "합본 이미지 교체(배경+캐릭터, 기본 배경 안 씀)" : `캐릭터 이미지 교체(${kind})`, p_detail: { path, bytes: bytes.length, w: info.w, h: info.h } });
       dropAssetCache();
-      const capKb = kind === "face" ? Number(live?.settings?.asset_face_max_kb ?? 100) : ["full", "combined"].includes(kind) ? Number(live?.settings?.asset_full_max_kb ?? 1024) : null;
+      const capKb = kind === "face" ? Number(live?.settings?.asset_face_max_kb ?? 100) : ["full", "combined"].includes(kind) ? Number(live?.settings?.asset_full_max_kb ?? 1024)
+        : slot?.id.startsWith("CARD_ART_") ? Number(live?.settings?.asset_card_max_kb ?? 300) : null;  // 카드 일러스트 800×1120은 전신보다 작아 별도 키(기본 300KB, 경고만)
       const warnings = capKb && bytes.length > capKb * 1024 ? [`${kind} ${Math.round(bytes.length / 1024)}KB — 목표 ${capKb}KB 초과(상세 14)`] : [];
       return json({ ok: true, path, url: publicBase(env) + path, ...value, warnings });
     }

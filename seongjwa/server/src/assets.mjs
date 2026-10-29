@@ -29,6 +29,8 @@ export const SLOTS = Object.freeze([
     .map(([k, n]) => S(`KIND_${k}`, "카드", `카드 종류 아이콘 ${n}`, 256, 256, true)),
   ...[["FIRE", "불"], ["WATER", "물"], ["WIND", "바람"], ["NEUTRAL", "중립"]].map(([k, n]) => S(`CARD_BG_${k}`, "카드", `카드 배경 ${n}`, ...CARD, "corners")),
   S("CARD_FRAME", "카드", "전투카드 틀", ...CARD, true), S("CARD_BACK", "카드", "카드 뒷면", ...CARD, "corners"),
+  // 공용 전투카드 일러스트(기획지시 2026-10-29 전투카드일러): 카드 ID와 같은 번호, 불투명, 글자 없음. 없으면 게임이 CARD_BG_NEUTRAL + KIND_* 중앙 심볼로 대체
+  ...Array.from({ length: 16 }, (_, i) => `C${String(i + 1).padStart(2, "0")}`).map((id) => S(`CARD_ART_${id}`, "카드", `카드 일러스트 ${id}`, ...CARD, false)),
   S("SKILL_FRAME_PASSIVE", "카드", "스킬 아이콘 프레임 패시브", 256, 256, true), S("SKILL_FRAME_ACTIVE", "카드", "스킬 아이콘 프레임 액티브", 256, 256, true),
   ...[["BANNED", "밴됨"], ["LOCKED", "잠긴 스킨"], ["OPP_PICK", "상대 선택"]].map(([k, n]) => S(`OVERLAY_${k}`, "카드", `상태 오버레이 ${n}`, ...CARD, true)),
   ...[["SHIELD", "실드"], ["SILENCE", "침묵"], ["IMMUNE", "면역"], ["WEAKEN", "약화"], ["ATK_UP", "공격 강화"], ["BURN", "작열"], ["MARK", "표식"],
