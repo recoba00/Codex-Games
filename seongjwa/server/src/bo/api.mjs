@@ -305,7 +305,7 @@ export async function handleBo(request, env, url) {
       return json({ ok: true, live: version, editable: (PERMS.data_edit ?? []).includes(st.role), base: publicBase(env),
         spec: { art: ART, slots: SLOTS, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), faceMaxKb: Number(live?.settings?.asset_face_max_kb ?? 100), cardMaxKb: Number(live?.settings?.asset_card_max_kb ?? 300) },
         characters: Object.entries(live?.characters ?? {}).map(([id, c]) => ({ id, name: c.name, faction: c.faction, stats: stat(c) })),
-        cards: Object.fromEntries(Object.entries(live?.cards ?? {}).map(([id, c]) => [id, { name: c.name, kind: c.kind, cost: c.cost }])),  // 카드 일러스트 슬롯 표시(기획지시 카드명표시)
+        cards: Object.fromEntries(Object.entries(live?.cards ?? {}).map(([id, c]) => [id, { name: c.name, kind: c.kind, cost: c.cost, phase: c.phase, owner: c.owner_character ?? null, text: c.effect_text ?? "" }])),  // 카드 일러스트 슬롯 표시(기획지시 카드명표시)
         assets: { slots: shapeAssets(rows).slots }, art: shapeAssets(rows).art, prev: shapeAssets(rows, "prev"), meta: Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, { at: r.at, by: r.by, hasPrev: Boolean(r.prev) }])),
         usage: await assetUsage(env) });
     }
