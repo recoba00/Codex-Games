@@ -179,6 +179,10 @@ function bindVer(){}
 function metaOf(key){return (T.ad.meta||{})[key]||{}}
 function metaLine(key){var m=metaOf(key);return m.at?'<span class="small muted">'+fmt(m.at)+(m.by?' · '+esc(m.by):'')+'</span>':''}
 function revBtn(id,key,label){return T.ad.editable&&metaOf(key).hasPrev?'<button class="btn sm" id="'+id+'">↶ '+(label||'이전 파일로 되돌리기')+'</button>':''}
+/* 슬롯 표시 이름: 카드 일러스트는 "베기 · C01"(라이브 카드명 + ID, 기획지시 카드명표시), 데이터에 없으면 ID만 */
+var KIND_KO={immune:'면역',defense:'방어',counter:'반격',silence:'침묵',disrupt:'방해',skill:'스킬',attack:'공격'};
+function cardOfSlot(s){var m=/^CARD_ART_(C\d+)$/.exec(s.id);return m?{id:m[1],c:((T.ad&&T.ad.cards)||{})[m[1]]}:null}
+function slotName(s){var k=cardOfSlot(s);return k?(k.c?k.c.name+' · '+k.id:k.id):s.name}
 function backBtn(){return '<button class="btn sm" id="aBack" style="margin-bottom:10px">← 에셋 목록</button>'}
 function bindBack(){if($('aBack'))$('aBack').onclick=function(){go('assets')}}
 
@@ -188,7 +192,7 @@ V.assets=function(){return assetsLoad().then(function(d){var tab=T.atab||ssGet('
  var chars=d.characters.map(function(c){var skins=d.art[c.id]||{},base=skins['000']||{},n=Object.keys(skins).length,ok=base.full&&base.card&&base.faceRect;
   return '<button class="card acard" data-ach="'+c.id+'"><div style="display:flex;justify-content:center">'+aImg(base.thumb||base.full,150)+'</div><div style="margin-top:8px"><b>'+esc(c.name)+'</b> <span class="small muted">'+c.id+'</span></div><div class="small" style="margin-top:4px">'+(base.full?(ok?'<span class="tag ok">기본 완료</span>':'<span class="tag warn">영역 미지정</span>'):'<span class="tag">이미지 없음</span>')+(n>1?' <span class="tag">스킨 '+(n-1)+'</span>':'')+'</div></button>'}).join('');
  var slotHtml=Object.keys(groups).map(function(g){return '<h3 style="margin:14px 0 8px">'+g+' <span class="small muted">'+groups[g].filter(function(s){return slots[s.id]}).length+'/'+groups[g].length+'</span></h3><div class="agrid sm">'+groups[g].map(function(s){var f=slots[s.id];
-  return '<button class="card acard" data-aslot="'+s.id+'"><div style="display:flex;justify-content:center">'+aImg(f,64)+'</div><div class="small" style="margin-top:6px"><b>'+esc(s.name)+'</b></div><div class="small muted">'+s.w+'×'+s.h+'</div>'+(f&&(f.w!==s.w||f.h!==s.h)?'<span class="tag warn">규격 불일치</span>':'')+'</button>'}).join('')+'</div>'}).join('');
+  return '<button class="card acard" data-aslot="'+s.id+'"><div style="display:flex;justify-content:center">'+aImg(f,64)+'</div><div class="small" style="margin-top:6px"><b>'+esc(slotName(s))+'</b></div><div class="small muted">'+s.w+'×'+s.h+'</div>'+(f&&(f.w!==s.w||f.h!==s.h)?'<span class="tag warn">규격 불일치</span>':'')+'</button>'}).join('')+'</div>'}).join('');
  return '<h2>에셋 등록</h2><p class="sub">카드를 눌러 상세 화면에서 이미지를 올려요. 규격·투명 검사 → WebP 압축 → 사람이 압축 전후를 보고 승인하면 바로 반영돼요(상세 14).</p>'
  +verBar(d)+'<div class="card" style="margin-bottom:14px"><h3>저장소 사용량</h3>'+usageBox(d.usage)+'</div>'
  +'<div class="row" style="margin-bottom:12px"><button class="btn sm'+(tab==='chars'?' pri':'')+'" data-atab="chars">캐릭터 '+d.characters.length+'</button><button class="btn sm'+(tab==='slots'?' pri':'')+'" data-atab="slots">슬롯 '+filled+'/'+d.spec.slots.length+'</button></div>'
@@ -270,12 +274,13 @@ function bindBg(d,cur,ch){var key=T.ach+':'+T.askin,m=bgModeOf(cur);
 /* 슬롯 상세 */
 V.assetSlot=function(){T.aslot=T.aslot||ssGet('bo_aslot');return assetsLoad().then(function(d){var s=d.spec.slots.find(function(x){return x.id===T.aslot});if(!s){go('assets');return ''}
  var ed=d.editable&&T.perms.data_edit,f=(d.assets.slots||{})[s.id],same=d.spec.slots.filter(function(x){return x.group===s.group}),i=same.indexOf(s);
- return backBtn()+'<h2>'+esc(s.name)+' <span class="small muted">'+s.id+'</span></h2>'+verBar(d)
+ var ck=cardOfSlot(s);
+ return backBtn()+'<h2>'+esc(slotName(s))+' <span class="small muted">'+s.id+'</span></h2>'+(ck?'<p class="small" style="margin:-6px 0 12px">'+(ck.c?'카드 '+ck.id+' · '+esc(ck.c.name)+' · 종류 <b>'+esc(KIND_KO[ck.c.kind]||ck.c.kind)+'</b> · 비용 <b>'+ck.c.cost+'E</b> (라이브 v'+d.live+')':'라이브 데이터에 카드 '+ck.id+'가 없어요')+'</p>':'')+verBar(d)
  +'<div class="card"><div class="row" style="align-items:flex-start;gap:16px"><div>'+aImg(f,s.w>=s.h?140:220)+'</div><div class="small"><div>규격 <b>'+s.w+'×'+s.h+'</b> · '+(s.alpha===false?'불투명':s.alpha==='corners'?'모서리 투명':'투명')+'</div><div style="margin-top:4px">'+(f?'현재 '+f.w+'×'+f.h+' · '+kb(f.bytes)+' '+metaLine('slot:'+s.id):'비어 있음 → 게임 내장 기본 이미지')+'</div>'
  +(f&&(f.w!==s.w||f.h!==s.h)?'<div class="note" style="margin-top:6px">⚠ 지금 파일('+f.w+'×'+f.h+')이 규격('+s.w+'×'+s.h+')과 달라요. 규격이 바뀌었어요 — 새로 올려 주세요(지금 파일은 지우지 않아요).</div>':'')
  +'<div class="muted" style="margin-top:4px">같은 비율의 큰 이미지는 규격 크기로 줄여 저장해요.'+(/^FRAME_/.test(s.id)?' 티어 프레임은 카드 본체(800×1120)보다 상하좌우 64px 커요 — 바깥 띠는 장식용(상세 10).':'')+'</div></div></div>'
  +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">올리기<input type="file" id="aSlotFile" accept="image/png,image/webp" hidden></label>'+(f?'<button class="btn sm" id="aSlotDel">빼기(내장 기본으로)</button>':'')+revBtn('aSlotRev','slot:'+s.id)+'</div>':'')
- +'<div id="aPrep"></div><div class="row" style="margin-top:12px">'+(i>0?'<button class="btn sm" data-anext="'+same[i-1].id+'">← '+esc(same[i-1].name)+'</button>':'')+'<span class="sp"></span>'+(i<same.length-1?'<button class="btn sm" data-anext="'+same[i+1].id+'">'+esc(same[i+1].name)+' →</button>':'')+'</div></div>'})};
+ +'<div id="aPrep"></div><div class="row" style="margin-top:12px">'+(i>0?'<button class="btn sm" data-anext="'+same[i-1].id+'">← '+esc(slotName(same[i-1]))+'</button>':'')+'<span class="sp"></span>'+(i<same.length-1?'<button class="btn sm" data-anext="'+same[i+1].id+'">'+esc(slotName(same[i+1]))+' →</button>':'')+'</div></div>'})};
 V.assetSlot.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var s=d.spec.slots.find(function(x){return x.id===T.aslot});
  $('view').onclick=function(e){var n=e.target.closest('[data-anext]');if(n){T.aslot=n.dataset.anext;ssSet('bo_aslot',T.aslot);render()}};
  if($('aSlotFile'))$('aSlotFile').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'slot',s,function(P){return upload(P.blob,upQ('slot','&slot='+s.id))})};

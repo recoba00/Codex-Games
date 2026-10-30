@@ -142,6 +142,11 @@ try {
   await page.reload();
   await page.waitForSelector('[data-atab="slots"]', { timeout: 10000 }).catch(async (e) => { console.error("PAGE", (await page.evaluate(() => document.querySelector("#view")?.innerText ?? "")).slice(0, 800), perr); throw e; });
   await page.click('[data-atab="slots"]');
+  assert.match(await page.textContent('[data-aslot="CARD_ART_C01"]'), /베기 · C01/, "카드 일러스트 슬롯 = 카드명 · ID(기획지시 카드명표시)");
+  await page.click('[data-aslot="CARD_ART_C02"]');
+  await page.waitForFunction(() => document.querySelector("h2")?.textContent.includes("강타 · C02"));
+  assert.match(await page.textContent("#view"), /종류 공격 · 비용 2E/);
+  await page.click("#aBack"); await page.waitForSelector('[data-aslot="TIER_SILVER"]');
   await page.click('[data-aslot="TIER_SILVER"]');
   await page.waitForSelector("#aSlotFile", { state: "attached" });
   await page.setInputFiles("#aSlotFile", fx("tier.png"));
