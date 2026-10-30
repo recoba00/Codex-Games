@@ -44,6 +44,31 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--panel2)}
 .note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13px}
 .code{font-family:ui-monospace,monospace;font-size:20px;letter-spacing:2px;color:var(--accent);user-select:all}
 .dlgw{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:30;padding:16px}.dlg{background:var(--panel);color:var(--ink);border-radius:14px;padding:18px;width:100%;max-width:420px;box-shadow:0 10px 40px rgba(0,0,0,.3)}.dlgm{white-space:pre-wrap;line-height:1.5}
+.pvwrap{display:flex;flex-wrap:wrap;gap:20px 20px;padding:14px 12px 6px;justify-content:center}
+.pvcell{display:flex;flex-direction:column;align-items:center;gap:8px}
+.pvlab{font-size:12px;text-align:center;color:var(--muted);max-width:150px;line-height:1.35}
+.pvc{--mx:.5;--my:.5;--px:0;--py:0;position:relative;width:var(--w,150px);aspect-ratio:5/7;transform:perspective(800px) rotateX(calc(var(--py)*-7deg)) rotateY(calc(var(--px)*9deg));transform-style:preserve-3d;container-type:inline-size}
+.pvb{position:absolute;inset:0;border-radius:6%/4.3%;overflow:hidden;isolation:isolate;background:#223;box-shadow:0 10px 24px -10px rgba(0,0,0,.6)}
+.pvl{position:absolute;inset:0;pointer-events:none}
+.pvbg{background-size:cover;background-position:center}
+.pvwin{position:absolute;left:5%;top:3.571%;width:90%;height:85.714%}
+.pvchar{background-repeat:no-repeat}
+.pvname{top:auto;height:20%;display:flex;align-items:flex-end;padding:0 7cqw 5cqw;color:#F7F5EE;font-weight:700;font-size:max(11px,8cqw);background:linear-gradient(to top,rgba(8,10,22,.85),rgba(8,10,22,0))}
+.pvhb,.pvhf,.pvsp,.pvgl{display:none}
+.pvhb{background-image:repeating-linear-gradient(112deg,#ff8a8a 0%,#ffd56b 7%,#93f2a5 14%,#7fd3ff 21%,#b894ff 28%,#ff8a8a 35%);background-size:260% 260%;background-position:calc(var(--mx)*100%) calc(var(--my)*100%);mix-blend-mode:color-dodge;filter:hue-rotate(calc(var(--px)*50deg)) saturate(1.2);opacity:.32}
+.pvhf{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.09) 0 2px,transparent 2px 7px),repeating-linear-gradient(112deg,#ff8a8a 0%,#ffd56b 7%,#93f2a5 14%,#7fd3ff 21%,#b894ff 28%,#ff8a8a 35%);background-size:100% 100%,240% 240%;background-position:0 0,calc(var(--mx)*100%) calc(var(--my)*100%);mix-blend-mode:overlay;filter:hue-rotate(calc(var(--py)*-40deg));opacity:.4}
+.pvsp{background-image:radial-gradient(circle,#fff 0 1.1px,transparent 1.8px),radial-gradient(circle,#fff 0 .8px,transparent 1.4px);background-size:37px 41px,23px 27px;background-position:calc(var(--mx)*40px) calc(var(--my)*30px),calc(var(--mx)*-26px) calc(var(--my)*-34px);mix-blend-mode:color-dodge;-webkit-mask-image:radial-gradient(circle at calc(var(--mx)*100%) calc(var(--my)*100%),#000 0%,transparent 52%);mask-image:radial-gradient(circle at calc(var(--mx)*100%) calc(var(--my)*100%),#000 0%,transparent 52%);opacity:.5}
+.pvgl{background:radial-gradient(circle at calc(var(--mx)*100%) calc(var(--my)*100%),rgba(255,255,255,.55) 0%,rgba(255,255,255,0) 48%);mix-blend-mode:soft-light}
+.pvring{position:absolute;inset:0;border-radius:6%/4.3%;padding:3.5cqw;pointer-events:none;background:linear-gradient(105deg,transparent calc(var(--mx)*100% - 16%),rgba(255,255,255,.95) calc(var(--mx)*100%),transparent calc(var(--mx)*100% + 16%));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mix-blend-mode:screen;opacity:0}
+.pvc.h1 .pvring,.pvc.h2 .pvring,.pvc.h3 .pvring,.pvc.h4 .pvring{opacity:1}
+.pvc.h2 .pvhb,.pvc.h3 .pvhb,.pvc.h4 .pvhb,.pvc.h2 .pvgl,.pvc.h3 .pvgl,.pvc.h4 .pvgl{display:block}
+.pvc.h3 .pvhf,.pvc.h4 .pvhf,.pvc.h3 .pvsp,.pvc.h4 .pvsp{display:block}
+.pvc.h4 .pvbg{transform:translate3d(calc(var(--px)*-6%),calc(var(--py)*-5%),0) scale(1.12)}
+.pvc.h4 .pvchar{transform:translate3d(calc(var(--px)*4%),calc(var(--py)*3%),0) scale(1.04)}
+.pvframe{position:absolute;left:-8%;top:-5.714%;width:116%;height:111.428%;pointer-events:none;background-size:100% 100%}
+.pvbadge{position:absolute;right:4%;top:2.8%;width:20%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat;pointer-events:none}
+.pvstage{border-radius:12px;background:repeating-conic-gradient(#8881 0 25%,transparent 0 50%) 0 0/16px 16px;touch-action:pan-y}
+@media (prefers-reduced-motion:reduce){.pvc{transform:none}}
 .toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;max-width:420px}
 .toast.on{opacity:1;transform:none}.hr{height:1px;background:var(--line);margin:12px 0}
 .login{max-width:380px;margin:12vh auto;display:grid;gap:12px}
@@ -92,7 +117,7 @@ function bindLogin(){$('lgSwitch').onclick=function(){T.reg=!T.reg;render()};
 
 /* ---------- 메뉴 ---------- */
 var MENU=[['운영',[['dashboard','대시보드','dashboard'],['metrics','지표(KPI)','dashboard']]],
- ['게임 데이터',[['data','데이터 배포(xlsx)','data_view'],['characters','캐릭터','data_view'],['cards','전투카드','data_view'],['spells','스펠','data_view'],['settings','설정값','data_view'],['assets','에셋 등록','data_view']]],
+ ['게임 데이터',[['data','데이터 배포(xlsx)','data_view'],['characters','캐릭터','data_view'],['cards','전투카드','data_view'],['spells','스펠','data_view'],['settings','설정값','data_view'],['assets','에셋 등록','data_view'],['cardPreview','카드 미리보기','data_view']]],
  ['운영 도구',[['shop','상점·상품','shop'],['events','배너·공지·우편','events'],['users','유저 조회·제재','users'],['reports','신고','users'],['words','금칙어·닉네임','users'],['suspects','어뷰징 의심','users']]],
  ['배포·관리',[['audit','감사 로그','audit'],['staff','권한 관리','dashboard']]]];
 function shell(inner){var nav='<div class="brand">성좌 결투 BO</div>'+MENU.map(function(g){return '<div class="grp">'+g[0]+'</div>'+g[1].map(function(m){return '<button data-k="'+m[0]+'" '+((T.route===m[0]||(m[0]==='assets'&&/^asset[A-Z]/.test(T.route)))?'aria-current="page"':'')+(T.perms[m[2]]?'':' disabled title="권한 없음"')+'>'+m[1]+'</button>'}).join('')}).join('');
@@ -270,6 +295,48 @@ function bindBg(d,cur,ch){var key=T.ach+':'+T.askin,m=bgModeOf(cur);
  if($('aBgRev'))$('aBgRev').onclick=function(){ask('배경 방식을 직전 값으로 되돌릴까요?').then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:'bg'})}).then(function(){T.bgPick=null;toast('되돌렸어요');render()}).catch(fail)};
  if($('aComb'))$('aComb').onchange=function(e){var f=e.target.files[0];if(!f)return;askUpload(f,'combined',null,function(P){return upload(P.blob,upQ('combined',ch))},'aPrepBg')};
  if($('aCombRev'))$('aCombRev').onclick=function(){ask('합본을 직전 파일로 되돌릴까요?').then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:'combined'})}).then(function(){toast('되돌렸어요');render()}).catch(fail)}}
+
+
+/* ---------- 카드 미리보기: 등록한 에셋으로 캐릭터 카드를 홀로 연출 0~4·티어 프레임 7종별로(총괄 13장 카드 연출 등급, 상세 10 카드 구조·FRAME 여백) ----------
+   실제 게임은 Godot 셰이더로 그린다. 여기는 등록한 그림이 어울리는지 보는 근사치(CSS). 카드 800×1120, 그림 창 720×960(좌 40·위 40, 가정값), 프레임 928×1248(바깥 64px) */
+var HOLO=[['0','없음'],['1','메탈 테두리'],['2','리버스 홀로(배경만)'],['3','풀 홀로 + 스파클'],['4','풀 홀로 + 스파클 + 입체 시차']];
+var TIERS=[['BRONZE','브론즈'],['SILVER','실버'],['GOLD','골드'],['PLATINUM','플래티넘'],['DIAMOND','다이아'],['MASTER','마스터'],['LEGEND','레전드']];
+function pvCard(d,c,skin,o){var a=((d.art||{})[c.id]||{})[skin]||{},sl=d.assets.slots||{},u=function(f){return f&&f.path?'url('+d.base+f.path+')':''};
+ var m=bgModeOf(a);if(o.bg!=='saved')m={mode:o.bg,color:o.bg==='color'?(m.color||'#8E44AD'):m.color};
+ var slotBg=sl[BG_OF[c.faction]||'CARD_BG_NEUTRAL'],bgCss=m.mode==='color'&&m.color?'background:linear-gradient(180deg,'+m.color+','+darken(m.color,0.35)+')':slotBg?'background-image:'+u(slotBg):'background:#334';
+ var src=m.mode==='combined'&&a.combined?a.combined:a.full,cr=a.card||{x:0.125,y:0.05,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3},ch='';
+ if(src){var bw=100/cr.w,bh=bw*(src.h/src.w)*(720/960);ch='background-image:'+u(src)+';background-size:'+bw.toFixed(2)+'% '+bh.toFixed(2)+'%;background-position:'+(cr.w>=1?0:(cr.x/(1-cr.w)*100)).toFixed(2)+'% '+(cr.h>=1?0:(cr.y/(1-cr.h)*100)).toFixed(2)+'%'}
+ var fr=sl['FRAME_'+o.tier],bd=o.badge>1?sl['MASTERY_'+o.badge]:null;
+ return '<div class="pvc h'+o.holo+'" style="--w:'+o.w+'px"><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
+  +'<div class="pvwin"><div class="pvl pvchar" style="'+ch+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'
+  +'<div class="pvl pvname">'+esc(c.name)+'</div></div><div class="pvring"></div>'
+  +(fr?'<div class="pvframe" style="background-image:'+u(fr)+'"></div>':'')+(bd?'<div class="pvbadge" style="background-image:'+u(bd)+'"></div>':'')+'</div>'}
+V.cardPreview=function(){var P=T.pv=T.pv||{ch:ssGet('bo_pvch')||'',skin:'000',tier:'GOLD',holo:'3',badge:3,bg:'saved'};return assetsLoad().then(function(d){
+ var c=d.characters.find(function(x){return x.id===P.ch})||d.characters[0];if(!c)return '<h2>카드 미리보기</h2><p class="sub">라이브 데이터에 캐릭터가 없어요.</p>';P.ch=c.id;
+ var skins=Object.keys((d.art||{})[c.id]||{}).sort();if(skins.indexOf(P.skin)<0)P.skin=skins[0]||'000';var sl=d.assets.slots||{};
+ var seg=function(k,list){return '<div class="row" style="gap:6px;flex-wrap:wrap">'+list.map(function(x){return '<button class="btn sm'+(String(P[k])===String(x[0])?' pri':'')+'" data-pv="'+k+'" data-v="'+x[0]+'">'+esc(x[1])+'</button>'}).join('')+'</div>'};
+ var miss=TIERS.filter(function(t){return !sl['FRAME_'+t[0]]}).map(function(t){return t[1]});
+ var W=Math.max(110,Math.min(150,Math.floor((Math.min(window.innerWidth,1100)-140)/2)));
+ return '<h2>카드 미리보기</h2><p class="sub">등록한 에셋으로 캐릭터 카드를 홀로 연출 단계·티어 프레임별로 그려요. 카드 위를 누르거나 끌면 기울기·빛이 따라와요(가만히 두면 자동으로 빛이 지나가요). 실제 게임은 Godot 셰이더라 느낌만 맞추는 근사치예요(총괄 13장).</p>'
+ +'<div class="card" style="margin-bottom:14px;display:grid;gap:10px"><div><b class="small">캐릭터</b>'+seg('ch',d.characters.map(function(x){return [x.id,x.name]}))+'</div>'
+ +(skins.length>1?'<div><b class="small">스킨</b>'+seg('skin',skins.map(function(x){return [x,x==='000'?'기본':x]}))+'</div>':'')
+ +'<div><b class="small">카드 배경</b>'+seg('bg',[['saved','저장된 방식'],['faction','기본(진영)'],['color','컬러'],['combined','합본']])+'</div>'
+ +'<div><b class="small">숙련도 뱃지</b>'+seg('badge',[['1','없음(1단계)'],['2','2단계'],['3','3단계'],['4','4단계']])+'</div>'
+ +(miss.length?'<div class="note">아직 없는 티어 프레임: '+miss.join(', ')+'</div>':'')+'</div>'
+ +'<div class="card" style="margin-bottom:14px"><h3>홀로 연출 0~4단계</h3><div class="row" style="gap:8px;align-items:center"><span class="small muted">프레임</span>'+seg('tier',TIERS)+'</div>'
+ +'<div class="pvstage" data-pvstage="1"><div class="pvwrap">'+HOLO.map(function(h){return '<div class="pvcell">'+pvCard(d,c,P.skin,{tier:P.tier,holo:h[0],badge:Number(P.badge),bg:P.bg,w:W})+'<div class="pvlab"><b>'+h[0]+'</b> '+h[1]+'</div></div>'}).join('')+'</div></div></div>'
+ +'<div class="card"><h3>티어 프레임 7종</h3><div class="row" style="gap:8px;align-items:center"><span class="small muted">홀로</span>'+seg('holo',HOLO.map(function(h){return [h[0],h[0]+' '+h[1].split('(')[0].split(' +')[0]]}))+'</div>'
+ +'<div class="pvstage" data-pvstage="1"><div class="pvwrap">'+TIERS.map(function(t){return '<div class="pvcell">'+pvCard(d,c,P.skin,{tier:t[0],holo:P.holo,badge:Number(P.badge),bg:P.bg,w:W})+'<div class="pvlab">'+t[1]+(sl['FRAME_'+t[0]]?'':' (프레임 없음)')+'</div></div>'}).join('')+'</div></div></div>'})};
+V.cardPreview.bind=function(){$('view').onclick=function(e){var b=e.target.closest('[data-pv]');if(!b)return;var k=b.dataset.pv;T.pv[k]=k==='badge'?Number(b.dataset.v):b.dataset.v;if(k==='ch'){ssSet('bo_pvch',b.dataset.v);T.pv.skin='000'}render()};
+ document.querySelectorAll('[data-pvstage]').forEach(function(st){var set=function(x,y){st.querySelectorAll('.pvc').forEach(function(c){c.style.setProperty('--mx',x);c.style.setProperty('--my',y);c.style.setProperty('--px',(x-0.5)*2);c.style.setProperty('--py',(y-0.5)*2)})};
+  var mv=function(e){var r=st.getBoundingClientRect(),p=e.touches?e.touches[0]:e;st.pvt=Date.now();set(Math.max(0,Math.min(1,(p.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(p.clientY-r.top)/r.height)))};
+  st.onpointermove=mv;st.ontouchmove=mv;st.pvset=set});
+ pvAnim()};
+/* 입력이 없으면 몇 초마다 빛이 한 번 지나감(총괄 13장). 움직임 줄이기 설정이면 멈춤 */
+function pvAnim(){if(T.pvRaf)return;var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduce)return;
+ var t0=performance.now(),step=function(now){var sts=document.querySelectorAll('[data-pvstage]');if(!sts.length){T.pvRaf=0;return}
+  var k=((now-t0)%4200)/4200,x=0.5-0.5*Math.cos(k*Math.PI*2);sts.forEach(function(st){if(st.pvset&&!(st.pvt&&Date.now()-st.pvt<2500))st.pvset(0.1+x*0.8,0.35+Math.sin(k*Math.PI*2)*0.15)});T.pvRaf=requestAnimationFrame(step)};
+ T.pvRaf=requestAnimationFrame(step)}
 
 /* 슬롯 상세 */
 V.assetSlot=function(){T.aslot=T.aslot||ssGet('bo_aslot');return assetsLoad().then(function(d){var s=d.spec.slots.find(function(x){return x.id===T.aslot});if(!s){go('assets');return ''}

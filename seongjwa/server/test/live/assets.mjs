@@ -230,6 +230,12 @@ try {
   await page.click('.dlg [data-x="1"]');
   for (let i = 0; i < 30 && Number((await sql("select version_id from public.data_live"))[0].version_id) !== up2.version; i += 1) await sleep(200);
   assert.equal(Number((await sql("select version_id from public.data_live"))[0].version_id), up2.version, "배포 버튼 → 라이브");
+  // 카드 미리보기(홀로 0~4 · 티어 프레임 7)
+  await page.goto(`${API}/bo#cardPreview`); await page.reload();
+  await page.waitForSelector(".pvc");
+  assert.equal(await page.locator(".pvc").count(), 12, "홀로 5 + 프레임 7");
+  await page.click('[data-pv="ch"][data-v="SE"]'); await page.waitForSelector(".pvc.h4");
+  await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_card_preview.png`, fullPage: true });
   assert.deepEqual(perr, []);
   assert.ok(reqs.includes("/bo/vendor/webp_enc.wasm"), "libwebp 인코더 사용");
   step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로(브라우저 WebP 없을 때 libwebp 인코더) → 영역 편집기(카드 위아래·얼굴 끌기) 저장, 카드 배경 토글, 확인 창(빼기·되돌리기·데이터 배포)");
