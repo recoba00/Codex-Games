@@ -142,8 +142,10 @@ export async function runCron(env) {
   const cupLive = (await pinLive(env).catch(() => ({ snapshot: {} }))).snapshot;
   const cupClosed = await rpc(env, "cup_close_week", { p_before: cupWindow().week, p_cfg: cupRewardCfg(cupLive) }).catch(() => null);
   if (purged) purged.rate = await rpc(env, "rate_purge", { p_keep_sec: 3600 }).catch(() => null);
-  // 저장소 정리(한 시간에 한 번): 현재·직전 파일 어디에도 안 쓰는 버킷 파일(하루 지난 것)을 지운다. 교체를 거듭해 밀려난 파일·버려진 초안 파일
-  if (purged) purged.assetFiles = await rpc(env, "asset_orphans", { p_min_age_sec: 86400, p_limit: 100 })
+  // 저장소 정리(매주 토요일 04:00 한국 시간 한 번, 사용자 결정 2026-10-30): 현재·직전 파일 어디에도 안 쓰는 버킷 파일(하루 지난 것)을 지운다
+  const kst = new Date(Date.now() + 9 * 3600000);
+  const cleanupDue = (kst.getUTCDay() === 6 && kst.getUTCHours() === 4 && kst.getUTCMinutes() < 5) || env.CRON_PURGE_ALWAYS === "1";
+  if (purged && cleanupDue) purged.assetFiles = await rpc(env, "asset_orphans", { p_min_age_sec: 86400, p_limit: 100 })
     .then(async (list) => { const n = await storageDelete(env, (list ?? []).map((x) => x.name)); if (n) await rpc(env, "asset_cleanup_log", { p_detail: { files: n, bytes: (list ?? []).reduce((a, x) => a + Number(x.bytes ?? 0), 0) } }); return n; })
     .catch(() => null);
   return { published: done, mailed, seasons: paid, purged, cupClosed };
