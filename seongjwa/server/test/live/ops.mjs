@@ -205,7 +205,9 @@ try {
   let st = null;
   for (let i = 0; i < 30 && st !== "deleted"; i += 1) { st = (await sql("select status from public.accounts where id = $1", [c.acc]))[0].status; if (st !== "deleted") await sleep(300); }
   assert.equal(st, "deleted");
-  assert.equal((await sql("select count(*)::int n from public.events where at < now() - interval '300 days'"))[0].n, 0, "오래된 로그 정리");
+  let oldLogs = 1;  // 계정 정리 다음에 로그 정리가 돌아서 조금 늦을 수 있음(CI 간헐 실패 2026-10-30)
+  for (let i = 0; i < 30 && oldLogs; i += 1) { oldLogs = (await sql("select count(*)::int n from public.events where at < now() - interval '300 days'"))[0].n; if (oldLogs) await sleep(300); }
+  assert.equal(oldLogs, 0, "오래된 로그 정리");
   const again = await ok(call("/v1/auth/dev", { devId: c.name }));
   assert.notEqual(again.accountId, c.acc, "익명화 뒤 같은 로그인 수단 = 새 계정");
   step("Steam 연결·종류별 1개·모바일 수단은 2단계, 다른 계정 Steam이면 두 진행도 보여 주고 선택(전환), 삭제 요청(세션 종료)→로그인 취소→14일 뒤 크론 익명화·새 계정, 오래된 로그 정리");
