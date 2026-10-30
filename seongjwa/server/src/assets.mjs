@@ -105,6 +105,17 @@ export const assetPath = (prefix, hashHex) => `${prefix}.${hashHex.slice(0, 16)}
 export const publicBase = (env) => `${String(env.SUPABASE_URL ?? "").replace(/\/$/, "")}/storage/v1/object/public/${BUCKET}/`;
 
 // Supabase Storage 업로드(서비스 키, 서버 전용). 같은 이름이면 덮어씀(이름이 내용 해시라 내용도 같음)
+// 버킷 파일 지우기(서비스 키). 에셋 표가 가리키지 않는 파일 정리용(크론)
+export async function storageDelete(env, names, fetcher = fetch) {
+  if (!names.length) return 0;
+  const key = String(env.SUPABASE_SERVICE_KEY ?? "");
+  const headers = { apikey: key, "content-type": "application/json" };
+  if (key.startsWith("eyJ")) headers.authorization = `Bearer ${key}`;
+  const res = await fetcher(`${String(env.SUPABASE_URL).replace(/\/$/, "")}/storage/v1/object/${BUCKET}`, { method: "DELETE", headers, body: JSON.stringify({ prefixes: names }) });
+  if (!res.ok) throw Object.assign(new Error("storage_failed"), { extra: { status: res.status } });
+  return names.length;
+}
+
 export async function storagePut(env, path, bytes, fetcher = fetch) {
   const key = String(env.SUPABASE_SERVICE_KEY ?? "");
   const headers = { apikey: key, "content-type": "image/webp", "x-upsert": "true", "cache-control": "max-age=31536000" };

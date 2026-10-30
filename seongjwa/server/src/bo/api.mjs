@@ -9,7 +9,7 @@ import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
 import { offerRule } from "../shop-rules.mjs";
 import { cupRewardCfg, cupWindow } from "../cup.mjs";
-import { ART, SLOTS, artKey, checkBg, assetPath, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storagePut, webpInfo } from "../assets.mjs";
+import { ART, SLOTS, artKey, checkBg, assetPath, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storageDelete, storagePut, webpInfo } from "../assets.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -142,6 +142,10 @@ export async function runCron(env) {
   const cupLive = (await pinLive(env).catch(() => ({ snapshot: {} }))).snapshot;
   const cupClosed = await rpc(env, "cup_close_week", { p_before: cupWindow().week, p_cfg: cupRewardCfg(cupLive) }).catch(() => null);
   if (purged) purged.rate = await rpc(env, "rate_purge", { p_keep_sec: 3600 }).catch(() => null);
+  // 저장소 정리(한 시간에 한 번): 현재·직전 파일 어디에도 안 쓰는 버킷 파일(하루 지난 것)을 지운다. 교체를 거듭해 밀려난 파일·버려진 초안 파일
+  if (purged) purged.assetFiles = await rpc(env, "asset_orphans", { p_min_age_sec: 86400, p_limit: 100 })
+    .then(async (list) => { const n = await storageDelete(env, (list ?? []).map((x) => x.name)); if (n) await rpc(env, "asset_cleanup_log", { p_detail: { files: n, bytes: (list ?? []).reduce((a, x) => a + Number(x.bytes ?? 0), 0) } }); return n; })
+    .catch(() => null);
   return { published: done, mailed, seasons: paid, purged, cupClosed };
 }
 
@@ -594,5 +598,10 @@ export async function assetUsage(env) {
   const pct = (v, q) => Math.round((1000 * v) / q) / 10;
   const out = { storage: { ...u.storage, quota: storageQ, pct: pct(u.storage.bytes, storageQ) }, download: { ...u.download, quota: transferQ, pct: pct(u.download.bytes, transferQ) } };
   out.warn = out.storage.pct >= 80 || out.download.pct >= 80;
+  // 나눠 보기: 지금 쓰는 파일 / 되돌리기용 직전 파일(파일마다 1개 보관, 기획지시 에셋분리) / 정리 대기(크론이 하루 뒤 지움)
+  const rows = await rpc(env, "asset_list", {}).catch(() => ({}));
+  const sum = (k) => Object.values(rows ?? {}).reduce((a, r) => a + Number(r?.[k]?.bytes ?? 0), 0);
+  out.split = { current: sum("cur"), previous: sum("prev") };
+  out.split.other = Math.max(0, Number(u.storage.bytes ?? 0) - out.split.current - out.split.previous);
   return out;
 }
