@@ -37,6 +37,8 @@ export const SLOTS = Object.freeze([
     ["HAND_SEAL", "손패 봉인"], ["TIDE", "조류"], ["SKILL_LOCK", "스킬 봉쇄"], ["ENERGY_DOWN", "에너지 감소"]].map(([k, n]) => S(`STATUS_${k}`, "아이콘", `상태 아이콘 ${n}`, 256, 256, true)),
   ...["SP01", "SP02", "SP03", "SP04", "SP05", "SP06", "SP07", "SP08"].map((id) => S(`SPELL_${id}`, "아이콘", `스펠 아이콘 ${id}`, 256, 256, true)),
   S("CURRENCY_GOLD", "아이콘", "재화 골드", 256, 256, true),
+  // 진영 문양(아이콘): 패시브 스킬 아이콘 가운데·진영 필터 칩·진영 표시(기획지시 2026-10-30 진영문양). 홀로 키트의 '진영 문양 포일'(셰이더 재료)과 별개
+  ...[["FIRE", "불"], ["WATER", "물"], ["WIND", "바람"]].map(([k, n]) => S(`FACTION_${k}`, "아이콘", `진영 문양(아이콘) ${n}`, 256, 256, true)),
   S("BG_LOBBY", "배경", "로비 배경", 2560, 1440, false), S("BG_BATTLE", "배경", "전투 배경", 2560, 1440, false)
 ]);
 export const slotOf = (id) => SLOTS.find((s) => s.id === id) ?? null;

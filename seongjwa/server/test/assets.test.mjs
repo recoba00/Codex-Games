@@ -12,9 +12,10 @@ test("WebP 헤더: 손실(VP8)·무손실(VP8L)·확장(VP8X, 알파) 크기 읽
   assert.equal(webpInfo(new TextEncoder().encode("‰PNG not webp at all, padding padding")), null);
 });
 
-test("슬롯 74개(상세 14 표 + 티어 프레임 7 + 카드 일러스트 16), 규격: 엠블럼 512, 아이콘·숙련도 뱃지 256, 카드 관련 800×1120, 배경 2560×1440", () => {
-  assert.equal(SLOTS.length, 74);
-  assert.equal(new Set(SLOTS.map((s) => s.id)).size, 74);
+test("슬롯 77개(상세 14 표 + 티어 프레임 7 + 카드 일러스트 16 + 진영 문양 3), 규격: 엠블럼 512, 아이콘·숙련도 뱃지 256, 카드 관련 800×1120, 배경 2560×1440", () => {
+  assert.equal(SLOTS.length, 77);
+  assert.equal(new Set(SLOTS.map((s) => s.id)).size, 77);
+  assert.deepEqual([slotOf("FACTION_WIND").w, slotOf("FACTION_WIND").group, slotOf("FACTION_FIRE").name], [256, "아이콘", "진영 문양(아이콘) 불"]);
   assert.deepEqual([slotOf("CARD_ART_C16").w, slotOf("CARD_ART_C16").h, slotOf("CARD_ART_C01").alpha, slotOf("CARD_ART_C17")], [800, 1120, false, null]);
   assert.deepEqual([slotOf("MASTERY_3").w, slotOf("MASTERY_3").h, slotOf("FRAME_LEGEND").w, slotOf("FRAME_LEGEND").h, slotOf("RARITY_EPIC")], [256, 256, 928, 1248, null]);
   assert.deepEqual([slotOf("CARD_FRAME").w, slotOf("CARD_ART_C01").group], [800, "카드 일러스트"], "티어 프레임만 928×1248(기획지시 프레임여백)");
