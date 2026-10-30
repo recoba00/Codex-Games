@@ -29,7 +29,7 @@ input,select,textarea{font:inherit;font-size:14px;color:var(--ink);background:va
 textarea{resize:vertical;min-height:56px;width:100%}
 .btn{font:inherit;font-size:14px;border-radius:8px;padding:7px 12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;white-space:nowrap}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.bad{color:var(--bad)}.btn[disabled]{opacity:.45;cursor:not-allowed}.btn.sm{padding:3px 8px;font-size:12px}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.tw{overflow-x:auto}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.tw{overflow-x:auto}.tw.stack table,.tw.stack tbody,.tw.stack tr,.tw.stack td{display:block;width:auto}.tw.stack tr:first-child{display:none}.tw.stack tr{border-bottom:1px solid var(--line);padding:10px 0}.tw.stack td{border:none!important;padding:3px 0!important}.tw.stack td[data-l]:before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}
 .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.agrid.sm{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}button.card.acard{width:100%;text-align:center;cursor:pointer;font:inherit;color:inherit;border:1px solid var(--line)}button.card.acard:hover{border-color:var(--accent)}
 @media(max-width:700px){.tw table,.tw tbody,.tw tr,.tw td{display:block;width:auto}.tw tr:first-child{display:none}.tw tr{border-bottom:1px solid var(--line);padding:10px 0}.tw td{border:none!important;padding:3px 0!important}.tw td[data-l]:before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}}
 table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
@@ -128,11 +128,14 @@ function render(){var root=$('root');
  if(!T.token||!T.me){root.innerHTML=loginView();bindLogin();return}
  root.innerHTML=shell('<p class="muted">불러오는 중…</p>');
  $('side').onclick=function(e){var b=e.target.closest('button[data-k]');if(b&&!b.disabled)go(b.dataset.k)};$('mnav').onchange=function(e){go(e.target.value)};$('btnOut').onclick=function(){logout()};
- var v=V[T.route]||V.dashboard;Promise.resolve(v()).then(function(h){if(typeof h==='string')$('view').innerHTML=h;labelTables();if(v.bind)v.bind()}).catch(function(e){$('view').innerHTML='<div class="note">'+esc(e.message)+'</div>'})}
+ var v=V[T.route]||V.dashboard;Promise.resolve(v()).then(function(h){if(typeof h==='string')$('view').innerHTML=h;labelTables();setTimeout(fitTables,60);setTimeout(fitTables,500);if(v.bind)v.bind()}).catch(function(e){$('view').innerHTML='<div class="note">'+esc(e.message)+'</div>'})}
 function boot(){api('/me').then(function(j){T.me=j.staff;T.perms=j.perms;T.solo=j.soloMode;render()}).catch(function(){T.token=null;render()})}
 var V={};
 /* 휴대폰(700px 이하): 표를 카드처럼 세로로 쌓고 칸 이름을 붙인다(작업 버튼이 화면 밖으로 밀리지 않게) */
-function labelTables(root){(root||document).querySelectorAll('.tw table').forEach(function(t){var hs=[].map.call(t.querySelectorAll('tr:first-child th'),function(h){return h.textContent});t.querySelectorAll('tr').forEach(function(r){[].forEach.call(r.children,function(td,i){if(td.tagName==='TD'&&hs[i]&&!td.hasAttribute('colspan'))td.setAttribute('data-l',hs[i])})})})}
+function labelTables(root){(root||document).querySelectorAll('.tw table').forEach(function(t){var hs=[].map.call(t.querySelectorAll('tr:first-child th'),function(h){return h.textContent});t.querySelectorAll('tr').forEach(function(r){[].forEach.call(r.children,function(td,i){if(td.tagName==='TD'&&hs[i]&&!td.hasAttribute('colspan'))td.setAttribute('data-l',hs[i])})})});fitTables(root)}
+/* 태블릿 세로 등 중간 폭: 표가 칸보다 넓으면(가로 스크롤이 생기면) 그 표만 휴대폰처럼 줄마다 카드로 펼친다 */
+function fitTables(root){(root||document).querySelectorAll('.tw').forEach(function(w){var t=w.querySelector('table');if(!t||!w.clientWidth)return;if(w.classList.contains('stack')&&!w.dataset.full)return;var need=t.scrollWidth>w.clientWidth+2;w.classList.toggle('stack',need);if(need)w.dataset.full=String(t.scrollWidth)})}
+var fitT=0;if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){fitTables()});window.addEventListener('resize',function(){clearTimeout(fitT);fitT=setTimeout(function(){document.querySelectorAll('.tw.stack').forEach(function(w){if(w.clientWidth>=Number(w.dataset.full||0)){w.classList.remove('stack');delete w.dataset.full}});fitTables()},150)});
 new MutationObserver(function(){labelTables()}).observe(document.documentElement,{childList:true,subtree:true});
 function table(head,rows){return '<div class="tw"><table><tr>'+head.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr>'+(rows.join('')||'<tr><td colspan="'+head.length+'" class="muted">없음</td></tr>')+'</table></div>'}
 function val(id){var e=$(id);return e?e.value.trim():''}
@@ -316,7 +319,7 @@ V.cardPreview=function(){var P=T.pv=T.pv||{ch:ssGet('bo_pvch')||'',skin:'000',ti
  var skins=Object.keys((d.art||{})[c.id]||{}).sort();if(skins.indexOf(P.skin)<0)P.skin=skins[0]||'000';var sl=d.assets.slots||{};
  var seg=function(k,list){return '<div class="row" style="gap:6px;flex-wrap:wrap">'+list.map(function(x){return '<button class="btn sm'+(String(P[k])===String(x[0])?' pri':'')+'" data-pv="'+k+'" data-v="'+x[0]+'">'+esc(x[1])+'</button>'}).join('')+'</div>'};
  var miss=TIERS.filter(function(t){return !sl['FRAME_'+t[0]]}).map(function(t){return t[1]});
- var W=Math.max(110,Math.min(150,Math.floor((Math.min(window.innerWidth,1100)-140)/2)));
+ var vw=Math.min(window.innerWidth,1100),W=vw>=700?Math.min(180,Math.floor((vw-160)/3)):Math.max(110,Math.min(150,Math.floor((vw-140)/2)));
  return '<h2>카드 미리보기</h2><p class="sub">등록한 에셋으로 캐릭터 카드를 홀로 연출 단계·티어 프레임별로 그려요. 카드 위를 누르거나 끌면 기울기·빛이 따라와요(가만히 두면 자동으로 빛이 지나가요). 실제 게임은 Godot 셰이더라 느낌만 맞추는 근사치예요(총괄 13장).</p>'
  +'<div class="card" style="margin-bottom:14px;display:grid;gap:10px"><div><b class="small">캐릭터</b>'+seg('ch',d.characters.map(function(x){return [x.id,x.name]}))+'</div>'
  +(skins.length>1?'<div><b class="small">스킨</b>'+seg('skin',skins.map(function(x){return [x,x==='000'?'기본':x]}))+'</div>':'')
