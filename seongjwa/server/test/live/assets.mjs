@@ -238,7 +238,7 @@ try {
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_card_preview.png`, fullPage: true });
   await page.click('[data-pv="tab"][data-v="battle"]'); await page.waitForSelector(".bc");
   assert.equal(await page.locator(".bc").count(), 34, "전투카드 공용 16 + 전용 18");
-  await page.click('[data-pv="bm"][data-v="desk"]'); await page.waitForSelector(".bc .ph");
+  await page.click('[data-pv="bm"][data-v="hand"]'); await page.waitForSelector(".bc.hand"); await page.click('[data-pv="bm"][data-v="detail"]'); await page.waitForSelector(".bc .tx");
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_battle_preview.png`, fullPage: true });
   await page.click('[data-pv="tab"][data-v="char"]'); await page.waitForSelector(".pvc");
   assert.deepEqual(perr, []);

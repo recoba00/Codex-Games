@@ -50,12 +50,17 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--panel2)}
 .bc .sym{position:absolute;left:30%;top:20%;width:40%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat;opacity:.9}
 .bc .symt{position:absolute;left:0;right:0;top:27%;text-align:center;font-size:12cqw;font-weight:700;opacity:.85}
 .bc .frm{background-size:100% 100%}
-.bc .cost{position:absolute;left:4%;top:3%;width:17%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#7fc8ff,#1d5fae 70%);border:.6cqw solid rgba(255,255,255,.8);display:grid;place-items:center;font-weight:800;font-size:10cqw;text-shadow:0 1px 2px rgba(0,0,0,.6)}
-.bc .kind{position:absolute;right:4%;top:3%;width:17%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat}
-.bc .kindt{position:absolute;right:4%;top:4%;padding:.5cqw 2cqw;border-radius:99px;background:rgba(0,0,0,.55);font-size:5.5cqw;font-weight:700}
-.bc .nm{position:absolute;left:0;right:0;top:58%;padding:2cqw 5cqw;background:linear-gradient(90deg,rgba(8,10,22,.85),rgba(8,10,22,.6));font-weight:800;font-size:8cqw;line-height:1.15}
-.bc .tx{position:absolute;left:0;right:0;top:calc(58% + 13cqw);bottom:0;padding:2.5cqw 5cqw;background:rgba(8,10,22,.78);font-size:5.4cqw;line-height:1.35}
-.bc .ph{position:absolute;left:0;right:0;bottom:0;padding:1.4cqw 5cqw;font-size:5cqw;font-weight:700;letter-spacing:.02em;background:var(--phc,#445)}
+.bc .shade{top:auto;height:40%;background:linear-gradient(to top,rgba(8,10,22,.85),rgba(8,10,22,0))}
+.bc .sock{position:absolute;width:20%;aspect-ratio:1;transform:translate(-50%,-50%);display:grid;place-items:center}
+.bc .sock.c{left:12.5%;top:8.929%}.bc .sock.k{left:87.5%;top:8.929%}
+.bc .sock.c b{font-size:11cqw;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.bc .sock.nos{border-radius:50%;background:radial-gradient(circle at 35% 30%,#7fc8ff,#1d5fae 70%);border:.6cqw solid rgba(255,255,255,.8)}
+.bc .sock i{width:70%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat;background-position:center}
+.bc .sock.k.nos{background:rgba(0,0,0,.55)}.bc .sock .kt{font-size:4.2cqw;font-weight:700;font-style:normal}
+.bc .txt{position:absolute;left:0;right:0;bottom:0;padding:0 6cqw 6cqw}
+.bc .txt .nm{font-weight:800;font-size:5.5cqw;line-height:1.2}
+.bc .txt .tx{margin-top:1.75cqw;font-size:3.5cqw;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.bc.hand .txt{top:60%;padding:0 6cqw;display:flex;align-items:center}.bc.hand .txt .nm{font-size:13cqw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bc .own{position:absolute;left:4%;top:22%;padding:.5cqw 2cqw;border-radius:99px;background:rgba(255,215,120,.9);color:#2a1d00;font-size:5cqw;font-weight:800}
 .pvwrap{display:flex;flex-wrap:wrap;gap:20px 20px;padding:14px 12px 6px;justify-content:center}
 .pvcell{display:flex;flex-direction:column;align-items:center;gap:8px}
@@ -327,12 +332,12 @@ function pvCard(d,c,skin,o){var a=((d.art||{})[c.id]||{})[skin]||{},sl=d.assets.
   +'<div class="pvwin"><div class="pvl pvchar" style="'+ch+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'
   +'<div class="pvl pvname">'+esc(c.name)+'</div></div><div class="pvring"></div>'
   +(fr?'<div class="pvframe" style="background-image:'+u(fr)+'"></div>':'')+(bd?'<div class="pvbadge" style="background-image:'+u(bd)+'"></div>':'')+'</div>'}
-V.cardPreview=function(){var P=T.pv=T.pv||{ch:ssGet('bo_pvch')||'',skin:'000',tier:'GOLD',holo:'3',badge:3,bg:'saved',tab:ssGet('bo_pvtab')||'char',bm:'detail',bf:'all'};P.tab=P.tab||'char';P.bm=P.bm||'detail';P.bf=P.bf||'all';return assetsLoad().then(function(d){
+V.cardPreview=function(){var P=T.pv=T.pv||{ch:ssGet('bo_pvch')||'',skin:'000',tier:'GOLD',holo:'3',badge:3,bg:'saved',tab:ssGet('bo_pvtab')||'char',bm:'detail',bf:'all'};P.tab=P.tab||'char';P.bm=P.bm==='hand'?'hand':'detail';P.bf=P.bf||'all';return assetsLoad().then(function(d){
  var c=d.characters.find(function(x){return x.id===P.ch})||d.characters[0];if(!c)return '<h2>카드 미리보기</h2><p class="sub">라이브 데이터에 캐릭터가 없어요.</p>';P.ch=c.id;
  var skins=Object.keys((d.art||{})[c.id]||{}).sort();if(skins.indexOf(P.skin)<0)P.skin=skins[0]||'000';var sl=d.assets.slots||{};
  var seg=function(k,list){return '<div class="row" style="gap:6px;flex-wrap:wrap">'+list.map(function(x){return '<button class="btn sm'+(String(P[k])===String(x[0])?' pri':'')+'" data-pv="'+k+'" data-v="'+x[0]+'">'+esc(x[1])+'</button>'}).join('')+'</div>'};
  var tabs='<div class="row" style="margin-bottom:12px">'+seg('tab',[['char','캐릭터 카드'],['battle','전투카드']])+'</div>';
- if(P.tab==='battle')return '<h2>카드 미리보기</h2><p class="sub">등록한 에셋으로 전투카드를 게임 합성 순서대로 그려요(일러스트 → 틀 → 비용 → 종류 → 이름 → 문구 → 처리 단계 띠). 글자 위치·크기는 카드 틀 디자인 전 가안이에요.</p>'+tabs+bcView(d,P,seg);
+ if(P.tab==='battle')return '<h2>카드 미리보기</h2><p class="sub">전투카드 구성 규격(가안, 기획지시 2026-10-30) 그대로 그려요: 일러스트 → 어두운 바탕 → 틀 → 비용·종류(틀의 소켓 자리) → 이름·효과 문구(최대 3줄). 숫자는 디자인 시안 후 바뀔 수 있어요.</p>'+tabs+bcView(d,P,seg);
  var miss=TIERS.filter(function(t){return !sl['FRAME_'+t[0]]}).map(function(t){return t[1]});
  var vw=Math.min(window.innerWidth,1100),W=vw>=700?Math.min(180,Math.floor((vw-160)/3)):Math.max(110,Math.min(150,Math.floor((vw-140)/2)));
  return '<h2>카드 미리보기</h2>'+tabs+'<p class="sub">등록한 에셋으로 캐릭터 카드를 홀로 연출 단계·티어 프레임별로 그려요. 카드 위를 누르거나 끌면 기울기·빛이 따라와요(가만히 두면 자동으로 빛이 지나가요). 실제 게임은 Godot 셰이더라 느낌만 맞추는 근사치예요(총괄 13장).</p>'
@@ -361,17 +366,16 @@ function bcCard(d,id,k,o){var sl=d.assets.slots||{},u=function(f){return f&&f.pa
   if(f){if(cr){var iw=o.w/cr.w,ih=iw*f.h/f.w;lay+='<div class="l" style="background-image:'+u(f)+';background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'px '+ih.toFixed(1)+'px;background-position:'+(-cr.x*iw).toFixed(1)+'px '+(-cr.y*ih).toFixed(1)+'px"></div>'}else lay+='<div class="l" style="background:'+u(f)+' center 10%/cover no-repeat"></div>'}}
  else if(art)lay='<div class="l art" style="background-image:'+u(art)+'"></div>';
  else lay='<div class="l art" style="'+(bgN?'background-image:'+u(bgN):'background:linear-gradient(160deg,#3a4058,#1b1f2e)')+'"></div>'+(ks?'<div class="sym" style="background-image:'+u(ks)+'"></div>':'<div class="symt">'+esc(KIND_KO[k.kind]||k.kind)+'</div>');
- var fr=sl.CARD_FRAME,ph=PHASE[k.phase]||['단계 '+k.phase,'#445'];
- return '<div class="bc" style="--w:'+o.w+'px">'+lay+(fr?'<div class="l frm" style="background-image:'+u(fr)+'"></div>':'')
-  +'<div class="cost">'+k.cost+'</div>'+(ks?'<div class="kind" style="background-image:'+u(ks)+'"></div>':'<div class="kindt">'+esc(KIND_KO[k.kind]||k.kind)+'</div>')
-  +(k.owner?'<div class="own">전용</div>':'')+'<div class="nm">'+esc(k.name)+'</div>'
-  +(o.mode!=='hand'?'<div class="tx" style="'+(o.mode==='desk'?'bottom:9cqw':'')+'">'+esc(k.text)+'</div>':'')
-  +(o.mode==='desk'?'<div class="ph" style="--phc:'+ph[1]+'">'+ph[0]+'</div>':'')+'</div>'}
+ var fr=sl.CARD_FRAME,kicon=ks?'<i style="background-image:'+u(ks)+'"></i>':'<i class="kt">'+esc(KIND_KO[k.kind]||k.kind)+'</i>';
+ /* 전투카드 구성 규격(기획지시 2026-10-30, 가안): 일러스트 → 어두운 바탕(아래 40%) → 틀 → 소켓(비용 (100,100)·종류 (700,100), 지름 160) → 이름 44·문구 28(최대 3줄) */
+ return '<div class="bc'+(o.mode==='hand'?' hand':'')+'" style="--w:'+o.w+'px">'+lay+'<div class="l shade"></div>'+(fr?'<div class="l frm" style="background-image:'+u(fr)+'"></div>':'')
+  +'<div class="sock c'+(fr?'':' nos')+'"><b>'+k.cost+'</b></div><div class="sock k'+(fr?'':' nos')+'">'+kicon+'</div>'
+  +(k.owner?'<div class="own">전용</div>':'')+'<div class="txt"><div class="nm">'+esc(k.name)+'</div>'+(o.mode==='hand'?'':'<div class="tx">'+esc(k.text)+'</div>')+'</div></div>'}
 function bcView(d,P,seg){var ids=Object.keys(d.cards||{}).sort(function(a,b){var ca=d.cards[a],cb=d.cards[b];return (ca.owner?1:0)-(cb.owner?1:0)||a.localeCompare(b)});
  if(P.bf==='common')ids=ids.filter(function(i){return !d.cards[i].owner});else if(P.bf==='own')ids=ids.filter(function(i){return d.cards[i].owner});
  var vw=Math.min(window.innerWidth,1100),W=P.bm==='hand'?(vw>=700?110:90):(vw>=700?170:Math.max(120,Math.min(150,Math.floor((vw-140)/2))));
  var sl=d.assets.slots||{},have=ids.filter(function(i){return !d.cards[i].owner&&sl['CARD_ART_'+i]}).length,common=ids.filter(function(i){return !d.cards[i].owner}).length;
- return '<div class="card" style="margin-bottom:14px;display:grid;gap:10px"><div><b class="small">보기</b>'+seg('bm',[['hand','손패(휴대폰: 문구 숨김)'],['detail','상세·태블릿(효과 문구)'],['desk','데스크톱 손패(문구 + 처리 단계 띠)']])+'</div>'
+ return '<div class="card" style="margin-bottom:14px;display:grid;gap:10px"><div><b class="small">보기</b>'+seg('bm',[['hand','휴대폰 손패(이름만)'],['detail','태블릿·데스크톱·상세(이름 + 효과 문구)']])+'</div>'
  +'<div><b class="small">카드</b>'+seg('bf',[['all','전체'],['common','공용 16'],['own','전용(캐릭터)']])+'</div>'
  +'<div class="small muted">공용 일러스트 '+have+'/'+common+' · 없는 카드는 중립 배경 + 종류 심볼로 대체'+(sl.CARD_FRAME?'':' · 전투카드 틀(CARD_FRAME) 없음')+'. 전용 카드는 주인 캐릭터 전신의 카드 영역(기본 스킨)을 써요.</div></div>'
  +'<div class="card"><div class="pvwrap" style="gap:'+(P.bm==='hand'?'14px 12px':'20px')+'">'+ids.map(function(i){var k=d.cards[i];return '<div class="pvcell">'+bcCard(d,i,k,{w:W,mode:P.bm})+'<div class="pvlab">'+i+(k.owner?' · '+esc((d.characters.find(function(x){return x.id===k.owner})||{}).name||k.owner):'')+'</div></div>'}).join('')+'</div></div>'}
