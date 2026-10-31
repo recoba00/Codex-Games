@@ -44,6 +44,7 @@ pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220
 <script>
 var S={token:sessionStorage.getItem('tok'),acc:sessionStorage.getItem('acc'),data:null,ws:null,st:null,sel:{cards:[],spell:null,active:false}};
 var $=function(id){return document.getElementById(id)};
+window.PWA_BUSY=function(){return !!(S.st&&['ban','pick','loadout','battle'].indexOf(S.st.phase)>=0)};
 function log(m){$('log').textContent=new Date().toLocaleTimeString()+' '+m+'\n'+$('log').textContent}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.token?{authorization:'Bearer '+S.token}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function nm(kind,id){var d=S.data&&S.data[kind]&&S.data[kind][id];return d?d.name:id}

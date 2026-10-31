@@ -110,6 +110,7 @@ function draw(state, p, n) {
     p.hand.push(card);
     drawn.push(card.uid);
   }
+  if (drawn.length && !state.quiet) state.log.push({ t: "draw", seat: state.players.indexOf(p), n: drawn.length });  // 효과 자막(기획답변 32차): 실제 뽑은 장수
   return drawn;
 }
 
@@ -169,7 +170,9 @@ function selfCost(state, p, pct) {
 }
 
 function gaugeAdd(state, p, n) {
+  const before = p.gauge;
   p.gauge = Math.max(0, Math.min(state.rules.gauge_max, p.gauge + n));
+  if (p.gauge !== before && !state.quiet) state.log.push({ t: "gauge", seat: state.players.indexOf(p), v: p.gauge - before });  // 효과 자막(32차): 실제 증감량
 }
 
 function addShield(state, p, amount, full = false) {
@@ -255,6 +258,7 @@ function strike(state, attacker, target, { coef, hits = 1, pierce = 0, attackCar
 function beginTurn(state) {
   state.turn += 1;
   const r = state.rules;
+  state.quiet = true;  // 턴 시작 드로우·게이지 +15는 자막·로그에 넣지 않음(행동 결과만)
   for (const p of state.players) {
     p.seat = state.players.indexOf(p);
     const down = within(p.st.energyDown, state.turn) ? p.st.energyDown.n : 0;
@@ -275,6 +279,7 @@ function beginTurn(state) {
     p.invuln = false; p.mirror = 0; p.exhausted = 0; p.silencedNow = false;
     p.counters = []; p.mo02 = 0; p.mo02Used = false;
   }
+  delete state.quiet;
 }
 
 // ---------- 제출 (총괄 6장: 카드 최대 3장, 스펠 1개, 액티브) ----------
@@ -420,7 +425,9 @@ export function resolveTurn(state) {
       if (ok.has(c.uid)) pl.live.push(c);
       p.discard.push(c);
     }
+    state.quiet = true;  // 에너지 사용 게이지는 규칙 충전이라 자막에 넣지 않음(카드 효과 게이지만)
     gaugeAdd(state, p, paid * state.rules.gauge_per_energy);
+    delete state.quiet;
     p.carry = Math.min(state.rules.energy_carry_max, Math.max(0, p.energy - Math.min(paid, p.energy)));
   }
   const live = (p, kinds) => plays.get(p).live.filter((c) => kinds.includes(state.cards[c.id].kind));
@@ -430,6 +437,7 @@ export function resolveTurn(state) {
   for (const p of seq) {
     for (const c of live(p, ["immune", "defense", "counter"])) {
       const card = state.cards[c.id];
+      state.log.push({ t: "card", seat: p.seat, id: c.id, phase: 1 });  // 다른 단계처럼 효과보다 먼저(연출 순서)
       if (card.kind === "immune") {
         const turns = c.id === "C10" ? P("C10").immuneTurns : 1;
         p.st.immune = { from: state.turn, to: Math.max(state.turn + turns - 1, p.st.immune?.to ?? 0) };
@@ -443,7 +451,6 @@ export function resolveTurn(state) {
       } else {
         p.counters.push(c.id);
       }
-      state.log.push({ t: "card", seat: p.seat, id: c.id, phase: 1 });
     }
   }
 

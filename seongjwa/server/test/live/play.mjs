@@ -28,11 +28,23 @@ try {
   }
   const { chromium } = await import("playwright").catch(() => createRequire("/usr/lib/node_modules/")("playwright"));
   browser = await chromium.launch();
-  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 390, height: 844, name: "휴대폰 세로" }]) {
-    const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
+  // PWA(기획지시 PWA테스트빌드): 매니페스트·워커·아이콘
+  const mf = await (await fetch(`${API}/manifest.webmanifest`)).json();
+  assert.deepEqual([mf.start_url, mf.display, mf.orientation, mf.icons.length], ["/play", "fullscreen", "landscape", 3]);
+  assert.match(await (await fetch(`${API}/sw.js`)).text(), /shell-/);
+  assert.equal((await fetch(`${API}/icons/maskable-512.png`)).headers.get("content-type"), "image/png");
+  step("PWA: 매니페스트(전체 화면·가로·시작 /play)·서비스 워커·아이콘");
+  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 844, height: 390, name: "휴대폰 가로", touch: true }]) {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(vp.touch ? { isMobile: true, hasTouch: true } : {}) });
+    const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(String(e)));
     await page.goto(`${API}/play`);
+    await page.waitForSelector("#go");
+    assert.equal(await page.inputValue("#dev"), "", "처음 열면 아이디를 묻는다");
+    await page.click("#go");
+    await page.waitForSelector(".toast");  // 아이디 없으면 시작 안 함
+    await page.fill("#dev", `play-${vp.width}-${process.pid}`);
     await page.click("#go");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
     await page.click("[data-pick]", { force: true });
@@ -50,7 +62,7 @@ try {
         assert.equal(await page.$$eval(".slot.mine .bc", (x) => x.length), 1, "내 슬롯에 카드");
         assert.match(await page.textContent(".slot.mine .lab"), /^[0-5] /, "슬롯 처리 단계 라벨");
       }
-      if (t === 1 && vp.width > 760) {  // 카드 상세(호버 0.2초)
+      if (t === 1 && !vp.touch) {  // 카드 상세(호버 0.2초)
         await page.mouse.move(0, 0);
         await page.hover(".hand .bc:not(.picked)", { force: true });
         await page.waitForSelector("#peek .pinfo", { timeout: 3000 });
@@ -77,8 +89,14 @@ try {
     await page.click("#again");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
     step(`${vp.name}: 다시 하기 → 새 판 픽 화면`);
+    if (vp.touch) {  // 세로로 돌리면 안내 화면
+      await page.setViewportSize({ width: 390, height: 844 });
+      assert.ok(await page.isVisible("#rot"), "세로 안내");
+      step("휴대폰 세로: '가로로 돌려 주세요' 안내");
+    } else assert.ok(!(await page.isVisible("#rot")));
+    assert.ok(await page.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => Boolean(r))), "서비스 워커 등록");
     assert.deepEqual(errors, []);
-    await page.close();
+    await ctx.close();
   }
   console.log("play live OK");
 } catch (e) {

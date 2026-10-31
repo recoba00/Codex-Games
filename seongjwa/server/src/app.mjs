@@ -1,7 +1,6 @@
 // 성좌 결투 서버 라우팅: 계정·인증, 게임 데이터, 친구 비밀방. 진입점은 index.mjs
 import { rpc } from "./db.mjs";
-import { TEST_PAGE } from "./devpage.mjs";
-import { PLAY_PAGE } from "./playpage.mjs";
+import { PWA_DEV, PWA_PLAY, MANIFEST, SW_SOURCE, iconBytes } from "./pwa.mjs";
 import { getLive, pinLive } from "./gamedata.mjs";
 import { aiAllowed, legendCount } from "./rank.mjs";
 import { currentSeason, loadRank, tierName } from "./ranking.mjs";
@@ -633,13 +632,23 @@ export async function handle(request, env) {
 
     case "GET /dev":
       if (env.DEV_LOGIN !== "1") throw new Error("not_found");
-      return new Response(TEST_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+      return new Response(PWA_DEV, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 
     case "GET /play":  // 웹 전투 프로토타입(AI 대전만, 느낌 확인용). /dev와 같이 DEV_LOGIN=1 환경에서만
       if (env.DEV_LOGIN !== "1") throw new Error("not_found");
-      return new Response(PLAY_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+      return new Response(PWA_PLAY, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+
+    // 웹 테스트 빌드 PWA(기획지시 PWA테스트빌드): 매니페스트·서비스 워커·아이콘. /play·/dev처럼 DEV_LOGIN=1에서만
+    case "GET /manifest.webmanifest":
+      if (env.DEV_LOGIN !== "1") throw new Error("not_found");
+      return new Response(MANIFEST, { headers: { "content-type": "application/manifest+json; charset=utf-8", "cache-control": "no-cache" } });
+    case "GET /sw.js":
+      if (env.DEV_LOGIN !== "1") throw new Error("not_found");
+      return new Response(SW_SOURCE, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" } });
 
     default: {
+      const im = request.method === "GET" && env.DEV_LOGIN === "1" && url.pathname.match(/^\/icons\/(icon-192|icon-512|maskable-512|apple-touch-icon)\.png$/);
+      if (im) return new Response(iconBytes(im[1]), { headers: { "content-type": "image/png", "cache-control": "public, max-age=86400" } });
       const om = url.pathname.match(/^\/v1\/shop\/orders\/(\d{1,19})\/(finalize|cancel)$/);
       if (om && request.method === "POST") {  // Steam 승인 콜백 뒤 확정 / 창 닫음
         const claims = await authenticate(request, env);
