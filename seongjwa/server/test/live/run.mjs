@@ -41,7 +41,7 @@ class Client {
     const t = await call(`/v1/rooms/${code}/ticket`, {}, this.token);
     assert.equal(t.status, 200, JSON.stringify(t.body));
     this.ws = new WebSocket(`ws://127.0.0.1:${API_PORT}/v1/rooms/${code}/ws?ticket=${encodeURIComponent(t.body.ticket)}`);
-    this.ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === "room") this.state = m; else if (m.type === "error") this.errors.push(m.error); this.msgs.push(m); };
+    this.ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === "room") { this.state = m; if (m.reveal && !m.reveal.done && m.battle) this.ws.send(JSON.stringify({ type: "revealed", turn: m.battle.turn })); } else if (m.type === "error") this.errors.push(m.error); this.msgs.push(m); };
     await new Promise((res, rej) => { this.ws.onopen = res; this.ws.onerror = rej; });
     await this.until((s) => s);
   }

@@ -9,6 +9,7 @@ export const RULE_DEFAULTS = Object.freeze({
   rush_heal_cut: 0.5,
   crit_mult: 1.5,
   reconnect_grace_sec: 60,
+  reveal_max_sec: 10,        // 공개 연출 상한(총괄 6장 8→10초, 기획지시 효과연출). 양쪽이 연출을 끝내면 바로 다음 선택
   // 아래는 총괄 6장·상세 02 문구 값(시트에 키가 생기면 그쪽 우선)
   energy_max: 5,
   energy_carry_max: 1,

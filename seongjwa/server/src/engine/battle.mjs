@@ -199,7 +199,7 @@ function receivedMult(state, attacker, target, isAttack) {
 }
 
 // 실드 차감 후 HP 피해. 반환: { pre, hp }
-function dealDirect(state, attacker, target, raw, { ignoreShield = false, reflectable = true, source = "attack" } = {}) {
+function dealDirect(state, attacker, target, raw, { ignoreShield = false, reflectable = true, source = "attack", calc = null } = {}) {
   const tSeat = state.players.indexOf(target);
   if (target.invuln) {  // 수호: 0으로 끝(반사도 0)
     state.log.push({ t: "dmg", seat: tSeat, v: 0, src: source, guard: true });
@@ -222,7 +222,7 @@ function dealDirect(state, attacker, target, raw, { ignoreShield = false, reflec
   }
   target.hp -= rest;
   attacker.dealt += rest;
-  state.log.push({ t: "dmg", seat: tSeat, v: rest, absorbed: pre - rest, src: source });
+  state.log.push({ t: "dmg", seat: tSeat, v: rest, absorbed: pre - rest, src: source, ...(calc ? { calc: { ...calc, pre } } : {}) });  // calc: 피해 계산 내역(기획지시 효과연출 9)
   if (reflectable && target.mirror) {  // 거울: 실드 차감 전 받는 직접 피해의 N% 반사, 재반사 없음
     dealDirect(state, target, attacker, pre * target.mirror, { reflectable: false, source: "mirror" });
   }
@@ -245,9 +245,12 @@ function strike(state, attacker, target, { coef, hits = 1, pierce = 0, attackCar
   for (let h = 0; h < hits; h += 1) {
     const crit = nextRandom(state) * 100 < critChance;
     let v = atk * coef * mult * defense;
-    if (crit) v *= state.rules.crit_mult * (marked ? 1 + state.rules.mark_crit_bonus : 1);
-    v *= rushMult(state) * receivedMult(state, attacker, target, attackCard);
-    const r = dealDirect(state, attacker, target, v, { source: attackCard ? "card" : "counter" });
+    const critM = crit ? state.rules.crit_mult * (marked ? 1 + state.rules.mark_crit_bonus : 1) : 1;
+    const rush = rushMult(state), recv = receivedMult(state, attacker, target, attackCard);
+    v *= critM * rush * recv;
+    const fx = (n) => Math.round(n * 1000) / 1000;
+    const r = dealDirect(state, attacker, target, v, { source: attackCard ? "card" : "counter",
+      calc: { atk: Math.round(atk), coef, mult: fx(mult), def: fx(defense), crit: fx(critM), rush: fx(rush), recv: fx(recv) } });
     if (crit) state.log.push({ t: "crit", seat: target.seat });
     total += r.hp;
   }
@@ -693,7 +696,7 @@ export function view(state, seat) {
     } : {})
   });
   return {
-    turn: state.turn, dataVersion: state.dataVersion, rules: { max_turn: state.rules.max_turn, rush_start_turn: state.rules.rush_start_turn, cards_per_turn_max: state.rules.cards_per_turn_max },
+    turn: state.turn, dataVersion: state.dataVersion, rules: { max_turn: state.rules.max_turn, rush_start_turn: state.rules.rush_start_turn, rush_dmg_step: state.rules.rush_dmg_step, cards_per_turn_max: state.rules.cards_per_turn_max },
     you: seat, me: pub(state.players[seat], true), opp: pub(state.players[1 - seat], false),
     log: state.log, result: state.result
   };

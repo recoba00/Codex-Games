@@ -100,8 +100,11 @@ try {
       await page.waitForSelector(".skip", { timeout: 15000 });  // 공개 연출 시작(확정 버튼 자리에 건너뛰기)
       assert.equal(await page.$("#ok"), null, "공개 중 확정 버튼 없음");
       await page.waitForSelector("#cap.show", { timeout: 8000 });  // 효과 자막
-      if (t === 2) { await sleep(900); await page.screenshot({ path: `/tmp/play_rev_${vp.width}.png` }); }
+      assert.ok(await page.$(".obar i"), "처리 순서 막대");
+      if (t === 2) { await sleep(1300); await page.screenshot({ path: `/tmp/play_rev_${vp.width}.png` }); }
       await page.waitForFunction((n) => /턴 (\d+)/.test(document.querySelector(".turn")?.textContent ?? "") && !document.querySelector(".skip") && Number(document.querySelector(".turn").textContent.match(/턴 (\d+)/)[1]) === n, t + 1, { timeout: 20000 });
+      // 양쪽 연출이 끝나면(AI는 즉시) 남은 공개 시간을 버리고 선택 20초가 새로 시작
+      await page.waitForFunction(() => Number(document.querySelector("#rt")?.textContent) >= 18, null, { timeout: 4000 });
     }
     step(`${vp.name}: 전투 3턴(카드 선택·확정 → 공개 연출 → 다음 턴)`);
     const shot = `/tmp/play_${vp.width}.png`;

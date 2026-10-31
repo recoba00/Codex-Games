@@ -275,6 +275,12 @@ export class FriendRoom extends DurableObject {
         if (both) await this.resolve(now);
         return;
       }
+      case "revealed": {  // 공개 연출 끝(건너뛰기 포함). 양쪽 다 끝나면 남은 연출 시간을 버리고 선택 시작
+        if (room.phase !== "battle" || !(g.revealUntil > now) || Number(msg.turn) !== g.battle.turn) return;
+        g.revealDone[seat] = true;
+        if (g.revealDone.every((d, s) => d || !this.connected(s))) this.endReveal(now);
+        return;
+      }
       case "pause": {  // AI 대전 첫 턴 안내(상세 01): 안내가 열려 있는 동안 선택 타이머 정지. 사람끼리 하는 모드는 정지 없음
         if (room.mode !== "practice" || room.phase !== "battle") throw new Error("phase_invalid");
         if (msg.on) {
@@ -460,20 +466,35 @@ export class FriendRoom extends DurableObject {
     this.openTurn(now);
   }
 
-  openTurn(now) {
+  // reveal: 직전 턴 공개 연출 시간(총괄 6장 상한 10초)을 선택 시간 앞에 둔다. 양쪽이 연출을 끝내거나 건너뛰면(revealed) 바로 선택 시작(기획지시 효과연출)
+  openTurn(now, reveal = false) {
     const g = this.room.game;
-    g.turnAt = now;
+    const rv = reveal ? Math.round(Number(g.battle.rules.reveal_max_sec ?? 10) * 1000) : 0;
+    g.revealUntil = now + rv;
+    g.revealDone = [0, 1].map((s) => !rv || Boolean(this.room.members[s]?.ai) || !this.connected(s));
+    g.turnAt = now + rv;
     const ms = g.battle.rules.turn_select_sec * 1000 + PREP.grace_ms;
-    g.deadline = [now + ms, now + ms];
+    g.deadline = [now + rv + ms, now + rv + ms];
     g.paused = null;
     const ai = this.room.members.findIndex((m) => m.ai);
-    g.aiAt = ai >= 0 ? now + Math.min(this.thinkMs(), ms - 1000) : 0;
+    g.aiAt = ai >= 0 ? now + rv + Math.min(this.thinkMs(), ms - 1000) : 0;
+    if (rv && g.revealDone.every(Boolean)) this.endReveal(now);
     for (const seat of [0, 1]) {  // AFK 2턴째 경고(총괄 10장)
       if (g.battle.players[seat].idle === g.battle.rules.afk_turns_leave - 1 && g.warned[seat] !== g.battle.turn) {
         g.warned[seat] = g.battle.turn;
         for (const ws of this.sockets(seat)) send(ws, { type: "afk_warning", turn: g.battle.turn });
       }
     }
+  }
+
+  endReveal(now) {
+    const g = this.room.game;
+    const ms = g.battle.rules.turn_select_sec * 1000 + PREP.grace_ms;
+    g.revealUntil = now;
+    g.turnAt = now;
+    g.deadline = [0, 1].map((s) => now + ms + (g.timebank[s] === g.battle.turn ? g.battle.rules.timebank_sec * 1000 : 0));
+    const ai = this.room.members.findIndex((m) => m.ai);
+    if (ai >= 0 && !g.battle.players[ai].submitted) g.aiAt = now + Math.min(this.thinkMs(), ms - 1000);
   }
 
   resolve(now) {
@@ -489,7 +510,7 @@ export class FriendRoom extends DurableObject {
     if (ai >= 0) remember(g.battle, ai, g.aiMemory);
     recordTurn(g, now);
     if (g.battle.result) return this.finishGame(now);
-    this.openTurn(now);
+    this.openTurn(now, true);
     return null;
   }
 
@@ -771,6 +792,7 @@ export class FriendRoom extends DurableObject {
       base.deadline = g.deadline[seat];
       base.oppDeadline = g.deadline[1 - seat];
       base.timebankUsed = Boolean(g.timebank[seat]);
+      base.reveal = g.revealUntil > Date.now() ? { until: g.revealUntil, done: Boolean(g.revealDone?.[seat]) } : null;
       base.emotes = { left: EMOTE_MAX - (g.emote?.used?.[seat] ?? 0), mutedOpp: Boolean(g.emote?.muted?.[seat]), set: g.emote?.sets?.[seat] ?? null };
     }
     return base;
