@@ -85,6 +85,8 @@ jobs:
           npm i --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
           npm run test:live:assets
+      - name: Live test of the web battle prototype (/play, browser, practice vs AI)
+        run: npm run test:live:play
       - name: Live test on local Workers runtime + Postgres (champions cup, rate limit, abuse suspects)
         run: npm run test:live:cup
 

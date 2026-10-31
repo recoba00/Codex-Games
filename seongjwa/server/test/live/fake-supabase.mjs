@@ -42,6 +42,7 @@ export function startFakeSupabase(port) {
         const s = sessions.get(body.p_session);
         return reply(res, 200, Boolean(s && !s.revoked));
       }
+      if (url.pathname === "/rest/v1/rpc/asset_list") return reply(res, 200, {});  // 에셋 없음 → 게임 내장 기본(전투 프로토타입 시험)
       if (url.pathname === "/rest/v1/rpc/season_current") return reply(res, 200, season);
       if (url.pathname === "/rest/v1/rpc/account_unban_expired") return reply(res, 200, false);
       if (url.pathname === "/rest/v1/rpc/sanction_status") return reply(res, 200, { warnings: [], rankUntil: null });

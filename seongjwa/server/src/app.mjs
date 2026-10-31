@@ -1,6 +1,7 @@
 // 성좌 결투 서버 라우팅: 계정·인증, 게임 데이터, 친구 비밀방. 진입점은 index.mjs
 import { rpc } from "./db.mjs";
 import { TEST_PAGE } from "./devpage.mjs";
+import { PLAY_PAGE } from "./playpage.mjs";
 import { getLive, pinLive } from "./gamedata.mjs";
 import { aiAllowed, legendCount } from "./rank.mjs";
 import { currentSeason, loadRank, tierName } from "./ranking.mjs";
@@ -633,6 +634,10 @@ export async function handle(request, env) {
     case "GET /dev":
       if (env.DEV_LOGIN !== "1") throw new Error("not_found");
       return new Response(TEST_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+
+    case "GET /play":  // 웹 전투 프로토타입(AI 대전만, 느낌 확인용). /dev와 같이 DEV_LOGIN=1 환경에서만
+      if (env.DEV_LOGIN !== "1") throw new Error("not_found");
+      return new Response(PLAY_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 
     default: {
       const om = url.pathname.match(/^\/v1\/shop\/orders\/(\d{1,19})\/(finalize|cancel)$/);
