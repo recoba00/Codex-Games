@@ -132,7 +132,7 @@ function fmtLog(L,you){return (L||[]).map(function(e){var who=e.seat===undefined
  switch(e.t){case 'turn':return '── '+e.turn+'턴 결과';case 'reveal':return who+'공개: '+(e.cards.map(function(c){return nm('cards',c)}).join(', ')||'카드 없음')+(e.spell?' / 스펠 '+nm('spells',e.spell):'')+(e.active?' / 액티브':'')+(e.auto?' (자동)':'');
  case 'dmg':return who+'피해 '+e.v+(e.absorbed?' (실드 '+e.absorbed+')':'')+(e.guard?' 수호로 0':'')+' ← '+e.src;case 'heal':return who+'회복 '+e.v;case 'countered':return who+nm('cards',e.card)+' 무효 (반격)';
  case 'blocked':return who+e.debuff+' 막음(면역)';case 'debuff':return who+e.debuff+' 걸림';case 'void':return who+nm('cards',e.card||'')+' 무효 ('+e.why+')';case 'spell':return who+'스펠 '+nm('spells',e.id)+(e.void?' 무효':'');
- case 'active':return who+'액티브'+(e.void?' 무효(게이지 반환)':'');case 'end':return '■ 종료: '+e.outcome+' ('+e.reason+')';case 'rush':return '★ 폭주 시작';case 'card':return '';default:return who+e.t}}).filter(Boolean).join('\n')}
+ case 'active':return who+'액티브'+(e.void?' 무효(게이지 반환)':'');case 'end':return '■ 종료: '+e.outcome+' ('+e.reason+')';case 'rush':return '★ 폭주 시작';case 'card':return '';case 'phase':return '';case 'shield':return who+'실드 +'+e.v;default:return who+e.t}}).filter(Boolean).join('\n')}
 function tick(){var m=S.st;if(!m)return;var t=m.phase==='battle'?m.deadline:m.phaseDeadline;var a=$('tl')||$('timer');if(a)a.textContent=left(t)}
 var MK={daily:'일일',weekly:'주간',season:'시즌'};
 function loadEcon(){api('/v1/econ').then(function(e){S.econ=e;$('gold').textContent=e.gold.toLocaleString()+' 골드';

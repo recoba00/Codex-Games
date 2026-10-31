@@ -45,9 +45,23 @@ try {
       const before = await page.$$eval(".hand .bc", (x) => x.length);
       assert.ok(before >= 3, `손패 ${before}`);
       const playable = await page.$(".hand .bc:not(.cant):not(.lock)");
-      if (playable) { await playable.click(); assert.equal(await page.$$eval(".slot.mine .bc", (x) => x.length), 1, "내 슬롯에 카드"); }
+      if (playable) {
+        await playable.click();
+        assert.equal(await page.$$eval(".slot.mine .bc", (x) => x.length), 1, "내 슬롯에 카드");
+        assert.match(await page.textContent(".slot.mine .lab"), /^[0-5] /, "슬롯 처리 단계 라벨");
+      }
+      if (t === 1 && vp.width > 760) {  // 카드 상세(호버 0.2초)
+        await page.mouse.move(0, 0);
+        await page.hover(".hand .bc:not(.picked)", { force: true });
+        await page.waitForSelector("#peek .pinfo", { timeout: 3000 });
+        assert.match(await page.textContent("#peek .pinfo"), /처리 단계 [0-5]/);
+        await page.mouse.move(0, 0);
+      }
       await page.click("#ok");
-      await page.waitForSelector(".skip", { timeout: 15000 });  // 공개 연출 시작
+      await page.waitForSelector(".skip", { timeout: 15000 });  // 공개 연출 시작(확정 버튼 자리에 건너뛰기)
+      assert.equal(await page.$("#ok"), null, "공개 중 확정 버튼 없음");
+      await page.waitForSelector("#cap.show", { timeout: 8000 });  // 효과 자막
+      if (t === 2) { await sleep(900); await page.screenshot({ path: `/tmp/play_rev_${vp.width}.png` }); }
       await page.waitForFunction((n) => /턴 (\d+)/.test(document.querySelector(".turn")?.textContent ?? "") && !document.querySelector(".skip") && Number(document.querySelector(".turn").textContent.match(/턴 (\d+)/)[1]) === n, t + 1, { timeout: 20000 });
     }
     step(`${vp.name}: 전투 3턴(카드 선택·확정 → 공개 연출 → 다음 턴)`);

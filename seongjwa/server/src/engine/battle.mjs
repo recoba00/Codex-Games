@@ -154,7 +154,9 @@ function heal(state, p, amount) {
   p.hp += healed;
   if (p.char === "SE" && v > healed) {  // 셀레네 월광: 넘친 회복은 실드로(최대 HP 10%)
     const cap = round(p.maxHp * p.cp.passiveShieldCap);
+    const before = p.shield.full;
     p.shield.full = Math.min(cap, p.shield.full + (v - healed));
+    if (p.shield.full > before) state.log.push({ t: "shield", seat: state.players.indexOf(p), v: p.shield.full - before });
   }
   state.log.push({ t: "heal", seat: state.players.indexOf(p), v: healed });
   return healed;
@@ -170,8 +172,10 @@ function gaugeAdd(state, p, n) {
   p.gauge = Math.max(0, Math.min(state.rules.gauge_max, p.gauge + n));
 }
 
-function addShield(p, amount, full = false) {
-  if (full) p.shield.full += round(amount); else p.shield.norm += round(amount);
+function addShield(state, p, amount, full = false) {
+  const v = round(amount);
+  if (full) p.shield.full += v; else p.shield.norm += v;
+  state.log.push({ t: "shield", seat: state.players.indexOf(p), v });  // 효과 자막용(기획지시 전투가독성)
 }
 
 function isFlood(state, p) {
@@ -204,7 +208,7 @@ function dealDirect(state, attacker, target, raw, { ignoreShield = false, reflec
   if (!ignoreShield) {
     // 망령 갑주: 약화 상태 상대에게 맞으면 실드 +50%(턴당 1회)
     if (target.mo02 > 0 && !target.mo02Used && within(attacker.st.weak, state.turn)) {
-      addShield(target, target.mo02 * state.cards.MO02.params.hitByWeakBonus);
+      addShield(state, target, target.mo02 * state.cards.MO02.params.hitByWeakBonus);
       target.mo02Used = true;
     }
     for (const k of ["carried", "norm", "full"]) {  // 이월분(먼저 사라질 것)부터 깎음
@@ -429,12 +433,12 @@ export function resolveTurn(state) {
       if (card.kind === "immune") {
         const turns = c.id === "C10" ? P("C10").immuneTurns : 1;
         p.st.immune = { from: state.turn, to: Math.max(state.turn + turns - 1, p.st.immune?.to ?? 0) };
-        if (c.id === "C11") { cleanse(p); p.st.immune = { from: state.turn, to: Math.max(state.turn, p.st.immune?.to ?? 0) }; addShield(p, p.def * card.coef); }
+        if (c.id === "C11") { cleanse(p); p.st.immune = { from: state.turn, to: Math.max(state.turn, p.st.immune?.to ?? 0) }; addShield(state, p, p.def * card.coef); }
       } else if (card.kind === "defense") {
         let amount = p.def * card.coef;
         if (c.id === "TE02" && isEbb(state, p)) amount *= P("TE02").ebbMult;
         if (p.char === "AU") amount *= 1 + p.cp.passiveShieldBonus;
-        addShield(p, amount, c.id === "AU01");
+        addShield(state, p, amount, c.id === "AU01");
         if (c.id === "MO02") p.mo02 += round(amount);
       } else {
         p.counters.push(c.id);
@@ -541,6 +545,7 @@ export function resolveTurn(state) {
   if (finishIfDead(state)) return state;
 
   // 5 턴 종료: 작열 → 월광 재생 → 실드 이월 → 판정
+  state.log.push({ t: "phase", n: 5 });  // 연출용 단계 표시(앞 단계 카드 결과와 턴 종료 효과 구분)
   for (const p of seq) {
     const o = opp(p);
     const stacks = p.st.burn.filter((b) => b.from <= state.turn && state.turn <= b.to);
@@ -674,7 +679,9 @@ export function view(state, seat) {
     spells: Object.fromEntries(Object.entries(p.spellReady).map(([id, t]) => [id, Math.max(0, t - state.turn)])),
     status: statusView(state, p), submitted: Boolean(p.submitted), idle: p.idle,
     ...(mine ? {
-      hand: p.hand.map((c) => ({ uid: c.uid, id: c.id, cost: cardCost(state, p, [c.id])[0], sealed: p.sealed.includes(c.uid) })),
+      // 비용은 시트 `전투카드` 기준(기획지시 전투가독성 4). 실피 순풍(매 턴 처음 내는 1E 카드 0)은 freeOneCost로 따로 알려 화면이 선택 순서대로 계산
+      hand: p.hand.map((c) => ({ uid: c.uid, id: c.id, cost: state.cards[c.id].cost, sealed: p.sealed.includes(c.uid) })),
+      freeOneCost: p.char === "SL" ? (p.cp?.passiveFreeCards ?? 1) : 0,
       revealed: p.revealed, mySubmission: p.submitted ? { cards: p.submitted.cards, spell: p.submitted.spell, active: p.submitted.active } : null
     } : {})
   });
