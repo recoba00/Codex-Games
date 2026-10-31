@@ -135,6 +135,12 @@ export class FriendRoom extends DurableObject {
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment({ seat, acc: t.acc, sid: t.sid });
     const g = this.room.game;
+    // AI 대전: 픽 시간(총괄 7장 15초)은 플레이어가 실제로 접속한 때부터 센다(방 생성~화면 표시 사이 손실 방지, 기획지시 전투화면정리 확인 1)
+    if (g && this.room.mode === "practice" && this.room.phase === "pick" && !g.joinedAt && seat >= 0 && !this.room.members[seat].ai) {
+      g.joinedAt = now;
+      this.room.phaseDeadline = now + this.prepSec("pick_sec") * 1000 + PREP.grace_ms;
+      await this.save();
+    }
     if (g?.away?.[seat]) {
       g.away[seat] = null;
       g.log.push({ t: "reconnect", seat, at: now });
@@ -267,6 +273,16 @@ export class FriendRoom extends DurableObject {
         const both = submit(g.battle, seat, { cards: msg.cards ?? [], spell: msg.spell ?? null, active: Boolean(msg.active) });
         (g.actAt ??= [0, 0])[seat] = now;
         if (both) await this.resolve(now);
+        return;
+      }
+      case "pause": {  // AI 대전 첫 턴 안내(상세 01): 안내가 열려 있는 동안 선택 타이머 정지. 사람끼리 하는 모드는 정지 없음
+        if (room.mode !== "practice" || room.phase !== "battle") throw new Error("phase_invalid");
+        if (msg.on) {
+          if (!g.paused) { g.paused = { turn: g.battle.turn, left: g.deadline.map((d) => Math.max(0, d - now)) }; g.deadline = g.deadline.map(() => now + 60 * 1000); }  // 안내를 열어 둔 채 떠나도 60초 뒤엔 진행
+        } else if (g.paused) {
+          if (g.paused.turn === g.battle.turn) g.deadline = g.paused.left.map((l) => now + l);
+          g.paused = null;
+        }
         return;
       }
       case "timebank": {
@@ -449,6 +465,7 @@ export class FriendRoom extends DurableObject {
     g.turnAt = now;
     const ms = g.battle.rules.turn_select_sec * 1000 + PREP.grace_ms;
     g.deadline = [now + ms, now + ms];
+    g.paused = null;
     const ai = this.room.members.findIndex((m) => m.ai);
     g.aiAt = ai >= 0 ? now + Math.min(this.thinkMs(), ms - 1000) : 0;
     for (const seat of [0, 1]) {  // AFK 2턴째 경고(총괄 10장)

@@ -19,6 +19,20 @@ wr.stdout.on("data", (d) => { wlog += d; });
 wr.stderr.on("data", (d) => { wlog += d; });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const step = (m) => console.log(`✔ ${m}`);
+async function noScroll(page, name) {  // 총괄 5장: 스크롤 없음(문서·내부 상자 모두)
+  const bad = await page.evaluate(() => {
+    const out = [];
+    if (document.scrollingElement.scrollHeight > innerHeight + 1 || document.scrollingElement.scrollWidth > innerWidth + 1) out.push("document");
+    for (const e of document.querySelectorAll("body *")) {
+      const s = getComputedStyle(e);
+      if (/(auto|scroll)/.test(s.overflowY + s.overflowX) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) out.push(e.className || e.id || e.tagName);
+      const r = e.getBoundingClientRect();
+      if (e.matches("button,.bc,.pvc,.side,.ctl") && r.width && s.visibility !== "hidden" && !e.closest(".backs") && (r.bottom > innerHeight + 2 || r.right > innerWidth + 2)) out.push("밖:" + (e.id || e.className));
+    }
+    return out.slice(0, 5);
+  });
+  assert.deepEqual(bad, [], `${name} 화면 넘침`);
+}
 let browser;
 try {
   for (let i = 0; ; i += 1) {
@@ -34,11 +48,11 @@ try {
   assert.match(await (await fetch(`${API}/sw.js`)).text(), /shell-/);
   assert.equal((await fetch(`${API}/icons/maskable-512.png`)).headers.get("content-type"), "image/png");
   step("PWA: 매니페스트(전체 화면·가로·시작 /play)·서비스 워커·아이콘");
-  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 844, height: 390, name: "휴대폰 가로", touch: true }]) {
+  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }]) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(vp.touch ? { isMobile: true, hasTouch: true } : {}) });
     const page = await ctx.newPage();
     const errors = [];
-    page.on("pageerror", (e) => errors.push(String(e)));
+    page.on("pageerror", (e) => { errors.push(String(e)); console.log("PAGEERR", String(e)); });
     await page.goto(`${API}/play`);
     await page.waitForSelector("#go");
     assert.equal(await page.inputValue("#dev"), "", "처음 열면 아이디를 묻는다");
@@ -47,11 +61,23 @@ try {
     await page.fill("#dev", `play-${vp.width}-${process.pid}`);
     await page.click("#go");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
+    await noScroll(page, "픽");
+    assert.equal(await page.$$eval("[data-pick]", (x) => new Set(x.map((e) => Math.round(e.getBoundingClientRect().top))).size), 2, "픽 5+4 두 줄");
     await page.click("[data-pick]", { force: true });
     await page.waitForSelector("[data-sp]", { timeout: 15000 });
-    step(`${vp.name}: 시작 → 픽 → 스펠·덱 화면`);
+    await page.screenshot({ path: `/tmp/play_lo_${vp.width}.png` });
+    await noScroll(page, "스펠·덱");
+    step(`${vp.name}: 시작 → 픽 → 스펠·덱 화면(스크롤 없음)`);
     await page.click("#ok");
     await page.waitForSelector("#side_me .face", { timeout: 15000 });
+    await page.waitForSelector("#guide", { timeout: 5000 });  // 첫 턴 안내 3장(계정 첫 3판)
+    for (let i = 0; i < 3; i += 1) await page.click("#gnext");
+    assert.equal(await page.$("#guide"), null);
+    await noScroll(page, "전투");
+    const [opp, me] = await page.evaluate(() => ["#side_opp", "#side_me"].map((q) => document.querySelector(q).getBoundingClientRect().left));
+    await page.screenshot({ path: `/tmp/play_t1_${vp.width}.png` });
+    assert.ok(opp > me + 100, `상대 프로필 우상단, 내 프로필 좌하단 ${opp} ${me}`);
+    step(`${vp.name}: 첫 턴 안내 3장 → 전투 화면(상대 프로필 우상단, 스크롤 없음)`);
     for (let t = 1; t <= 3; t += 1) {
       await page.waitForFunction(() => { const b = document.querySelector("#ok"); return b && !b.disabled; }, null, { timeout: 20000 });
       const before = await page.$$eval(".hand .bc", (x) => x.length);
@@ -70,6 +96,7 @@ try {
         await page.mouse.move(0, 0);
       }
       await page.click("#ok");
+      if (!playable) await page.click("#dY");  // 빈 확정 확인
       await page.waitForSelector(".skip", { timeout: 15000 });  // 공개 연출 시작(확정 버튼 자리에 건너뛰기)
       assert.equal(await page.$("#ok"), null, "공개 중 확정 버튼 없음");
       await page.waitForSelector("#cap.show", { timeout: 8000 });  // 효과 자막
@@ -82,9 +109,12 @@ try {
     const over = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || document.documentElement.scrollHeight > innerHeight + 1);
     assert.ok(!over, "화면 밖 넘침");
     await page.click("#menu");
+    await page.click("#mSur");
     await page.click("#dY");
     await page.waitForSelector(".res h2", { timeout: 20000 });
     assert.equal((await page.textContent(".res h2")).trim(), "패배");
+    await page.screenshot({ path: `/tmp/play_res_${vp.width}.png` });
+    await noScroll(page, "결과");
     step(`${vp.name}: 항복 → 결과 화면(패배)`);
     await page.click("#again");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
