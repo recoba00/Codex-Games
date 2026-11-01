@@ -561,7 +561,8 @@ export class FriendRoom extends DurableObject {
     const reason = voidReason ?? b.result.reason;
     const mode = room.mode ?? "friend";
     room.games += 1;
-    room.last = { id: g.id, outcome, reason, turn: b.turn, picks: g.picks, hp: b.players.map((p) => [p.hp, p.maxHp]) };
+    room.last = { id: g.id, outcome, reason, turn: b.turn, picks: g.picks, hp: b.players.map((p) => [p.hp, p.maxHp]),
+      stats: b.players.map((p, s) => ({ dealt: p.dealt ?? 0, taken: b.players[1 - s].dealt ?? 0, blocked: p.absorbed ?? 0 })) };  // 결과 통계 5가지(턴·준/받은 피해·실드로 막은 피해·남은 HP)
     room.saves.push({
       tries: 0, next: now,
       row: {
@@ -572,7 +573,7 @@ export class FriendRoom extends DurableObject {
         summary: {
           bans: g.bans.map((x) => x?.id ?? null), picks: g.picks,
           spells: g.loadouts.map((l) => l.spells), presets: g.loadouts.map((l) => l.preset),
-          hp: b.players.map((p) => p.hp), dealt: b.players.map((p) => p.dealt),
+          hp: b.players.map((p) => p.hp), dealt: b.players.map((p) => p.dealt), blocked: b.players.map((p) => p.absorbed ?? 0),
           battle_sec: Math.round((now - (g.battleStartedAt ?? now)) / 1000), options: room.options,
           ai: room.members.find((m) => m.ai)?.ai ?? null
         }

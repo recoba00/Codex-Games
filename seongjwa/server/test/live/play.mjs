@@ -62,8 +62,11 @@ try {
     await page.click("#go");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
     await noScroll(page, "픽");
-    assert.equal(await page.$$eval("[data-pick]", (x) => new Set(x.map((e) => Math.round(e.getBoundingClientRect().top))).size), 2, "픽 5+4 두 줄");
+    assert.equal(await page.$$eval("[data-pick]", (x) => new Set(x.map((e) => Math.round(e.getBoundingClientRect().top))).size), 1, "픽 9명 한 줄");
+    const pw = await page.$eval("[data-pick]", (e) => e.getBoundingClientRect().width);
+    console.log(`  픽 카드 폭 ${vp.name} ${Math.round(pw)}px`);
     await page.click("[data-pick]", { force: true });
+    await page.click("#pok");  // 선택 확정
     await page.waitForSelector("[data-sp]", { timeout: 15000 });
     await page.screenshot({ path: `/tmp/play_lo_${vp.width}.png` });
     await noScroll(page, "스펠·덱");
@@ -117,10 +120,12 @@ try {
     await page.click("#menu");
     await page.click("#mSur");
     await page.click("#dY");
-    await page.waitForSelector(".res h2", { timeout: 20000 });
-    assert.equal((await page.textContent(".res h2")).trim(), "패배");
+    await page.waitForSelector(".rover h2", { timeout: 20000 });
+    assert.equal((await page.textContent(".rover h2")).trim(), "패배");
+    assert.equal(await page.$$eval(".stats .st", (x) => x.length), 5, "결과 통계 5가지");
     await page.screenshot({ path: `/tmp/play_res_${vp.width}.png` });
     await noScroll(page, "결과");
+    await page.screenshot({ path: `/tmp/play_res_${vp.width}.png` });
     step(`${vp.name}: 항복 → 결과 화면(패배)`);
     await page.click("#again");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });

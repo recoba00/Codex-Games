@@ -84,7 +84,7 @@ export function createBattle({ seed, data, players, rules: overrides = {} }) {
       energy: 0, carry: 0, gauge: 0,
       spellReady: Object.fromEntries(spells.map((id) => [id, rules.spell_first_turn])),
       shield: { carried: 0, norm: 0, full: 0 }, mo02: 0, mo02Used: false,
-      st: { burn: [] }, hpStart: {}, dealt: 0, debuffsLanded: 0,
+      st: { burn: [] }, hpStart: {}, dealt: 0, absorbed: 0, debuffsLanded: 0,
       submitted: null, idle: 0, revealed: [], sealed: [], pendingSeal: 0,
       tb: false
     });
@@ -222,6 +222,7 @@ function dealDirect(state, attacker, target, raw, { ignoreShield = false, reflec
   }
   target.hp -= rest;
   attacker.dealt += rest;
+  target.absorbed = (target.absorbed ?? 0) + (pre - rest);  // 결과 화면 통계: 실드로 막은 피해(기획지시 밴픽결과화면)
   state.log.push({ t: "dmg", seat: tSeat, v: rest, absorbed: pre - rest, src: source, ...(calc ? { calc: { ...calc, pre } } : {}) });  // calc: 피해 계산 내역(기획지시 효과연출 9)
   if (reflectable && target.mirror) {  // 거울: 실드 차감 전 받는 직접 피해의 N% 반사, 재반사 없음
     dealDirect(state, target, attacker, pre * target.mirror, { reflectable: false, source: "mirror" });
@@ -683,7 +684,7 @@ export function concede(state, seat, reason = "surrender") {
 // ---------- 시야 필터: 상대 손패·덱 순서·제출 내용·난수 상태는 숨긴다 ----------
 export function view(state, seat) {
   const pub = (p, mine) => ({
-    char: p.char, hp: p.hp, maxHp: p.maxHp, shield: p.shield.carried + p.shield.norm + p.shield.full,
+    char: p.char, hp: p.hp, maxHp: p.maxHp, shield: p.shield.carried + p.shield.norm + p.shield.full, shieldCarry: p.shield.carried,
     energy: p.energy, gauge: p.gauge, deck: p.deck.length, handCount: p.hand.length,
     discard: p.discard.map((c) => c.id),
     spells: Object.fromEntries(Object.entries(p.spellReady).map(([id, t]) => [id, Math.max(0, t - state.turn)])),
@@ -706,7 +707,7 @@ export function view(state, seat) {
 function statusView(state, p) {
   const out = [];
   const t = state.turn;
-  if (p.st.burn.length) out.push({ k: "burn", n: p.st.burn.length });
+  if (p.st.burn.length) out.push({ k: "burn", n: p.st.burn.length, left: Math.max(1, Math.min(...p.st.burn.map((b) => b.to)) - t + 1) });  // 가장 오래된 스택 기준(상태정의표)
   for (const k of ["mark", "weak", "activeSeal", "skillBlock", "energyDown", "immune", "healBoost", "spdUp", "inferno", "greatTide", "noCarry"]) {
     const s = p.st[k];
     if (s && s.to >= t) out.push({ k, left: s.to - Math.max(t, s.from) + 1, from: s.from });
