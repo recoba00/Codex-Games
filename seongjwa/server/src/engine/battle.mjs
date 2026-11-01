@@ -280,7 +280,7 @@ function beginTurn(state) {
     p.submitted = null;
     p.freeUsed = false;
     p.attackBuff = 0;
-    p.invuln = false; p.mirror = 0; p.exhausted = 0; p.silencedNow = false;
+    p.invuln = false; p.mirror = 0; p.exhausted = 0; p.silencedNow = false; p.silencedBy = null;
     p.counters = []; p.mo02 = 0; p.mo02Used = false;
   }
   delete state.quiet;
@@ -471,6 +471,7 @@ export function resolveTurn(state) {
         } else {
           const ok = applyDebuff(state, p, o, "silence", () => {
             o.silencedNow = true;
+            o.silencedBy = c.id;  // 잠금 연출용: 어느 카드가 침묵시켰는지(기획지시 전투UX2차 2)
             o.st.activeSeal = { from: state.turn + 1, to: state.turn + 1 };
           });
           if (ok && c.id === "SI01") gaugeAdd(state, o, -card.coef);
@@ -490,7 +491,7 @@ export function resolveTurn(state) {
   // 3 스킬: 스킬 카드 → 액티브. 침묵이면 무효(액티브 게이지 반환 = 소모하지 않음)
   for (const p of seq) {
     for (const c of live(p, ["skill"])) {
-      if (p.silencedNow) { state.log.push({ t: "void", seat: p.seat, card: c.id, why: "silence" }); continue; }
+      if (p.silencedNow) { state.log.push({ t: "void", seat: p.seat, card: c.id, why: "silence", by: p.silencedBy ?? null }); continue; }
       const card = state.cards[c.id];
       const prm = card.params;
       state.log.push({ t: "card", seat: p.seat, id: c.id, phase: 3 });
@@ -510,7 +511,7 @@ export function resolveTurn(state) {
   }
   for (const p of seq) {
     if (!plays.get(p).active) continue;
-    if (p.silencedNow) { state.log.push({ t: "active", seat: p.seat, void: true }); continue; }
+    if (p.silencedNow) { state.log.push({ t: "active", seat: p.seat, void: true, by: p.silencedBy ?? null }); continue; }
     p.gauge = 0;
     state.log.push({ t: "active", seat: p.seat, char: p.char });
     useActive(state, p, opp(p));

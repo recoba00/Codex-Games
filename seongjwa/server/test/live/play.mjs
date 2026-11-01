@@ -105,8 +105,9 @@ try {
       if (t === 1 && !vp.touch) {  // 카드 상세(호버 0.2초)
         await page.mouse.move(0, 0);
         await page.hover(".hand .bc:not(.picked)", { force: true });
-        await page.waitForSelector("#peek .pinfo", { timeout: 3000 });
-        assert.match(await page.textContent("#peek .pinfo"), /처리 단계 [0-5]/);
+        // 넓은 화면(안전 영역 안쪽 폭 1180 이상·높이 600 이상)은 오른쪽 카드 상세 패널로(전투UX2차 5)
+        await page.waitForFunction(() => /비용 \d+E/.test(document.querySelector("#wdet")?.textContent ?? ""), null, { timeout: 3000 });
+        assert.ok(await page.$("#wlog"), "넓은 화면 전체 로그 패널");
         await page.mouse.move(0, 0);
       }
       await page.click("#ok");
@@ -114,11 +115,12 @@ try {
       await page.waitForSelector(".skip", { timeout: 15000 });  // 공개 연출 시작(확정 버튼 자리에 건너뛰기)
       assert.equal(await page.$("#ok"), null, "공개 중 확정 버튼 없음");
       await page.waitForSelector("#bub", { timeout: 8000 });  // 효과 자막(슬롯 옆 말풍선)
+      if (t === 1 && playable) await page.waitForSelector("#bt .zoom", { timeout: 10000 });  // 슬롯에서 커지는 확대(전투UX2차 1)
       assert.ok(await page.$(".obar i"), "처리 순서 막대");
       if (t === 2) { await sleep(1300); await page.screenshot({ path: `/tmp/play_rev_${vp.width}.png` }); }
       if (t >= 2) await page.click("#skip");  // 건너뛰기(연출 상한 20초라 시험 시간 단축)
       await page.waitForSelector("#logline div");
-      await page.waitForFunction((n) => /턴 (\d+)/.test(document.querySelector(".turn")?.textContent ?? "") && !document.querySelector(".skip") && Number(document.querySelector(".turn").textContent.match(/턴 (\d+)/)[1]) === n, t + 1, { timeout: 20000 });
+      await page.waitForFunction((n) => Number(document.querySelector("#bt")?.dataset.turn) === n && !document.querySelector(".skip"), t + 1, { timeout: 20000 });
       // 양쪽 연출이 끝나면(AI는 즉시) 남은 공개 시간을 버리고 선택 20초가 새로 시작
       await page.waitForFunction(() => Number(document.querySelector("#rt")?.textContent) >= 18, null, { timeout: 4000 });
     }
