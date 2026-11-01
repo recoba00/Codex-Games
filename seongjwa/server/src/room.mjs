@@ -251,6 +251,13 @@ export class FriendRoom extends DurableObject {
         if (g.bans.every((b) => b?.done)) this.toPick(now);
         return;
       }
+      case "hint": {  // 밴·픽 화면에서 눌러 둔(아직 확정 안 한) 캐릭터. 시간이 끝나면 이것으로 확정(기획답변 37차)
+        if (!["ban", "pick"].includes(room.phase)) throw new Error("phase_invalid");
+        const id = msg.characterId ? String(msg.characterId) : null;
+        if (id && !g.data.characters[id]) throw new Error("character_unavailable");
+        ((g.hints ??= { ban: [null, null], pick: [null, null] })[room.phase])[seat] = id;
+        return;
+      }
       case "pick": {
         if (room.phase !== "pick") throw new Error("phase_invalid");
         const id = String(msg.characterId ?? "");
@@ -397,9 +404,16 @@ export class FriendRoom extends DurableObject {
     return this.rosterOf(seat).filter((id) => id !== banned);
   }
 
+  hintOk(g, phase, seat) {
+    const id = g.hints?.[phase]?.[seat];
+    if (!id || !g.data.characters[id]) return false;
+    return phase === "ban" ? (this.room.mode !== "cup" || this.rosterOf(1 - seat).includes(id)) : true;
+  }
+
   toPick(now) {
     const g = this.room.game;
-    g.bans = g.bans.map((b) => b ?? { id: null, done: true });  // 밴 시간 초과: 밴 없음
+    // 밴 시간 초과: 눌러 둔 캐릭터가 있으면 그것을 밴, 없으면 밴 없음(기획답변 37차, 총괄 7장 시간 초과 표)
+    g.bans = g.bans.map((b, seat) => b ?? { id: this.hintOk(g, "ban", seat) ? g.hints.ban[seat] : null, done: true });
     this.room.phase = "pick";
     this.room.phaseDeadline = now + this.prepSec("pick_sec") * 1000 + PREP.grace_ms;
     this.aiPrep(now);
@@ -410,6 +424,7 @@ export class FriendRoom extends DurableObject {
     g.picks = g.picks.map((p, seat) => {
       const pool = this.pickableFor(g, seat);  // 픽 시간 초과: 선호 1·2·3순위 → 직전 사용 캐릭터 → 목록 첫 번째 (총괄 7장, 기획답변 2차 8)
       if (p) return p;
+      if (this.hintOk(g, "pick", seat) && pool.includes(g.hints.pick[seat])) return g.hints.pick[seat];  // 눌러 둔 캐릭터 우선(37차)
       const m = this.room.members[seat];
       const pref = m.defaults.preferred.find((id) => pool.includes(id));
       if (pref) return pref;

@@ -25,6 +25,7 @@ async function noScroll(page, name) {  // 총괄 5장: 스크롤 없음(문서·
     if (document.scrollingElement.scrollHeight > innerHeight + 1 || document.scrollingElement.scrollWidth > innerWidth + 1) out.push("document");
     for (const e of document.querySelectorAll("body *")) {
       const s = getComputedStyle(e);
+      if (e.closest(".plist")) continue;  // 픽 목록만 세로 스크롤 예외(총괄 5장, 기획지시 밴픽화면재배치)
       if (/(auto|scroll)/.test(s.overflowY + s.overflowX) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) out.push(e.className || e.id || e.tagName);
       const r = e.getBoundingClientRect();
       if (e.matches("button,.bc,.pvc,.side,.ctl") && r.width && s.visibility !== "hidden" && !e.closest(".backs") && (r.bottom > innerHeight + 2 || r.right > innerWidth + 2)) out.push("밖:" + (e.id || e.className));
@@ -62,12 +63,18 @@ try {
     await page.click("#go");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
     await noScroll(page, "픽");
-    assert.equal(await page.$$eval("[data-pick]", (x) => new Set(x.map((e) => Math.round(e.getBoundingClientRect().top))).size), 1, "픽 9명 한 줄");
+    await page.screenshot({ path: `/tmp/play_pick_${vp.width}.png` });
+    assert.equal(await page.$$eval("[data-pick]", (x) => new Set(x.map((e) => Math.round(e.getBoundingClientRect().left))).size), 4, "픽 목록 4열");
     const pw = await page.$eval("[data-pick]", (e) => e.getBoundingClientRect().width);
     console.log(`  픽 카드 폭 ${vp.name} ${Math.round(pw)}px`);
-    await page.click("[data-pick]", { force: true });
-    await page.click("#pok");  // 선택 확정
-    await page.waitForSelector("[data-sp]", { timeout: 15000 });
+    const picked = await page.$eval("[data-pick]:nth-child(2)", (e) => e.dataset.pick);
+    await page.click("[data-pick]:nth-child(2)");
+    if (vp.touch) await page.click("#pok");  // 선택 확정
+    else step("데스크톱: 눌러만 두고 시간 초과 기다림(15초)");
+    await page.waitForSelector("[data-sp]", { timeout: 25000 });
+    assert.equal(await page.evaluate(() => S.st.prep.myPick), picked, "확정한/눌러 둔 캐릭터로 픽");
+    assert.equal(await page.$$eval(".deck2 .bc", (x) => x.length), 12, "덱 12장(프리셋 10 + 전용 2)");
+    console.log(`  덱 카드 폭 ${vp.name} ${Math.round(await page.$eval(".deck2 .bc", (e) => e.getBoundingClientRect().width))}px`);
     await page.screenshot({ path: `/tmp/play_lo_${vp.width}.png` });
     await noScroll(page, "스펠·덱");
     step(`${vp.name}: 시작 → 픽 → 스펠·덱 화면(스크롤 없음)`);
@@ -120,8 +127,8 @@ try {
     await page.click("#menu");
     await page.click("#mSur");
     await page.click("#dY");
-    await page.waitForSelector(".rover h2", { timeout: 20000 });
-    assert.equal((await page.textContent(".rover h2")).trim(), "패배");
+    await page.waitForSelector(".rr h2", { timeout: 20000 });
+    assert.equal((await page.textContent(".rr h2")).trim(), "패배");
     assert.equal(await page.$$eval(".stats .st", (x) => x.length), 5, "결과 통계 5가지");
     await page.screenshot({ path: `/tmp/play_res_${vp.width}.png` });
     await noScroll(page, "결과");

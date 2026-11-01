@@ -288,6 +288,42 @@ button.sm{padding:5px 10px;font-size:12px}
 .stats .st small{color:var(--mu);font-size:11px}.stats .st b{font-size:18px}.stats .st:first-child{grid-column:1/3}
 .rew{display:flex;flex-direction:column;gap:3px;font-size:14px}
 @media (max-height:500px){.rover h2{font-size:36px}.stats .st b{font-size:15px}.stats .st{padding:4px 8px}.rright{gap:8px;min-width:200px}.pinfo2{min-height:44px}.pinfo2 .small{font-size:11px}}
+
+/* ===== 밴·픽·스펠덱·결과 재배치(기획지시 2026-11-01 밴픽화면재배치) ===== */
+.pk3 .top,.lo3 .top{margin-bottom:12px}
+.pk3b{flex:1;min-height:0;display:grid;grid-template-columns:var(--side) var(--cen) var(--side);gap:var(--g);justify-content:center}
+.pcol{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:0}.lab2{font-size:12px;color:var(--mu)}.pnm{font-size:14px}
+.emp,.qcard{aspect-ratio:5/7;border-radius:12%/8.6%;border:2px dashed rgba(255,255,255,.2);display:grid;place-items:center;color:var(--mu);font-size:13px}
+.qcard{border-style:solid;background:linear-gradient(160deg,#232a4a,#141a30);font-size:56px;font-weight:900;color:#5a6390}
+.pmid{display:flex;flex-direction:column;min-height:0;gap:6px}
+.plist{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 4px;scroll-snap-type:y mandatory;scrollbar-width:thin;align-content:start}
+.plist.more{-webkit-mask-image:linear-gradient(#000 calc(100% - 28px),rgba(0,0,0,.35));mask-image:linear-gradient(#000 calc(100% - 28px),rgba(0,0,0,.35))}
+.pk{position:relative;scroll-snap-align:start;border:2px solid transparent;border-radius:13%/9.3%;transition:border-color .12s,filter .12s;cursor:pointer}
+.pk:hover{filter:brightness(1.12)}.pk.sel{border-color:var(--acc)}.pk.off{cursor:default}
+.pk .ck{position:absolute;right:6%;bottom:22%;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-style:normal;font-weight:900;font-size:13px;display:grid;place-items:center;opacity:0;transition:opacity .12s}
+.pk.sel .ck{opacity:1}
+.pvc.rnd{transform:none!important}
+.pband{height:var(--band);font-size:max(10px,11px);line-height:1.4;overflow:hidden;padding:0 6px}.pband div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbar{margin-top:12px;justify-content:space-between}
+.lo3b{flex:1;min-height:0;display:grid;grid-template-columns:var(--cw) minmax(0,1fr);gap:var(--g)}
+.lcol2{display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:var(--g)}
+.rcol2{display:flex;flex-direction:column;gap:8px;min-width:0;justify-content:center}
+.sprow{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.spb2{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border:2px solid transparent;background:rgba(14,18,36,.8);border-radius:10px;transition:border-color .12s,filter .12s;min-width:0}
+.spb2 i{width:30px;height:30px;background:center/contain no-repeat;display:grid;place-items:center;font-style:normal;font-weight:800}.spb2 b{font-size:12px;white-space:nowrap}.spb2 small{font-size:10px;color:var(--mu)}
+.spb2.on{border-color:var(--acc)}.spb2:hover{filter:brightness(1.15)}.spb2 em{position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--acc);font-style:normal;font-size:10px;font-weight:900;display:grid;place-items:center}
+.line1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{gap:6px;flex-wrap:nowrap}.tab2{border:2px solid transparent;background:rgba(255,255,255,.08)}.tab2.on{border-color:var(--acc);outline:none}
+.deck2{display:grid;grid-template-columns:repeat(12,var(--dw));gap:4px;justify-content:start}.deck2.two{grid-template-columns:repeat(6,var(--dw));gap:6px}
+.bc.mini .txt{display:none}.bc.mini .shade{height:25%}.bc.mini .sock{width:30%}.bc.mini .sock.c b{font-size:16cqw}.bc.mini .sock.c{left:17%;top:13%}.bc.mini .sock.k{left:83%;top:13%}.bc.mini .own{display:none}
+.res3{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;background:#0b0d1a}
+.rl{position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#1c2340,#0b0d1a)}
+.rimg{position:absolute;inset:0;-webkit-mask-image:linear-gradient(#000 65%,transparent);mask-image:linear-gradient(#000 65%,transparent)}
+.res3.lose .rimg{filter:saturate(.35) brightness(.65)}.res3.win .rl{box-shadow:inset 0 0 80px rgba(255,213,107,.18)}
+.rr{position:relative;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:max(16px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) 24px}
+.rr h2{margin:0;font-size:52px;letter-spacing:6px}.res3.win h2{color:var(--gold);text-shadow:0 0 24px rgba(255,213,107,.5)}.res3.lose h2{color:#c8cbe0}
+.rr .rmenu{position:absolute;right:max(12px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));width:36px;height:32px;border-radius:9px;border:1px solid var(--line);background:rgba(14,18,36,.8)}
+@media (max-height:500px){.pk3 .top,.lo3 .top{margin-bottom:8px}.pbar{margin-top:8px}.rr h2{font-size:36px}.rr{gap:8px}.spb2{padding:4px 2px}.spb2 i{width:24px;height:24px}.spb2 b{font-size:11px}.pnm{font-size:12px}}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -406,42 +442,51 @@ function render(){var m=S.st;if(!m)return home();S.showLog=S.showLog&&m.phase===
 function stepChips(cur){return '<div class="chips">'+[['pick','픽'],['loadout','스펠·덱'],['battle','전투']].map(function(x){return '<span class="chip'+(x[0]===cur?' on':'')+'">'+x[1]+'</span>'}).join('')+'</div>'}
 function topBar(m,label){return '<div class="top">'+stepChips(m.phase)+'<div class="mu small">'+esc(label)+'</div><div class="timer" id="tm"></div></div>'}
 function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.holo:0}}
-/* 밴·픽: 9명 한 줄 균등 정렬, 둥근 카드(티어 프레임 없음, 기획지시 2026-11-01 밴픽결과화면). 폭 72 미만이면 5+4. 누르면 선택, 확정 버튼(Space)으로 확정 */
-function pickW(n,H,W){var short=H<=500,gap=short?8:12,avail=W-2*(short?14:24)-(n-1)*gap,w1=Math.floor(Math.min(avail/n,(H-(short?150:220))/1.4,150));
- if(w1>=72)return {w:w1,rows:1,gap:gap};var cols=Math.ceil(n/2);return {w:Math.floor(Math.min((W-40-(cols-1)*gap)/cols,(H-(short?150:220)-gap)/2/1.4,150)),rows:2,gap:gap}}
-function renderPick(m){var P=m.prep,n=P.characters.length,L=pickW(n,innerHeight,innerWidth);
- var cur=P.myPick||(S.pickSel&&P.characters.indexOf(S.pickSel)>=0&&P.banned.indexOf(S.pickSel)<0?S.pickSel:null);
- var h='<div class="scr">'+topBar(m,P.myPick?'선택 완료 · 상대 '+(P.oppPickDone?'완료':'선택 중'):'캐릭터를 고르고 확정하세요 (동시·비공개)')
-  +'<div class="pickg r'+L.rows+'" style="gap:'+L.gap+'px;'+(L.rows===2?'width:'+(Math.ceil(n/2)*L.w+(Math.ceil(n/2)-1)*L.gap)+'px':'')+'">';
- P.characters.forEach(function(id){var c=ch(id),ban=P.banned.indexOf(id)>=0,badge=(P.mastery.mine||{})[id]||1;
-  h+=pvCard(id,{w:L.w,holo:0,badge:badge,sub:(c.role||''),cls:'rnd'+(ban?' ban':'')+(cur===id?' sel':''),attr:' data-pick="'+id+'"'})});
- var c=cur?ch(cur):null;
- h+='</div><div class="pinfo2">'+(c?'<b>'+esc(c.name)+'</b> <span class="mu">'+esc((c.job||'')+' · '+(c.role||''))+'</span><div class="small">패시브 <b>'+esc(c.passive_name||'')+'</b> '+esc(c.passive_text||'')+'</div><div class="small">액티브 <b>'+esc(c.active_name||'')+'</b> '+esc(c.active_text||'')+'</div>'
-  :'<span class="mu small">캐릭터를 누르면 여기에 스킬이 보여요 · 시간이 지나면 직전에 쓴 캐릭터로 자동 선택</span>')+'</div>'
-  +'<div class="row bar"><button id="qt">나가기</button><span class="small mu">스펠·덱은 다음 단계에서 골라요</span><button class="pri confirm" id="pok"'+(P.myPick||!cur?' disabled':'')+'>'+(P.myPick?'대기 중…':'선택 확정 (Space)')+'</button></div></div>';
- $('app').innerHTML=h;
- document.querySelectorAll('[data-pick]').forEach(function(el){el.onclick=function(){if(P.myPick||P.banned.indexOf(el.dataset.pick)>=0)return;S.pickSel=el.dataset.pick;render()}});
- $('pok').onclick=confirmPick;$('qt').onclick=function(){quit();home()};holo()}
-function confirmPick(){var m=S.st;if(!m||m.phase!=='pick')return;var P=m.prep,id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id})}
-/* 스펠·덱: 좌 두 캐릭터 세로, 우 스펠 4×2 + 덱 카드 6×2(기획지시 전투화면정리 4) */
-function renderLoadout(m){var P=m.prep,fm=frameOf(P.frame.mine),fo=frameOf(P.frame.opp),short=innerHeight<=500;
- S.load=S.load||lastLoad(P.myPick);var L=P.myLoadout||S.load,done=!!P.myLoadout;
- var mine=(S.data.presets[P.myPick]||[]).find(function(x){return x.slot===L.preset})||{cards:[]};
- var avail=innerHeight-(short?92:120),cw=Math.floor(Math.min((avail-18)/2/1.4,150)),rw=Math.min(innerWidth-cw-44,760);
- var sh=Math.floor(Math.min(short?52:72,avail*0.22)),dh=avail-2*sh-(short?60:76),dw=Math.floor(Math.max(30,Math.min(dh/2/1.4,(rw-5*6)/6,90)));
- var h='<div class="scr">'+topBar(m,done?'준비 완료 · 상대 '+(P.oppLoadoutDone?'완료':'선택 중'):'스펠 2개와 덱을 고르세요')+'<div class="lo">'
- +'<div class="lcol">'+pvCard(P.oppPick,{w:cw,holo:0,cls:'rnd',badge:(P.mastery.opp||{})[P.oppPick]||1,sub:'상대 (AI)'})+pvCard(P.myPick,{w:cw,holo:0,cls:'rnd',badge:(P.mastery.mine||{})[P.myPick]||1,sub:'나'})+'</div>'
- +'<div class="rcol" style="width:'+rw+'px"><div class="spg">'+Object.keys(S.data.spells).map(function(id){var s=S.data.spells[id],ic=S.A.slots['SPELL_'+id];
-  return '<button class="spb'+(L.spells.indexOf(id)>=0?' on':'')+'" style="height:'+sh+'px" data-sp="'+id+'"'+(done?' disabled':'')+'>'+(ic?'<i style="background-image:url('+ic.url+')"></i>':'')+'<span><b>'+esc(s.name)+'</b><small>쿨 '+s.cooldown+'턴</small></span></button>'}).join('')+'</div>'
- +'<div class="small mu line" id="spinfo">'+esc(L.spells.map(function(id){return sname(id)+': '+(S.data.spells[id]||{}).effect_text}).join(' / '))+'</div>'
- +'<div class="row" style="gap:6px">'+(S.data.presets[P.myPick]||[]).map(function(p){return '<button data-pre="'+p.slot+'" class="sm '+(L.preset===p.slot?'on':'')+'"'+(done?' disabled':'')+'>'+({aggro:'공세',balance:'균형',defense:'수비'}[p.style]||p.style)+' 덱</button>'}).join('')+'</div>'
- +'<div class="deck" style="grid-template-columns:repeat(6,'+dw+'px)">'+mine.cards.map(function(id){return bcCard(id,{w:dw,mode:'hand',attr:' data-cid="'+id+'"'})}).join('')+'</div></div></div>'
- +'<div class="row bar"><button id="qt">나가기</button><button class="pri confirm" id="ok"'+(done||L.spells.length!==2?' disabled':'')+'>'+(done?'대기 중…':'준비 완료 (Space)')+'</button></div></div>';
+/* 밴·픽: 가로 3단(기획지시 2026-11-01 밴픽화면재배치). 왼쪽 내 선택 · 가운데 4열 목록(이 화면만 세로 스크롤, 줄 단위 멈춤) · 오른쪽 상대 "?".
+   선택 테두리 자리는 처음부터 2pt(투명) → 눌러도 크기·위치 불변. 눌러 둔 캐릭터는 서버에 hint로 보내 시간 초과 때 그것으로 확정(37차) */
+function pickLay(){var W=innerWidth,H=innerHeight,short=H<=500,pad=short?14:24,gap=12,side=Math.round(Math.min(Math.max(160,W*0.19),260)),cen=W-2*pad-2*side-2*gap;
+ var cw=Math.floor((cen-8-3*8)/4),topH=short?38:50,band=short?34:44,sideH=H-2*(short?8:12)-topH-(short?52:60);
+ var sw=Math.floor(Math.min(side,(sideH-20)/1.4));return {pad:pad,gap:gap,side:side,cen:cen,cw:cw,sw:sw,band:band,short:short}}
+function renderPick(m){var P=m.prep,ban=m.phase==='ban',z=pickLay(),done=ban?!!P.myBan:!!P.myPick;
+ var cur=ban?(P.myBan||S.banSel):(P.myPick||(S.pickSel&&P.banned.indexOf(S.pickSel)<0?S.pickSel:null));if(cur&&P.characters.indexOf(cur)<0)cur=null;
+ var c=cur?ch(cur):null,badge=function(id){return (P.mastery.mine||{})[id]||1};
+ var mine=cur?pvCard(cur,{w:z.sw,holo:0,badge:ban?1:badge(cur),cls:'rnd'+(ban?' ban':'')}):'<div class="emp" style="width:'+z.sw+'px">'+(ban?'밴할 캐릭터':'선택 전')+'</div>';
+ var h='<div class="scr pk3" style="--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--band:'+z.band+'px">'+topBar(m,done?(ban?'밴 완료':'선택 완료')+' · 상대 '+((ban?P.oppBanDone:P.oppPickDone)?'완료':'선택 중'):(ban?'상대가 못 쓰게 할 캐릭터를 고르세요':'캐릭터를 고르고 확정하세요 (동시·비공개)'))
+  +'<div class="pk3b"><div class="pcol"><div class="lab2">'+(ban?'내 밴':'내 캐릭터')+'</div>'+mine+'<b class="pnm">'+(c?esc(c.name):'&nbsp;')+'</b></div>'
+  +'<div class="pmid"><div class="plist" id="plist">'+P.characters.map(function(id){var x=ch(id),bn=!ban&&P.banned.indexOf(id)>=0;
+   return '<div class="pk'+(cur===id?' sel':'')+(bn?' off':'')+'" data-pick="'+id+'">'+pvCard(id,{w:z.cw-4,holo:0,badge:badge(id),sub:x.role||'',cls:'rnd'+(bn?' ban':'')})+'<i class="ck">✓</i></div>'}).join('')+'</div>'
+  +'<div class="pband">'+(c?'<div><b>'+esc(c.name)+'</b> <span class="mu">'+esc((c.job||'')+' · '+(c.role||''))+'</span> · 패시브 <b>'+esc(c.passive_name||'')+'</b> '+esc(c.passive_text||'')+'</div><div>액티브 <b>'+esc(c.active_name||'')+'</b> '+esc(c.active_text||'')+'</div>':'<div class="mu">캐릭터를 누르면 스킬이 보여요 · 시간이 지나면 '+(ban?'눌러 둔 캐릭터를 밴(없으면 밴 없음)':'눌러 둔 캐릭터 → 직전에 쓴 캐릭터 순으로 자동 선택')+'</div>')+'</div></div>'
+  +'<div class="pcol"><div class="lab2">상대 (AI)</div><div class="qcard" style="width:'+z.sw+'px">?</div><b class="pnm">&nbsp;</b></div></div>'
+  +'<div class="row bar pbar"><button id="qt">나가기</button><button class="pri confirm" id="pok"'+(done||!cur?' disabled':'')+'>'+(done?'대기 중…':(ban?'밴 확정':'선택 확정')+' (Space)')+'</button></div></div>';
+ var keep=$('plist')?$('plist').scrollTop:0;$('app').innerHTML=h;var pl=$('plist');pl.scrollTop=keep;
+ var fade=function(){pl.classList.toggle('more',pl.scrollTop+pl.clientHeight<pl.scrollHeight-4)};pl.onscroll=fade;fade();
+ document.querySelectorAll('[data-pick]').forEach(function(el){el.onclick=function(){var id=el.dataset.pick;if(done||(!ban&&P.banned.indexOf(id)>=0))return;if(ban)S.banSel=id;else S.pickSel=id;send({type:'hint',characterId:id});render()}});
+ $('pok').onclick=confirmPick;$('qt').onclick=function(){quit();home()}}
+function confirmPick(){var m=S.st;if(!m||(m.phase!=='pick'&&m.phase!=='ban'))return;var P=m.prep;
+ if(m.phase==='ban'){if(P.myBan||!S.banSel)return;send({type:'ban',characterId:S.banSel});return}
+ var id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id})}
+/* 스펠·덱(재배치 3): 왼쪽 상대(위)·나(아래) 같은 크기, 오른쪽 스펠 8종 한 줄(링+체크, 2개) + 설명 한 줄 + 덱 탭 + 덱 12장 한 줄(이름 없이, 길게 누르면 상세). 폭 44 미만이면 6×2 */
+function loLay(){var W=innerWidth,H=innerHeight,short=H<=500,pad=short?14:24,gap=12,topH=short?38:50,botH=short?44:52;
+ var colH=H-2*(short?8:12)-topH-12-botH-12,ch2=Math.floor((colH-gap)/2),cw=Math.floor(Math.min(ch2*5/7,200)),main=W-2*pad-cw-gap;
+ var dw=Math.floor((main-11*4)/12),two=dw<44;if(two)dw=Math.floor(Math.min((main-5*6)/6,(colH*0.42)/2/1.4));
+ return {pad:pad,gap:gap,cw:cw,main:main,dw:Math.min(dw,90),two:two,short:short}}
+function renderLoadout(m){var P=m.prep,z=loLay();S.load=S.load||lastLoad(P.myPick);var L=P.myLoadout||S.load,done=!!P.myLoadout;
+ var preset=(S.data.presets[P.myPick]||[]).find(function(x){return x.slot===L.preset})||{cards:[]};
+ var own=Object.keys(S.data.cards).filter(function(id){return S.data.cards[id].owner_character===P.myPick}).sort(),deck=preset.cards.concat(own);  // 덱 12장 = 프리셋 10 + 전용 2(엔진 buildDeck)
+ var sp=L.spells,desc=sp.map(function(id){return sname(id)+': '+((S.data.spells[id]||{}).effect_text||'')}).join(' / ');
+ var h='<div class="scr lo3" style="--cw:'+z.cw+'px;--g:'+z.gap+'px">'+topBar(m,done?'준비 완료 · 상대 '+(P.oppLoadoutDone?'완료':'선택 중'):'스펠 2개와 덱을 고르세요')
+  +'<div class="lo3b"><div class="lcol2">'+pvCard(P.oppPick,{w:z.cw,holo:0,cls:'rnd',badge:(P.mastery.opp||{})[P.oppPick]||1,sub:'상대 (AI)'})+pvCard(P.myPick,{w:z.cw,holo:0,cls:'rnd',badge:(P.mastery.mine||{})[P.myPick]||1,sub:'나'})+'</div>'
+  +'<div class="rcol2"><div class="sprow">'+Object.keys(S.data.spells).map(function(id){var s=S.data.spells[id],ic=S.A.slots['SPELL_'+id],on=sp.indexOf(id)>=0;
+   return '<button class="spb2'+(on?' on':'')+'" data-sp="'+id+'"'+(done?' disabled':'')+' data-tip="'+esc(s.name+' · 쿨다운 '+s.cooldown+'턴 — '+(s.effect_text||''))+'"><i style="'+(ic?'background-image:url('+ic.url+')':'')+'">'+(ic?'':esc(s.name.slice(0,1)))+'</i><b>'+esc(s.name)+'</b><small>쿨 '+s.cooldown+'</small>'+(on?'<em>✓</em>':'')+'</button>'}).join('')+'</div>'
+  +'<div class="small mu line1" id="spinfo">'+esc(desc||'스펠 2개를 고르세요')+'</div>'
+  +'<div class="row tabs">'+(S.data.presets[P.myPick]||[]).map(function(p){return '<button data-pre="'+p.slot+'" class="sm tab2'+(L.preset===p.slot?' on':'')+'"'+(done?' disabled':'')+'>'+({aggro:'공세',balance:'균형',defense:'수비'}[p.style]||p.style)+' 덱</button>'}).join('')+'<span class="small mu">카드를 길게 누르면(마우스는 올리면) 상세</span></div>'
+  +'<div class="deck2'+(z.two?' two':'')+'" style="--dw:'+z.dw+'px">'+deck.map(function(id){return bcCard(id,{w:z.dw,mode:'hand',cls:'mini',attr:' data-cid="'+id+'"'})}).join('')+'</div></div></div>'
+  +'<div class="row bar pbar"><button id="qt">나가기</button><button class="pri confirm" id="ok"'+(done||sp.length!==2?' disabled':'')+'>'+(done?'대기 중…':'준비 완료 (Space)')+'</button></div></div>';
  $('app').innerHTML=h;
  document.querySelectorAll('[data-sp]').forEach(function(b){b.onclick=function(){var id=b.dataset.sp,i=S.load.spells.indexOf(id);if(i>=0)S.load.spells.splice(i,1);else{if(S.load.spells.length>=2)S.load.spells.shift();S.load.spells.push(id)}render()};
   b.onmouseenter=function(){var s=S.data.spells[b.dataset.sp];$('spinfo').textContent=s.name+': '+s.effect_text}});
  document.querySelectorAll('[data-pre]').forEach(function(b){b.onclick=function(){S.load.preset=Number(b.dataset.pre);render()}});
- $('ok').onclick=confirmLoad;$('qt').onclick=function(){quit();home()};holo()}
+ $('ok').onclick=confirmLoad;$('qt').onclick=function(){quit();home()}}
 function lastLoad(id){try{var x=JSON.parse(localStorage.getItem('play_load_'+id)||'null');if(x&&x.spells&&x.spells.length===2)return x}catch(e){}return {spells:['SP01','SP04'],preset:2}}
 function confirmLoad(){var P=S.st.prep;if(P.myLoadout||S.load.spells.length!==2)return;S.loadSelf=true;lsSet('play_load_'+P.myPick,JSON.stringify(S.load));send({type:'loadout',spells:S.load.spells,preset:S.load.preset})}
 
@@ -754,21 +799,16 @@ function banner(t){var b=document.createElement('div');b.className='banner';b.te
 function stamp(el,t){if(!el)return;var s=document.createElement('div');s.className='stamp';s.textContent=t;el.appendChild(s)}
 
 /* ---------- 결과 ---------- */
-/* 결과(기획지시 밴픽결과화면 3): 상대 표시 없음. 내 캐릭터 카드 영역(3:4)을 크게, 아래 35% 그라데이션 마스크, 승패 + 통계 5가지, 보상·변동, 재매칭·로비, 신고는 ⋯ */
-function artBig(id,w,h){var c=ch(id),a=((S.A.art||{})[id]||{})['000']||{},src=a.bg==='combined'&&a.combined?a.combined:a.full,cr=a.card||{x:0.125,y:0.05,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3};
- var bg=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':(S.A.slots[a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))]?'background-image:'+slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL')))+';background-size:cover;background-position:center':'background:#223');
- var chs='';if(src){var bw=100/cr.w,bh=bw*(src.h/src.w)*(3/4);chs='background-image:url('+src.url+');background-repeat:no-repeat;background-size:'+bw.toFixed(2)+'% '+bh.toFixed(2)+'%;background-position:'+(cr.w>=1?0:(cr.x/(1-cr.w)*100)).toFixed(2)+'% '+(cr.h>=1?0:(cr.y/(1-cr.h)*100)).toFixed(2)+'%'}
- return '<div class="rart" style="width:'+w+'px;height:'+h+'px"><div class="rbg" style="'+bg+'"></div><div class="rch" style="'+chs+'"></div></div>'}
+/* 결과(재배치 4): 1:1 분할. 왼쪽 50% = 전신 PNG의 카드 영역(3:4)만, 공용 어두운 배경, 폭을 꽉 채우고 위 맞춤(넘치는 아래는 잘림), 아래 35% 마스크. 오른쪽 50% = 데이터 */
+function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{},src=a.full,cr=a.card||{x:0.125,y:0,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3};
+ if(!src)return '';var iw=w/cr.w,ih=iw*src.h/src.w;return 'background-image:url('+src.url+');background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'px '+ih.toFixed(1)+'px;background-position:'+(-cr.x*iw).toFixed(1)+'px '+(-cr.y*ih).toFixed(1)+'px'}
 function renderResult(m){var L=m.last||{},you=m.you,win=L.outcome!=='draw'&&L.outcome!=='void'&&((L.outcome==='a')===(you===0)),draw=L.outcome==='draw',mine=(L.picks||[])[you];
- var st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],short=innerHeight<=500,H=Math.floor(innerHeight-(short?16:40)),Wa=Math.floor(Math.min(H*3/4,innerWidth*0.46));
- var stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
+ var st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor(innerWidth/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
  var mode=m.mode,rk=L.rank&&L.rank[you],ec=L.econ&&L.econ[you];
- $('app').innerHTML='<div class="scr res2'+(win?' win':draw?' draw':' lose')+'">'
-  +'<button class="ib rmenu" id="rmore" title="더보기">⋯</button>'
-  +'<div class="rleft">'+(mine?artBig(mine,Wa,Math.floor(Wa*4/3)):'')+'<div class="rover"><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(REASON[L.reason]||L.reason||'')+'</div></div></div>'
-  +'<div class="rright"><div class="stats">'+stat('판 길이',(L.turn||0)+'턴')+stat('준 피해',st.dealt!=null?st.dealt:'-')+stat('받은 피해',st.taken!=null?st.taken:'-')+stat('실드로 막은 피해',st.blocked!=null?st.blocked:'-')+stat('남은 HP',Math.round(100*hp[0]/hp[1])+'%')+'</div>'
-  +'<div class="rew">'+(rk?'<div>RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+'</div>':'')+(ec&&ec.gold?'<div>골드 +'+ec.gold+'</div>':'')
-  +(mode==='practice'?'<div class="mu small">AI 대전은 RP·숙련도 변화가 없어요(총괄 8장)</div>':'')+'</div>'
+ $('app').innerHTML='<div class="res3'+(win?' win':draw?' draw':' lose')+'"><div class="rl"><div class="rimg" style="'+(mine?artFill(mine,half):'')+'"></div></div>'
+  +'<div class="rr"><button class="ib rmenu" id="rmore" title="더보기">⋯</button><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(REASON[L.reason]||L.reason||'')+(mine?' · '+esc(ch(mine).name):'')+'</div>'
+  +'<div class="stats">'+stat('판 길이',(L.turn||0)+'턴')+stat('준 피해',st.dealt!=null?st.dealt:'-')+stat('받은 피해',st.taken!=null?st.taken:'-')+stat('실드로 막은 피해',st.blocked!=null?st.blocked:'-')+stat('남은 HP',Math.round(100*hp[0]/hp[1])+'%')+'</div>'
+  +'<div class="rew">'+(rk?'<div>RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+'</div>':'')+(ec&&ec.gold?'<div>골드 +'+ec.gold+'</div>':'')+(mode==='practice'?'<div class="mu small">AI 대전은 RP·숙련도 변화가 없어요(총괄 8장)</div>':'')+'</div>'
   +'<div class="row" style="gap:8px"><button id="home">로비</button><button class="pri confirm" id="again">다시 하기 (Enter)</button></div></div></div>';
  $('home').onclick=function(){quit();home()};$('again').onclick=again;
  $('rmore').onclick=function(){ask('신고 — 상대: '+(m.members[1-you]&&m.members[1-you].ai?'AI (신고 대상 아님)':'상대 플레이어')+'. 정식 신고는 상세 13 사유로 접수돼요(테스트 화면은 접수하지 않음).','닫기',function(){})}}
@@ -785,7 +825,7 @@ function holo(){if(S.hraf)return;var t0=performance.now(),step=function(n){var e
 document.addEventListener('pointermove',function(e){var c=e.target.closest&&e.target.closest('.pvc');document.querySelectorAll('.pvc').forEach(function(x){if(x!==c)x.hov=false});if(!c)return;var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.hov=true;c.style.setProperty('--mx',x);c.style.setProperty('--my',y);c.style.setProperty('--px',(x-0.5)*2);c.style.setProperty('--py',(y-0.5)*2)});
 document.addEventListener('keydown',function(e){var m=S.st;if(!m||e.target.tagName==='INPUT')return;
  if(m.phase==='loadout'&&e.code==='Space'){e.preventDefault();return confirmLoad()}
- if(m.phase==='pick'&&e.code==='Space'){e.preventDefault();return confirmPick()}
+ if((m.phase==='pick'||m.phase==='ban')&&e.code==='Space'){e.preventDefault();return confirmPick()}
  if(m.phase==='result'&&e.key==='Enter')return again();
  if(m.phase!=='battle'||S.anim)return;var me=m.battle.me;
  if(/^[1-7]$/.test(e.key)){var el=document.querySelector('.hand [data-i="'+(Number(e.key)-1)+'"]');if(el)pickCard(Number(el.dataset.uid))}
