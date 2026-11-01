@@ -40,6 +40,8 @@ const tdist = {}; const judge = { n: 0, loserPct: 0, winnerPct: 0 }; const quick
 const kinds = {};
 const reasons = {};
 // SIM_PAIRS=특정 대결만(양쪽 자리 모두) 예: "PY-MO,PY-SE" → 상성 칸 판수를 늘려 볼 때
+// SIM_DUMP=파일: 판마다 {a,b,덱 슬롯,결과,사유,턴,남은 HP 비율} JSON 배열을 저장(상성·조합 분석용)
+const DUMP = process.env.SIM_DUMP ? [] : null;
 const PAIRS = process.env.SIM_PAIRS ? new Set(process.env.SIM_PAIRS.split(",").flatMap((x) => { const [p, q] = x.split("-"); return [`${p}>${q}`, `${q}>${p}`]; })) : null;
 for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
   if (PAIRS && !PAIRS.has(`${a}>${b}`)) continue;
@@ -74,6 +76,7 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
     if (st.result.reason === "turn_limit") { judge.n += 1; judge.loserPct += hp[lo]; judge.winnerPct += hp[1 - lo]; } }
   if (a !== b) sl.games += ids.filter((c) => c === "SL").length;
   reasons[st.result.reason] = (reasons[st.result.reason] ?? 0) + 1;
+  if (DUMP) DUMP.push({ a, b, sa: slots[0], sb: slots[1], o: st.result.outcome, r: st.result.reason, t: st.result.turn, hp: st.players.map((p) => Math.max(0, p.hp) / p.maxHp) });
   const score = st.result.outcome === "a" ? [1, 0] : st.result.outcome === "b" ? [0, 1] : [0.5, 0.5];
   if (st.result.outcome === "draw") draws += 1;
   ids.forEach((c, s) => {
@@ -108,3 +111,4 @@ if (sl.turns) {
     `- 회오리: 게이지 가득 찬 턴 ${sl.fullGauge} 중 사용 ${sl.used} (${p1(sl.used, sl.fullGauge)}), 판당 사용 ${(sl.used / Math.max(1, sl.games)).toFixed(2)}회`);
 }
 console.log(out.join("\n"));
+if (DUMP) (await import("node:fs")).writeFileSync(process.env.SIM_DUMP, JSON.stringify(DUMP));
