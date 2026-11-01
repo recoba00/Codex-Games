@@ -18,6 +18,9 @@ DATA.settings = { ...(DATA.settings ?? {}), ...JSON.parse(process.env.SIM_SET ??
 if (process.env.SIM_SET) opt.set = JSON.parse(process.env.SIM_SET);
 for (const [id, c] of Object.entries(DATA.cards)) if (c.kind === "attack" && !c.owner_character) c.coef = Number(c.coef) * opt.atkCoef;
 for (const c of Object.values(DATA.characters)) c.hp = Math.round(c.hp * opt.hp);
+// SIM_CARD=카드 수치 덮어쓰기 JSON 예: '{"AU01":{"coef":2}}', SIM_CHAR=캐릭터 스탯 덮어쓰기 예: '{"SL":{"hp":1100,"spd":110}}'
+for (const [id, kv] of Object.entries(JSON.parse(process.env.SIM_CARD ?? "{}"))) { Object.assign(DATA.cards[id], kv); opt.card = { ...(opt.card ?? {}), [id]: kv }; }
+for (const [id, kv] of Object.entries(JSON.parse(process.env.SIM_CHAR ?? "{}"))) { Object.assign(DATA.characters[id], kv); opt.char = { ...(opt.char ?? {}), [id]: kv }; }
 const cpOver = JSON.parse(process.env.SIM_CP ?? "{}");
 for (const [id, kv] of Object.entries(cpOver)) DATA.characters[id].active_params = { ...(DATA.characters[id].active_params ?? {}), ...kv };
 if (Object.keys(cpOver).length) opt.cp = cpOver;
