@@ -27,8 +27,8 @@ async function noScroll(page, name) {  // 총괄 5장: 스크롤 없음(문서·
       const s = getComputedStyle(e);
       if (e.closest(".plist")) continue;  // 픽 목록만 세로 스크롤 예외(총괄 5장, 기획지시 밴픽화면재배치)
       if (/(auto|scroll)/.test(s.overflowY + s.overflowX) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) out.push(e.className || e.id || e.tagName);
-      const r = e.getBoundingClientRect();
-      if (e.matches("button,.bc,.pvc,.side,.ctl") && r.width && s.visibility !== "hidden" && !e.closest(".backs") && (r.bottom > innerHeight + 2 || r.right > innerWidth + 2)) out.push("밖:" + (e.id || e.className));
+      const r = e.getBoundingClientRect(), sf = window.__SAFE || { t: 0, r: 0, b: 0, l: 0 };  // 안전 영역 안(기획지시 픽5열안전영역)
+      if (e.matches("button,.bc,.pvc,.side,.ctl,.pk,.qcard,.emp,.rr h2,.stats") && r.width && s.visibility !== "hidden" && !e.closest(".backs,#rot") && (r.bottom > innerHeight - sf.b + 2 || r.right > innerWidth - sf.r + 2 || r.left < sf.l - 2 || r.top < sf.t - 2)) out.push("밖:" + (e.id || e.className));
     }
     return out.slice(0, 5);
   });
@@ -49,8 +49,9 @@ try {
   assert.match(await (await fetch(`${API}/sw.js`)).text(), /shell-/);
   assert.equal((await fetch(`${API}/icons/maskable-512.png`)).headers.get("content-type"), "image/png");
   step("PWA: 매니페스트(전체 화면·가로·시작 /play)·서비스 워커·아이콘");
-  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }]) {
+  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }, { width: 844, height: 390, name: "안전 영역 큰 휴대폰(좌우 47·아래 21)", touch: true, safe: { t: 0, r: 47, b: 21, l: 47 } }]) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(vp.touch ? { isMobile: true, hasTouch: true } : {}) });
+    if (vp.safe) await ctx.addInitScript((sf) => { window.__SAFE = sf; }, vp.safe);
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", (e) => { errors.push(String(e)); console.log("PAGEERR", String(e)); });
@@ -63,8 +64,10 @@ try {
     await page.click("#go");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
     await noScroll(page, "픽");
-    await page.screenshot({ path: `/tmp/play_pick_${vp.width}.png` });
-    assert.equal(await page.$$eval("[data-pick]", (x) => new Set(x.map((e) => Math.round(e.getBoundingClientRect().left))).size), 4, "픽 목록 4열");
+    await page.screenshot({ path: `/tmp/play_pick_${vp.width}${vp.safe ? 's' : ''}.png` });
+    const rowsTop = await page.$$eval("[data-pick]", (x) => x.map((e) => Math.round(e.getBoundingClientRect().top)));
+    assert.deepEqual([new Set(rowsTop).size, rowsTop.filter((t) => t === rowsTop[0]).length], [2, 5], "픽 목록 5열(5+4)");
+    assert.ok(!(await page.$(".plist.scr2")), "9명일 때 스크롤 없음");
     const pw = await page.$eval("[data-pick]", (e) => e.getBoundingClientRect().width);
     console.log(`  픽 카드 폭 ${vp.name} ${Math.round(pw)}px`);
     const picked = await page.$eval("[data-pick]:nth-child(2)", (e) => e.dataset.pick);
@@ -75,7 +78,7 @@ try {
     assert.equal(await page.evaluate(() => S.st.prep.myPick), picked, "확정한/눌러 둔 캐릭터로 픽");
     assert.equal(await page.$$eval(".deck2 .bc", (x) => x.length), 12, "덱 12장(프리셋 10 + 전용 2)");
     console.log(`  덱 카드 폭 ${vp.name} ${Math.round(await page.$eval(".deck2 .bc", (e) => e.getBoundingClientRect().width))}px`);
-    await page.screenshot({ path: `/tmp/play_lo_${vp.width}.png` });
+    await page.screenshot({ path: `/tmp/play_lo_${vp.width}${vp.safe ? 's' : ''}.png` });
     await noScroll(page, "스펠·덱");
     step(`${vp.name}: 시작 → 픽 → 스펠·덱 화면(스크롤 없음)`);
     await page.click("#ok");
@@ -85,7 +88,7 @@ try {
     assert.equal(await page.$("#guide"), null);
     await noScroll(page, "전투");
     const [opp, me] = await page.evaluate(() => ["#side_opp", "#side_me"].map((q) => document.querySelector(q).getBoundingClientRect().left));
-    await page.screenshot({ path: `/tmp/play_t1_${vp.width}.png` });
+    await page.screenshot({ path: `/tmp/play_t1_${vp.width}${vp.safe ? 's' : ''}.png` });
     assert.ok(opp > me + 100, `상대 프로필 우상단, 내 프로필 좌하단 ${opp} ${me}`);
     step(`${vp.name}: 첫 턴 안내 3장 → 전투 화면(상대 프로필 우상단, 스크롤 없음)`);
     for (let t = 1; t <= 3; t += 1) {
@@ -130,9 +133,9 @@ try {
     await page.waitForSelector(".rr h2", { timeout: 20000 });
     assert.equal((await page.textContent(".rr h2")).trim(), "패배");
     assert.equal(await page.$$eval(".stats .st", (x) => x.length), 5, "결과 통계 5가지");
-    await page.screenshot({ path: `/tmp/play_res_${vp.width}.png` });
+    await page.screenshot({ path: `/tmp/play_res_${vp.width}${vp.safe ? 's' : ''}.png` });
     await noScroll(page, "결과");
-    await page.screenshot({ path: `/tmp/play_res_${vp.width}.png` });
+    await page.screenshot({ path: `/tmp/play_res_${vp.width}${vp.safe ? 's' : ''}.png` });
     step(`${vp.name}: 항복 → 결과 화면(패배)`);
     await page.click("#again");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
