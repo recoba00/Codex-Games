@@ -576,7 +576,7 @@ export class FriendRoom extends DurableObject {
     const reason = voidReason ?? b.result.reason;
     const mode = room.mode ?? "friend";
     room.games += 1;
-    room.last = { id: g.id, outcome, reason, turn: b.turn, picks: g.picks, hp: b.players.map((p) => [p.hp, p.maxHp]),
+    room.last = { id: g.id, outcome, reason, koBoth: !!b.result?.koBoth, turn: b.turn, picks: g.picks, hp: b.players.map((p) => [p.hp, p.maxHp]),
       stats: b.players.map((p, s) => ({ dealt: p.dealt ?? 0, taken: b.players[1 - s].dealt ?? 0, blocked: p.absorbed ?? 0 })) };  // 결과 통계 5가지(턴·준/받은 피해·실드로 막은 피해·남은 HP)
     room.saves.push({
       tries: 0, next: now,
@@ -590,7 +590,8 @@ export class FriendRoom extends DurableObject {
           spells: g.loadouts.map((l) => l.spells), presets: g.loadouts.map((l) => l.preset),
           hp: b.players.map((p) => p.hp), dealt: b.players.map((p) => p.dealt), blocked: b.players.map((p) => p.absorbed ?? 0),
           battle_sec: Math.round((now - (g.battleStartedAt ?? now)) / 1000), options: room.options,
-          ai: room.members.find((m) => m.ai)?.ai ?? null
+          ai: room.members.find((m) => m.ai)?.ai ?? null,
+          ...(b.result?.koBoth ? { ko_both: true } : {})  // 동시 HP 0을 준 피해로 가른 판(기획답변 56차)
         }
       }
     });

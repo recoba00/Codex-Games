@@ -163,13 +163,23 @@ test("작열: 턴 종료마다 최대 HP 3%, 실드 무시, 2턴 후 소멸, 최
   assert.ok(before - target.hp >= 1);
 });
 
-test("같은 단계에서 양측 HP 0이면 무승부 (총괄 6·12장)", () => {
+test("같은 단계 동시 HP 0: 누적 준 HP 피해가 많은 쪽 승, 같으면 무승부 (기획답변 56차, 총괄 6·12장)", () => {
   const st = battle("UM", "UM");
-  st.players[0].hp = 1; st.players[1].hp = 1;
+  st.players[0].hp = 1; st.players[1].hp = 1; st.players[0].crit = 0; st.players[1].crit = 0;
   st.players[0].energy = 5; st.players[1].energy = 5;
+  st.players[1].dealt = 300;  // 이전 턴까지 B가 더 많이 줌
   const a = give(st, 0, "C02"), b = give(st, 1, "C02");
   play(st, { cards: [a] }, { cards: [b] });
-  assert.deepEqual(st.result, { outcome: "draw", reason: "hp", turn: 1 });
+  assert.deepEqual(st.result, { outcome: "b", reason: "hp", turn: 1, koBoth: true });
+  assert.ok(st.log.some((e) => e.t === "end" && e.koBoth));
+
+  const s2 = battle("AU", "AU");  // 치명 보너스 패시브 없는 같은 캐릭터 → 같은 피해
+  s2.players[0].hp = 1; s2.players[1].hp = 1; s2.players[0].crit = 0; s2.players[1].crit = 0;
+  s2.players[0].energy = 5; s2.players[1].energy = 5;
+  const a2 = give(s2, 0, "C02"), b2 = give(s2, 1, "C02");
+  play(s2, { cards: [a2] }, { cards: [b2] });
+  assert.equal(s2.players[0].dealt, s2.players[1].dealt);
+  assert.deepEqual(s2.result, { outcome: "draw", reason: "hp", turn: 1, koBoth: true });
 });
 
 test("10턴 종료: HP 비율 높은 쪽 승리", () => {

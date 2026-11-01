@@ -35,7 +35,7 @@ h1{margin:0;font-size:28px;letter-spacing:2px}
 .pvc{--mx:.5;--my:.5;--px:0;--py:0;position:relative;width:var(--w,150px);aspect-ratio:5/7;transform:perspective(800px) rotateX(calc(var(--py)*-7deg)) rotateY(calc(var(--px)*9deg));container-type:inline-size;flex:none}
 .pvb{position:absolute;inset:0;border-radius:6%/4.3%;overflow:hidden;isolation:isolate;background:#223;box-shadow:0 10px 24px -10px rgba(0,0,0,.6)}
 .pvl{position:absolute;inset:0;pointer-events:none}.pvbg{background-size:cover;background-position:center}
-.pvwin{position:absolute;left:5%;top:3.571%;width:90%;height:85.714%}.pvchar{background-repeat:no-repeat}
+.pvwin{position:absolute;left:5%;top:3.571%;width:90%;height:96.429%}  /* 아래는 카드 끝까지(이름 띠가 위에 겹침, 하단 일러스트 잘림 방지) */.pvchar{background-repeat:no-repeat}
 .pvname{top:auto;height:22%;display:flex;flex-direction:column;justify-content:flex-end;padding:0 7cqw 5cqw;color:#F7F5EE;font-weight:700;font-size:max(11px,8cqw);line-height:1.15;background:linear-gradient(to top,rgba(8,10,22,.9),rgba(8,10,22,0))}
 .pvname small{font-size:max(9px,5cqw);font-weight:500;opacity:.8}
 .pvhb,.pvhf,.pvsp,.pvgl{display:none}
@@ -462,10 +462,10 @@ function now(){return Date.now()+S.off}
 function left(t){return t?Math.max(0,Math.ceil((t-now())/1000)):0}
 
 /* ---------- 카드 그리기 ---------- */
-/* 캐릭터 카드 그림 배치(사용자 요청 2026-11-02): BO에서 지정한 카드 영역(cr)이 창 안에 전부 보이게(다리 잘림 방지).
+/* 캐릭터 카드 그림 배치(사용자 요청 2026-11-02): BO에서 지정한 카드 영역(cr)이 창 안에 전부 보이게, 영역 위쪽에 맞추고 아래는 그림이 카드 끝까지 이어짐(하단 잘림 방지).
    full = 전투 프로필처럼 테두리 여백 없이 카드 전체를 창으로 쓰고, 폭을 꽉 채움(영역 위쪽 기준, 남는 아래는 그림 그대로). 단위는 카드 폭 1 기준 */
-function artBg(src,cr,url,full){var ww=full?1:0.9,wh=full?1.4:1.2,rw=cr.w*src.w,rh=cr.h*src.h,s=full?ww/rw:Math.min(ww/rw,wh/rh),bw=src.w*s,bh=src.h*s;
- var ox=(ww-rw*s)/2-cr.x*src.w*s,oy=(full?0:(wh-rh*s)/2)-cr.y*src.h*s,px=Math.abs(ww-bw)<1e-6?0:ox/(ww-bw)*100,py=Math.abs(wh-bh)<1e-6?0:oy/(wh-bh)*100;
+function artBg(src,cr,url,full){var ww=full?1:0.9,wh=full?1.4:1.35,rw=cr.w*src.w,rh=cr.h*src.h,s=full?ww/rw:Math.min(ww/rw,wh/rh),bw=src.w*s,bh=src.h*s;
+ var ox=(ww-rw*s)/2-cr.x*src.w*s,oy=-cr.y*src.h*s,px=Math.abs(ww-bw)<1e-6?0:ox/(ww-bw)*100,py=Math.abs(wh-bh)<1e-6?0:oy/(wh-bh)*100;
  return 'background-image:'+url+';background-size:'+(bw/ww*100).toFixed(2)+'% '+(bh/wh*100).toFixed(2)+'%;background-position:'+px.toFixed(2)+'% '+py.toFixed(2)+'%'}
 function pvCard(id,o){var c=ch(id),a=((S.A.art||{})[id]||{})['000']||{},sl=S.A.slots;
  var bgCss=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':(sl[a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))]?'background-image:'+slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))):'background:#334');
@@ -869,7 +869,7 @@ function groupsOf(L,you){var G=[],cur=null,end=false,last=null,nw=function(o){o.
   case 'countered':nw({k:'counter',seat:1-e.seat,id:e.by,victim:e.card,ph:4});return;
   case 'void':nw({k:'void',seat:e.seat,id:e.card,ph:phOf(e.card),bad:({energy:'에너지 부족',silence:'침묵'}[e.why]||e.why)+': 이 카드는 무효',lock:({energy:'에너지',silence:'침묵'}[e.why]||'무효')});cur=null;return;
   case 'rush':nw({k:'rush',ph:5});cur=null;return;
-  case 'end':nw({k:'end',ph:5,reason:e.reason});cur=null;return;
+  case 'end':nw({k:'end',ph:5,reason:e.reason,koBoth:!!e.koBoth});cur=null;return;
   case 'crit':if(last)last.crit=true;return}
   if(e.t==='dmg')last=e;
   if(end||!cur){nw({k:'tick',seat:e.seat,ph:end?5:(cur?cur.ph:5)});cur.ev.push(e);if(end)cur=null;return}
@@ -884,7 +884,7 @@ function capOf(g,you,ob){var who=g.seat==null?'':(g.seat===you?'나':'상대'),c
  switch(g.k){case 'card':head=cn(g.id);fx=card(g.id).effect_text;break;case 'counter':head=cn(g.id);res.unshift('상대 '+card(g.victim).name+' 무효');break;
   case 'spell':head='스펠 '+esc(sname(g.id));fx=(S.data.spells[g.id]||{}).effect_text;break;case 'active':head='액티브 '+esc(ch(chr).active_name||'');fx=ch(chr).active_text;break;
   case 'void':head=cn(g.id);break;case 'auto':head='시간 초과';res=['아무것도 내지 않음'];break;case 'rush':return {html:'★ 폭주 시작: 이번 턴부터 피해 증가·회복 감소',text:'★ 폭주 시작'};
-  case 'end':return {html:'■ 종료 · '+esc(REASON[g.reason]||g.reason),text:'■ 종료'};
+  case 'end':return {html:'■ 종료 · '+esc(g.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[g.reason]||g.reason)),text:'■ 종료'};
   default:head=g.ev.some(function(e){return e.src==='burn'})?'작열':g.ev.some(function(e){return e.t==='heal'})&&chr==='SE'?esc(ch(chr).passive_name||'재생'):g.ev.some(function(e){return e.t==='burnout'})?'손패':'효과'}
  var body=g.bad||(res.length?res.join(', '):esc(fx||''));
  var calcs=g.ev.filter(function(e){return e.t==='dmg'&&e.calc}).map(function(e){return '<button class="calcb" data-calc="'+esc(JSON.stringify(Object.assign({},e.calc,{v:e.v,abs:e.absorbed||0})))+'">내역</button>'}).join('');
@@ -1015,7 +1015,7 @@ function renderResult(m){var L=m.last||{},you=m.you,win=L.outcome!=='draw'&&L.ou
  var f=safe(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((innerWidth-f.l-f.r)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
  var mode=m.mode,rk=L.rank&&L.rank[you],ec=L.econ&&L.econ[you];
  $('app').innerHTML='<div class="res3'+(win?' win':draw?' draw':' lose')+'"><div class="rl"><div class="rimg" style="'+(mine?artFill(mine,half):'')+'"></div></div>'
-  +'<div class="rr"><button class="ib rmenu" id="rmore" title="더보기">⋯</button><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(REASON[L.reason]||L.reason||'')+(mine?' · '+esc(ch(mine).name):'')+'</div>'
+  +'<div class="rr"><button class="ib rmenu" id="rmore" title="더보기">⋯</button><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(L.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[L.reason]||L.reason||''))+(mine?' · '+esc(ch(mine).name):'')+'</div>'
   +'<div class="stats">'+stat('판 길이',(L.turn||0)+'턴')+stat('준 피해',st.dealt!=null?st.dealt:'-')+stat('받은 피해',st.taken!=null?st.taken:'-')+stat('실드로 막은 피해',st.blocked!=null?st.blocked:'-')+stat('남은 HP',Math.round(100*hp[0]/hp[1])+'%')+'</div>'
   +'<div class="rew">'+(rk?'<div>RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+'</div>':'')+(ec&&ec.gold?'<div>골드 +'+ec.gold+'</div>':'')+(mode==='practice'?'<div class="mu small">AI 대전은 RP·숙련도 변화가 없어요(총괄 8장)</div>':'')+'</div>'
   +'<div class="row" style="gap:8px"><button id="home">로비</button><button class="pri confirm" id="again">다시 하기 (Enter)</button></div></div></div>';

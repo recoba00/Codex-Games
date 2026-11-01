@@ -665,14 +665,18 @@ function finishIfDead(state) {
   const [A, B] = state.players;
   const da = A.hp <= 0, db = B.hp <= 0;
   if (!da && !db) return false;
-  finish(state, da && db ? "draw" : da ? "b" : "a", "hp");  // 같은 단계 동시 HP 0: 무승부
+  if (da && db) {  // 같은 단계 동시 HP 0(기획답변 56차, 총괄 6·12장): 10턴 판정과 같은 순서 — HP 비율(둘 다 0) → 누적 준 HP 피해 → 무승부
+    finish(state, A.dealt !== B.dealt ? (A.dealt > B.dealt ? "a" : "b") : "draw", "hp", { koBoth: true });
+    return true;
+  }
+  finish(state, da ? "b" : "a", "hp");
   return true;
 }
 
-function finish(state, outcome, reason) {
-  state.result = { outcome, reason, turn: state.turn };
+function finish(state, outcome, reason, extra = {}) {
+  state.result = { outcome, reason, turn: state.turn, ...extra };
   for (const p of state.players) p.hp = Math.max(0, p.hp);
-  state.log.push({ t: "end", outcome, reason });
+  state.log.push({ t: "end", outcome, reason, ...extra });
 }
 
 // 항복(4턴부터, 일반 패배) / 이탈(재접속 실패)
