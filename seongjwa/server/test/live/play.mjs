@@ -49,7 +49,7 @@ try {
   assert.match(await (await fetch(`${API}/sw.js`)).text(), /shell-/);
   assert.equal((await fetch(`${API}/icons/maskable-512.png`)).headers.get("content-type"), "image/png");
   step("PWA: 매니페스트(전체 화면·가로·시작 /play)·서비스 워커·아이콘");
-  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }, { width: 844, height: 390, name: "안전 영역 큰 휴대폰(좌우 47·아래 21)", touch: true, safe: { t: 0, r: 47, b: 21, l: 47 } }]) {
+  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 2000, height: 1080, name: "4K(배율 2 화면)" }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }, { width: 844, height: 390, name: "안전 영역 큰 휴대폰(좌우 47·아래 21)", touch: true, safe: { t: 0, r: 47, b: 21, l: 47 } }]) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(vp.touch ? { isMobile: true, hasTouch: true } : {}) });
     if (vp.safe) await ctx.addInitScript((sf) => { window.__SAFE = sf; }, vp.safe);
     const page = await ctx.newPage();

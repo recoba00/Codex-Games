@@ -180,7 +180,7 @@ h1{margin:0;font-size:28px;letter-spacing:2px}
 .zw{background:rgba(10,12,26,.92);border:2px solid var(--kc);border-radius:14px;padding:8px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:min(320px,80vw);box-shadow:0 0 30px var(--kc)}
 .zw p{margin:0;font-size:13px;text-align:center;line-height:1.35}.zt{font-weight:800}.zt span{font-size:11px;padding:1px 7px;border-radius:99px;background:#2b5fd0;margin-right:4px}.zw.opp .zt span{background:#b23a63}
 .zi{width:64px;height:64px;background:center/contain no-repeat}.zi.face{border-radius:50%;background-size:cover;border:2px solid var(--kc)}
-.orb{position:fixed;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,#fff 0 20%,var(--kc) 55%,transparent 72%);box-shadow:0 0 16px 6px var(--kc);z-index:36;pointer-events:none;transform:translate(-50%,-50%)}
+.orb{position:absolute;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,#fff 0 20%,var(--kc) 55%,transparent 72%);box-shadow:0 0 16px 6px var(--kc);z-index:36;pointer-events:none;transform:translate(-50%,-50%)}
 .orb.brk{animation:brk .25s forwards}@keyframes brk{to{opacity:0;width:60px;height:60px;filter:blur(3px)}}
 .side.hit{animation:hit .35s}@keyframes hit{0%{box-shadow:0 0 0 0 var(--kc)}40%{box-shadow:0 0 0 4px var(--kc),0 0 24px 6px var(--kc)}100%{box-shadow:none}}
 .wait{position:absolute;left:8px;top:-10px;font-size:10px;font-weight:800;background:#ff9a3c;color:#1b1000;border-radius:99px;padding:0 6px;z-index:5}
@@ -531,7 +531,7 @@ function netBar(){var bad=S.room&&sessionStorage.getItem('play_room')&&(!S.ws||S
  if(!bad&&!(off&&S.data)){if(el)el.remove();return}if(!el){el=document.createElement('div');el.id='net';document.body.appendChild(el)}
  el.className=off?'off':'';el.innerHTML=off?'<b>연결이 필요해요</b><span class="small mu">다시 연결되면 지금 판으로 이어져요(재접속 유예 60초)</span>':'연결이 불안정해요 · 다시 연결 중…'}
 setInterval(netBar,1000);
-function home(msg){S.st=null;S.prev=null;wake(false);var dev=localStorage.getItem('play_dev')||'',P=window.PWA||{};
+function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);var dev=localStorage.getItem('play_dev')||'',P=window.PWA||{};
  $('app').innerHTML='<div class="scr home"><h1>성좌 결투</h1><div class="mu">전투 프로토타입 · AI 대전</div>'
  +'<div class="row" style="justify-content:center">'+[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(function(d){return '<button data-d="'+d[0]+'" class="'+(S.diff===d[0]?'on':'')+'">'+d[1]+'</button>'}).join('')+'</div>'
  +'<button class="pri" id="go" style="font-size:18px;padding:12px 40px">AI 대전 시작</button>'
@@ -576,7 +576,7 @@ function onRoom(m){if(m.now)S.off=m.now-Date.now();
  if(ob&&nb&&m.phase==='battle'&&nb.turn>ob.turn){return play(ob,nb.log,m)}
  if(ob&&old.phase==='battle'&&m.phase==='result'&&m.lastLog&&m.lastLog[0]&&m.lastLog[0].turn===ob.turn){return play(ob,m.lastLog,m)}
  render()}
-function render(){var m=S.st;if(!m)return home();S.showLog=S.showLog&&m.phase==='battle';wake(['pick','loadout','battle'].indexOf(m.phase)>=0);
+function render(){applyZoom();var m=S.st;if(!m)return home();S.showLog=S.showLog&&m.phase==='battle';wake(['pick','loadout','battle'].indexOf(m.phase)>=0);
  if(m.phase==='closed'){quit();return home('판이 닫혔어요('+(m.notice||'')+')')}
  if(m.phase==='pick'||m.phase==='ban')return renderPick(m);
  if(m.phase==='loadout')return renderLoadout(m);
@@ -589,9 +589,14 @@ function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.h
 /* 밴·픽: 가로 3단(기획지시 2026-11-01 밴픽화면재배치). 왼쪽 내 선택 · 가운데 4열 목록(이 화면만 세로 스크롤, 줄 단위 멈춤) · 오른쪽 상대 "?".
    선택 테두리 자리는 처음부터 2pt(투명) → 눌러도 크기·위치 불변. 눌러 둔 캐릭터는 서버에 hint로 보내 시간 초과 때 그것으로 확정(37차) */
 /* 픽 배치(기획지시 픽5열안전영역): 폭 = 화면 − 좌우 안전 영역 − 좌우 14 → 좌 19% / 중앙 62% / 우 19%, 단 사이 12. 중앙 5열(9명 5+4), 크기 = min(폭, 2줄 높이), 72 미만이면 4열 */
-function prepPad(){var f=safe(),short=innerHeight<=500;return {t:Math.max(12,f.t),r:f.r+14,b:Math.max(12,f.b),l:f.l+14,short:short}}  // 상하단 12 확보(사용자 요청 2026-11-01), 안전 영역이 더 크면 그만큼  // 확정 버튼은 홈 표시줄 위로 12
+/* 큰 화면(사용자 요청 2026-11-02, 4K 등): 높이 800 기준으로 앱 전체를 확대. 배치는 가상 크기 VW()×VH()로 계산하고 #app을 scale로 키움.
+   몸통 위에 띄우는 팝업(카드 상세·툴팁·턴 배너)은 실제 화면 기준 */
+function bigScale(){var W=innerWidth,H=innerHeight;return (H>=900&&W>=1400)?Math.min(H/800,W/1300):1}
+function VW(){return innerWidth/(S.zs||1)}function VH(){return innerHeight/(S.zs||1)}
+function applyZoom(){var z=bigScale(),a=$('app');S.zs=z;if(!a)return;if(z>1){a.style.width=(innerWidth/z)+'px';a.style.height=(innerHeight/z)+'px';a.style.right='auto';a.style.bottom='auto';a.style.transform='scale('+z+')';a.style.transformOrigin='0 0'}else{a.style.width='';a.style.height='';a.style.right='';a.style.bottom='';a.style.transform='';a.style.transformOrigin=''}}
+function prepPad(){var f=safe(),short=VH()<=500;return {t:Math.max(12,f.t),r:f.r+14,b:Math.max(12,f.b),l:f.l+14,short:short}}  // 상하단 12 확보(사용자 요청 2026-11-01), 안전 영역이 더 크면 그만큼  // 확정 버튼은 홈 표시줄 위로 12
 function padCss(p){return 'padding:'+p.t+'px '+p.r+'px '+p.b+'px '+p.l+'px'}
-function pickLay(n){var W=innerWidth,H=innerHeight,p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
+function pickLay(n){var W=VW(),H=VH(),p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
  var topH=short?30:40,topM=short?4:12,band=short?28:44,barH=short?40:46,barM=short?4:12,g8=8;  // 상하단 12 확보 후에도 휴대폰 5열 유지
  var listH=H-p.t-p.b-topH-topM-band-6-barH-barM,rowsFit=function(cols,w){return Math.ceil(n/cols)*(w*1.4+4)+(Math.ceil(n/cols)-1)*g8+8};
  var cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor(((listH-4-g8)/2)/1.4)-4,cw=Math.min(wW,wH,170);
@@ -618,7 +623,7 @@ function confirmPick(){var m=S.st;if(!m||(m.phase!=='pick'&&m.phase!=='ban'))ret
  var id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id})}
 /* 스펠·덱(재배치 3): 왼쪽 상대(위)·나(아래) 같은 크기, 오른쪽 스펠 8종 한 줄(링+체크, 2개) + 설명 한 줄 + 덱 탭 + 덱 12장 한 줄(이름 없이, 길게 누르면 상세). 폭 44 미만이면 6×2 */
 /* 스펠·덱(사용자 요청 2026-11-01): 픽 화면과 같은 틀 — 왼쪽 아래 나, 오른쪽 위 상대(19% 열), 가운데 스펠 8종 + 설명 + 덱 탭 + 덱 12장 두 줄(6×2) */
-function loLay(){var W=innerWidth,H=innerHeight,p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
+function loLay(){var W=VW(),H=VH(),p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
  var topH=short?30:40,topM=short?4:12,barH=short?40:46,barM=short?4:12,cenH=H-p.t-p.b-topH-topM-barH-barM,sideH=cenH-40,sw=Math.floor(Math.min(side,sideH*0.7/1.4));
  var spH=short?68:86,infoH=short?18:20,tabsH=short?34:38,avail=cenH-spH-infoH-tabsH-3*8,dw=Math.floor(Math.min((cen-5*6)/6,(avail-6)/2/1.4,96));
  return {p:p,gap:gap,side:side,cen:cen,sw:sw,dw:dw,two:true,short:short}}
@@ -672,7 +677,7 @@ function sortCells(a){return a.map(function(x,i){x.i=i;return x}).sort(function(
 /* 상대 최근 3턴 사용 카드(효과연출 8) */
 /* 전투 화면 배치(기획지시 2026-11-01 전투UI개편 3): 고정 구역(캐릭터 카드·버튼 구역·로그 줄·슬롯) + 가변 구역(손패).
    844×390 기준: 캐릭터 카드 176×64, 상태 뱃지 3줄 48, 상단 줄 30, 손패 높이 104(카드 약 74×104), 슬롯 칸 약 50×70 */
-function lay(n){var W=innerWidth,H=innerHeight,short=H<=500,pad=short?8:12,f=safe(),pl=Math.max(pad,f.l),pr=Math.max(pad,f.r),pt=Math.max(pad,f.t),pb=Math.max(pad,f.b);
+function lay(n){var W=VW(),H=VH(),short=H<=500,pad=short?8:12,f=safe(),pl=Math.max(pad,f.l),pr=Math.max(pad,f.r),pt=Math.max(pad,f.t),pb=Math.max(pad,f.b);
  var cardW=short?176:232,cardH=short?64:84,bdgH=short?48:58,topH=short?30:40,gap=short?6:8;
  var handH=Math.round(short?Math.max(92,Math.min(118,H*0.27)):Math.min(220,H*0.25)),handW=W-pl-pr-2*cardW-2*gap;
  // 손패: 고른 카드가 7% 올라가도 손패 칸을 넘지 않게 높이 90%, 폭은 겹침(최대 30%)으로 맞추고 그래도 넘으면 카드를 줄인다
@@ -720,7 +725,8 @@ function iconsHtml(op){return '<button id="menu" class="ib" title="메뉴">⋯</
  +'<span class="ib pop txt" data-tip="상대 에너지 '+op.energy+'">⚡'+op.energy+'</span><span class="ib pop txt" data-tip="상대 손패 '+op.handCount+'장"><s class="bk" style="'+(S.A.slots.CARD_BACK?'background-image:'+slotU('CARD_BACK'):'')+'"></s>'+op.handCount+'</span>'}
 /* 전투 화면 사선 구도 + 전투 UX 2차(기획지시 2026-11-01): 손패·낸 칸 위치는 고정, 캐릭터 열(카드·상태 뱃지·액티브)은 내 것은 아래, 상대 것은 위에 붙여 뱃지가 늘어도 다른 구역이 밀리지 않음.
    넓은 화면(안전 영역 안쪽 1180pt 이상·높이 600 이상)은 전투판 폭을 960으로 묶고 오른쪽에 카드 상세 + 전체 로그 패널 */
-function lay3(n){var W=innerWidth,H=innerHeight,short=H<=500,f=safe(),pad=short?8:12,pl=Math.max(pad,f.l),pr=Math.max(pad,f.r),pt=Math.max(12,f.t),pb=Math.max(12,f.b),g=short?6:10;
+/* 큰 화면(사용자 요청 2026-11-02, 4K): 높이 800 기준으로 전투판 전체를 확대. 배치는 가상 크기(화면/배율)로 계산하고 #btz가 scale로 키움 */
+function lay3(n){var zs=S.zs||1,W=VW(),H=VH(),short=H<=500,f=safe(),pad=short?8:12,pl=Math.max(pad,f.l),pr=Math.max(pad,f.r),pt=Math.max(12,f.t),pb=Math.max(12,f.b),g=short?6:10;
  var inner=W-pl-pr,wide=inner>=1180&&H>=600,panelW=wide?Math.min(440,inner-960-16):0,bR=wide?pl+960:W-pr;
  var topH=short?26:34,actH=short?26:32,ctlW=short?176:232;
  var ch=short?Math.min(150,Math.round((H-pt-pb)*0.42)):Math.round(Math.min(230,H*0.28)),cw=Math.round(ch*5/7);
@@ -729,7 +735,7 @@ function lay3(n){var W=innerWidth,H=innerHeight,short=H<=500,f=safe(),pad=short?
  var meSX=pl+cw+g,meSY=handTop-g-slH,opX=bR-cw,opSY=pt,opSRight=opX-g,handL=meSX,handR=bR-ctlW-g,handW=handR-handL;
  var cwc=Math.floor(handH*0.9*5/7),ov=false;if(n*cwc+(n-1)*6>handW){ov=true;cwc=Math.floor(Math.min(cwc,handW/(n*0.7+0.3)))}
  var boardW=bR-pl,two=(5*sw+4*16)>Math.floor(boardW*0.48);
- return {W:W,H:H,short:short,wide:wide,panelW:panelW,bR:bR,pl:pl,pr:pr,pt:pt,pb:pb,g:g,topH:topH,actH:actH,ctlW:ctlW,ch:ch,cw:cw,sw:sw,slH:slH,labH:labH,meSX:meSX,meSY:meSY,opX:opX,opSY:opSY,opSRight:opSRight,
+ return {zs:zs,W:W,H:H,short:short,wide:wide,panelW:panelW,bR:bR,pl:pl,pr:pr,pt:pt,pb:pb,g:g,topH:topH,actH:actH,ctlW:ctlW,ch:ch,cw:cw,sw:sw,slH:slH,labH:labH,meSX:meSX,meSY:meSY,opX:opX,opSY:opSY,opSRight:opSRight,
   handTop:handTop,handH:handH,handL:handL,handW:handW,ccw:cwc,ov:ov,two:two,colTop:pt+topH+g,midX:Math.round(pl+boardW*0.38),midY:Math.round((opSY+slH+labH+meSY-labH)/2),detail:false}}
 /* 넓은 화면 오른쪽 패널(전투UX2차 5): 카드 상세(손패 호버) + 처리 순서 도움말 + 전체 로그 */
 function wdetHelp(){return '<b>처리 순서</b><div class="small">0 스펠 → 1 보호(방어·반격·면역) → 2 방해(침묵·방해) → 3 스킬·액티브 → 4 공격 → 5 턴 끝(작열·재생)</div><div class="small mu">손패 카드에 마우스를 올리면 여기에 효과 전문이 나와요.</div>'}
@@ -743,8 +749,9 @@ function turnBanner(b){var key=S.room+':'+b.turn;if(S.bannerKey===key)return;S.b
  var hd=bt.querySelector('.hand');if(hd){hd.classList.add('deal');setTimeout(function(){hd.classList.remove('deal')},1300)}var rg=$('ring');if(rg){rg.classList.add('enter');setTimeout(function(){rg.classList.remove('enter')},1400)}}  // 턴 시작: 띠·글자 내려앉음·충격파·불꽃·빛줄기·화면 흔들림 + 손패 나눠 주기
 /* 역동 연출(사용자 요청 2026-11-01): 화면 흔들림·피격·충돌 */
 function shakeBt(n){var b=$('bt');if(!b)return;b.classList.remove('shk','shk2');void b.offsetWidth;b.classList.add(n>1?'shk2':'shk');setTimeout(function(){b.classList.remove('shk','shk2')},n>1?420:300)}
+function lr(el){var b=$('bt'),r=el.getBoundingClientRect(),q=b?b.getBoundingClientRect():{left:0,top:0},k=S.zs||1;return {left:(r.left-q.left)/k,top:(r.top-q.top)/k,width:r.width/k,height:r.height/k,right:(r.right-q.left)/k,bottom:(r.bottom-q.top)/k}}  // 전투판 안 좌표(확대 배율 보정)
 function hurt(sd,big){var v=$('side_'+sd),b=$('bt');if(v){v.classList.remove('hurt');void v.offsetWidth;v.classList.add('hurt');setTimeout(function(){v.classList.remove('hurt')},450)}
- if(b&&v){var r=v.getBoundingClientRect(),br=b.getBoundingClientRect(),x=document.createElement('div');x.className='burst'+(big?' big':'');x.style.left=(r.left-br.left+r.width/2)+'px';x.style.top=(r.top-br.top+r.height*(sd==='me'?0.35:0.6))+'px';
+ if(b&&v){var r=lr(v),x=document.createElement('div');x.className='burst'+(big?' big':'');x.style.left=(r.left+r.width/2)+'px';x.style.top=(r.top+r.height*(sd==='me'?0.35:0.6))+'px';
   var h='';for(var k=0;k<(big?14:9);k++)h+='<s style="--a:'+Math.round(k*360/(big?14:9)+Math.random()*20)+'deg;--d:'+Math.round((big?60:40)+Math.random()*40)+'px"></s>';x.innerHTML=h;b.appendChild(x);setTimeout(function(){x.remove()},650)}
  if(big)shakeBt(2);else shakeBt(1);if(sd==='me'&&b){var vg=document.createElement('div');vg.className='vign';b.appendChild(vg);setTimeout(function(){vg.remove()},500)}}
 function koShow(hp){var b=$('bt');if(!b)return;document.querySelectorAll('.zoom,.orb,#bub').forEach(function(x){x.remove()});var dead=['me','opp'].filter(function(k){return hp[k]<=0});
@@ -804,7 +811,7 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
  S.wide=z.wide;if(!reveal)turnBanner(b);
  if(S.lefty){var bt=$('bt'),BW=bt.clientWidth;Array.prototype.forEach.call(bt.children,function(el){if(el.classList.contains('center')||el.classList.contains('log')||el.classList.contains('menu'))return;var l=el.offsetLeft,w=el.offsetWidth;el.style.left=(BW-l-w)+'px';el.style.right='auto'});bt.querySelectorAll('.opslots,.slots.opp').forEach(function(x){x.style.alignItems='flex-start'})}  // 왼손 모드: 좌우 반전
  fitHand();
- document.querySelectorAll('.slots.me [data-skey]').forEach(function(el){var r0=prevR[el.dataset.skey];if(!r0||!el.animate)return;var r1=el.getBoundingClientRect(),dx=r0.left-r1.left,dy=r0.top-r1.top;if(Math.abs(dx)>2||Math.abs(dy)>2)el.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'none'}],{duration:300,easing:'ease-out'})});
+ document.querySelectorAll('.slots.me [data-skey]').forEach(function(el){var r0=prevR[el.dataset.skey];if(!r0||!el.animate)return;var r1=el.getBoundingClientRect(),dx=(r0.left-r1.left)/(S.zs||1),dy=(r0.top-r1.top)/(S.zs||1);if(Math.abs(dx)>2||Math.abs(dy)>2)el.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'none'}],{duration:300,easing:'ease-out'})});
  if(!reveal&&Object.keys(prevR).length+1>=document.querySelectorAll('.slots.me [data-skey]').length)document.querySelectorAll('.slots.me [data-skey]').forEach(function(el){if(prevR[el.dataset.skey]||!el.animate)return;el.animate([{transform:'translateY(-30px) scale(1.35)',filter:'brightness(2)',opacity:.4},{transform:'scale(.92)',filter:'brightness(1.4)',opacity:1,offset:.6},{transform:'none',filter:'none'}],{duration:340,easing:'cubic-bezier(.2,1.4,.4,1)'})});  // 칸에 놓일 때 쾅
  $('logline').onclick=function(){S.showLog=!S.showLog;refreshLog()};bindLog();
  document.querySelectorAll('.pop').forEach(function(el){el.onclick=function(e){e.stopPropagation();tipShow(el)}});
@@ -916,7 +923,7 @@ function capOf(g,you,ob){var who=g.seat==null?'':(g.seat===you?'나':'상대'),c
  return {html:'<i class="kd" style="background:'+KCOL[kindOf(g)]+'"></i>'+(who?who+' · ':'')+head+': '+body+calcs,dmg:dm}}
 /* 전투 로그: 턴 탭(1~10) + 페이지 넘김(스크롤 없음, 기획지시 전투화면정리 5) */
 function logHtml(){var T=S.hlog||{},turns=Object.keys(T).map(Number).sort(function(a,b){return a-b});if(!turns.length)return '<div class="mu">아직 기록이 없어요</div>';
- var t=T[S.logTab]?S.logTab:turns[turns.length-1],lines=T[t]||[],per=Math.max(3,Math.floor((innerHeight-(innerHeight<=500?48:56)-10-20-(innerHeight<=500?56:62)-30)/20)),pages=Math.max(1,Math.ceil(lines.length/per)),pg=Math.min(S.logPage||0,pages-1),mx=(S.st&&S.st.battle&&S.st.battle.rules.max_turn)||10,tabs='';
+ var t=T[S.logTab]?S.logTab:turns[turns.length-1],lines=T[t]||[],IH=VH(),per=Math.max(3,Math.floor((IH-(IH<=500?48:56)-10-20-(IH<=500?56:62)-30)/20)),pages=Math.max(1,Math.ceil(lines.length/per)),pg=Math.min(S.logPage||0,pages-1),mx=(S.st&&S.st.battle&&S.st.battle.rules.max_turn)||10,tabs='';
  for(var n=1;n<=mx;n++)tabs+='<button data-lt="'+n+'" class="'+(n===t?'on':'')+'"'+(T[n]?'':' disabled')+'>'+n+'</button>';
  return '<div class="ltabs">'+tabs+'</div><div class="lbody">'+(lines.slice(pg*per,(pg+1)*per).map(function(x){return '<div>'+x+'</div>'}).join('')||'<div class="mu">행동 없음</div>')+'</div><div class="lnav"><button id="lprev"'+(pg<=0?' disabled':'')+'>이전</button><span class="small mu">'+t+'턴 · '+(pg+1)+'/'+pages+'</span><button id="lnext"'+(pg>=pages-1?' disabled':'')+'>다음</button></div>'}
 function bindLog(){document.querySelectorAll('[data-lt]').forEach(function(b){b.onclick=function(){S.logTab=Number(b.dataset.lt);S.logPage=0;refreshLog()}});
@@ -1000,25 +1007,25 @@ function dimOn(sd){var b=$('bt');if(!b||!sd)return;var d=$('dimv');if(!d){d=docu
  b.querySelectorAll('.up').forEach(function(x){x.classList.remove('up')});b.querySelectorAll(sd==='me'?'.mec,.meslots':'.oppc,.opslots').forEach(function(x){x.classList.add('up')})}
 function dimOff(){var d=$('dimv');if(d)d.remove();document.querySelectorAll('#bt .up').forEach(function(x){x.classList.remove('up')})}
 function zoom(g,sd,kd,col,d,ob,from){var b=$('bt');if(!b)return;var z=document.createElement('div');z.className='zoom';z.style.setProperty('--kc',col);var ms=Math.round(d*spk());
- var w=Math.round(Math.min(150,innerHeight*0.3*5/7)),who=sd==='me'?'나':'상대',body,title;
+ var w=Math.round(Math.min(150,b.clientHeight*0.3*5/7)),who=sd==='me'?'나':'상대',body,title;
  if(g.k==='spell'){var ic=S.A.slots['SPELL_'+g.id];title='스펠 '+sname(g.id);body='<div class="zi" style="'+(ic?'background-image:url('+ic.url+')':'')+'"></div><p>'+esc((S.data.spells[g.id]||{}).effect_text||'')+'</p>'}
  else if(g.k==='active'){var chr=sd==='me'?ob.me.char:ob.opp.char;title='액티브 '+(ch(chr).active_name||'');body='<div class="zi face" style="'+faceCss(chr)+'"></div><p>'+esc(ch(chr).active_text||'')+'</p>'}
  else{title=card(g.id).name;body=bcCard(g.id,{w:w,mode:'hand'})+'<p>'+esc(card(g.id).effect_text||'')+'</p>'}
  z.innerHTML='<div class="zw '+(sd||'')+'"><div class="zt"><span>'+who+'</span> '+esc(title)+'</div>'+body+'</div>';b.appendChild(z);
- var br=b.getBoundingClientRect(),zr=z.getBoundingClientRect(),src=from||$('side_'+sd)||b,r=src.getBoundingClientRect(),cx=r.left-br.left+r.width/2,bw=(S.wide&&$('wdet'))?$('wdet').getBoundingClientRect().left-br.left-12:br.width;
- var x=Math.max(8,Math.min(bw-zr.width-8,cx-zr.width/2)),y=sd==='opp'?r.bottom-br.top+10:r.top-br.top-zr.height-10;y=Math.max(8,Math.min(br.height-zr.height-8,y));
- z.style.left=x+'px';z.style.top=y+'px';var dx=cx-(x+zr.width/2),dy=(r.top-br.top+r.height/2)-(y+zr.height/2),s0=Math.max(0.12,Math.min(0.5,r.width/zr.width));
+ var br={left:0,top:0,width:b.clientWidth,height:b.clientHeight},zr={width:z.offsetWidth,height:z.offsetHeight},src=from||$('side_'+sd)||b,r=src===b?br:lr(src),cx=r.left+r.width/2,bw=(S.wide&&$('wdet'))?lr($('wdet')).left-12:br.width;
+ var x=Math.max(8,Math.min(bw-zr.width-8,cx-zr.width/2)),y=sd==='opp'?r.bottom+10:r.top-zr.height-10;y=Math.max(8,Math.min(br.height-zr.height-8,y));
+ z.style.left=x+'px';z.style.top=y+'px';var dx=cx-(x+zr.width/2),dy=(r.top+r.height/2)-(y+zr.height/2),s0=Math.max(0.12,Math.min(0.5,r.width/zr.width));
  var at='translate('+dx+'px,'+dy+'px) scale('+s0+')';dimOn(sd);
  z.animate([{transform:at,opacity:.3},{transform:'none',opacity:1,offset:0.18},{transform:'none',opacity:1,offset:0.82},{transform:at,opacity:0}],{duration:ms,easing:'ease-out',fill:'both'});
  setTimeout(function(){z.remove();if(!document.querySelector('.zoom'))dimOff()},ms+40)}
 /* 잠금 연출(전투UX2차 2): 무효가 된 카드는 그 카드 차례에 자물쇠 + 흑백, 이후 흐리게 유지 */
 function lockCell(el,why){if(!el||el.classList.contains('locked'))return;el.classList.add('locked');var k=document.createElement('div');k.className='lk';k.innerHTML='🔒<small>'+esc(why)+'</small>';el.appendChild(k)}
-function ctr(el){var r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}}
+function ctr(el){var r=lr(el);return {x:r.left+r.width/2,y:r.top+r.height/2}}
 /* 빛 경로(사선구도 3): 낸 칸 → (반대편이면 가운데 사선 띠를 거쳐) → 대상 카드. 내 카드는 위쪽 30%, 상대 카드는 아래쪽 75% 지점을 겨눠 내 칸·상대 칸 위를 지나지 않게 */
-function aimPt(el){var r=el.getBoundingClientRect();if(el.classList.contains('vc')){var me=el.id==='side_me';return {x:r.left+r.width/2,y:r.top+r.height*(me?0.3:0.75)}}return {x:r.left+r.width/2,y:r.top+r.height/2}}
-function fly(from,to,col,d,breakMid,then){if(!to){then&&then();return}var b=$('bt');if(!b)return;var a=from?ctr(from):{x:innerWidth/2,y:innerHeight/2},z=aimPt(to),o=document.createElement('div');o.className='orb';o.style.setProperty('--kc',col);
+function aimPt(el){var r=lr(el);if(el.classList.contains('vc')){var me=el.id==='side_me';return {x:r.left+r.width/2,y:r.top+r.height*(me?0.3:0.75)}}return {x:r.left+r.width/2,y:r.top+r.height/2}}
+function fly(from,to,col,d,breakMid,then){if(!to){then&&then();return}var b=$('bt');if(!b)return;var a=from?ctr(from):{x:b.clientWidth/2,y:b.clientHeight/2},z=aimPt(to),o=document.createElement('div');o.className='orb';o.style.setProperty('--kc',col);
  o.style.left=a.x+'px';o.style.top=a.y+'px';b.appendChild(o);var ms=Math.max(60,Math.round(d*spk()));
- var mid=null,cEl=b.querySelector('.center');if(cEl&&from&&(a.x-innerWidth/2)*(z.x-innerWidth/2)<0){var cr=cEl.getBoundingClientRect();mid={x:cr.left+cr.width/2,y:cr.top+cr.height/2}}
+ var mid=null,cEl=b.querySelector('.center');if(cEl&&from&&(a.x-b.clientWidth/2)*(z.x-b.clientWidth/2)<0){var cr=lr(cEl);mid={x:cr.left+cr.width/2,y:cr.top+cr.height/2}}
  var T=function(p,sc){return {transform:'translate(calc(-50% + '+(p.x-a.x)+'px),calc(-50% + '+(p.y-a.y)+'px)) scale('+sc+')'}};
  var end=breakMid?{x:a.x+(z.x-a.x)*0.5,y:a.y+(z.y-a.y)*0.5}:z,frames=[{transform:'translate(-50%,-50%) scale(.6)'}];if(mid&&!breakMid)frames.push(Object.assign(T(mid,0.85),{offset:0.5}));frames.push(T(end,1));
  o.animate(frames,{duration:ms,easing:'ease-in'}).onfinish=function(){if(breakMid){o.classList.add('brk');setTimeout(function(){o.remove()},250)}else o.remove();then&&then()}}
@@ -1026,15 +1033,15 @@ function pulse(el,col){if(!el)return;el.style.setProperty('--kc',col);el.classLi
 function markWait(sd){var f=$('face_'+sd);if(!f)return;var w=document.createElement('span');w.className='wait';w.textContent='반격 대기';f.parentElement.appendChild(w)}
 /* 효과 자막 = 해당 슬롯 옆 말풍선(사선구도 4-1): 내 칸은 위, 상대 칸은 아래 */
 function bubble(el,sd,html,col,bad){var b=$('bt');if(!b)return;var o=$('bub');if(!o){o=document.createElement('div');o.id='bub';b.appendChild(o)}o.className='bub '+(sd||'')+(bad?' bad':'');o.style.setProperty('--kc',col||'#8a90a8');o.innerHTML=html;
- if(!el){o.style.left='50%';o.style.top='50%';o.style.transform='translate(-50%,-50%)';return}var r=el.getBoundingClientRect(),br=b.getBoundingClientRect(),x=r.left-br.left+r.width/2,w=o.offsetWidth;x=Math.max(w/2+6,Math.min(br.width-w/2-6,x));o.style.left=x+'px';
- if(sd==='opp'){o.style.top=(r.bottom-br.top+6)+'px';o.style.transform='translateX(-50%)'}else{o.style.top=(r.top-br.top-6)+'px';o.style.transform='translate(-50%,-100%)'}}
+ if(!el){o.style.left='50%';o.style.top='50%';o.style.transform='translate(-50%,-50%)';return}var r=lr(el),bw=b.clientWidth,x=r.left+r.width/2,w=o.offsetWidth;x=Math.max(w/2+6,Math.min(bw-w/2-6,x));o.style.left=x+'px';
+ if(sd==='opp'){o.style.top=(r.bottom+6)+'px';o.style.transform='translateX(-50%)'}else{o.style.top=(r.top-6)+'px';o.style.transform='translate(-50%,-100%)'}}
 function firstTip(t){var b=$('bt');if(!b)return;var e=document.createElement('div');e.className='first';e.innerHTML='<b>처음 보는 종류</b> '+esc(t);b.appendChild(e);setTimeout(function(){e.remove()},3200)}
 function bars(sd,hp,sh,mx){var w=Math.max(0,100*hp[sd]/mx[sd]),sw=Math.min(100-w,100*sh[sd]/mx[sd]);
  $('hp_'+sd).style.width=w+'%';$('gh_'+sd).style.width=w+'%';var s=$('sh_'+sd);s.style.left=w+'%';s.style.width=sw+'%';$('hpt_'+sd).textContent=hp[sd]+'/'+mx[sd];$('sht_'+sd).textContent=sh[sd]?'+'+sh[sd]:''}
 /* 프로필 위 효과 글자(사용자 요청 2026-11-02): 프로필(.vc, 잘림 영역) 안이 아니라 전투판 위에 띄워 긴 글자도 잘리지 않게. 크기는 카드 폭 기준 */
-function float(sd,txt,cls){var host=$('side_'+sd),b=$('bt');if(!host||!b)return;var r=host.getBoundingClientRect(),br=b.getBoundingClientRect(),f=document.createElement('div');f.className='float fx '+(cls||'');f.textContent=txt;
+function float(sd,txt,cls){var host=$('side_'+sd),b=$('bt');if(!host||!b)return;var r=lr(host),f=document.createElement('div');f.className='float fx '+(cls||'');f.textContent=txt;
  var n=b.querySelectorAll('.float.fx[data-sd="'+sd+'"]').length,fs=Math.max(20,Math.min(38,Math.round(r.width*(cls==='crit'?0.3:0.24))));if(/[가-힣]/.test(txt))fs=Math.round(fs*0.72);
- f.dataset.sd=sd;f.style.left=(r.left-br.left+r.width/2)+'px';f.style.top=(r.top-br.top+r.height*0.3+n*fs*1.05)+'px';f.style.fontSize=fs+'px';b.appendChild(f);setTimeout(function(){f.remove()},1700)}
+ f.dataset.sd=sd;f.style.left=(r.left+r.width/2)+'px';f.style.top=(r.top+r.height*0.3+n*fs*1.05)+'px';f.style.fontSize=fs+'px';b.appendChild(f);setTimeout(function(){f.remove()},1700)}
 function banner(t){var b=document.createElement('div');b.className='banner';b.textContent=t;$('bt').appendChild(b);setTimeout(function(){b.remove()},1300)}
 function stamp(el,t){if(!el)return;var s=document.createElement('div');s.className='stamp';s.textContent=t;el.appendChild(s)}
 
@@ -1042,7 +1049,7 @@ function stamp(el,t){if(!el)return;var s=document.createElement('div');s.classNa
 /* 결과(재배치 4): 1:1 분할. 왼쪽 50% = 전신 PNG의 카드 영역(3:4)만, 공용 어두운 배경, 폭을 꽉 채우고 위 맞춤(넘치는 아래는 잘림), 아래 35% 마스크. 오른쪽 50% = 데이터 */
 function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{},src=a.full;if(!src)return '';return 'background-image:url('+src.url+')'}
 function renderResult(m){var L=m.last||{},you=m.you,win=L.outcome!=='draw'&&L.outcome!=='void'&&((L.outcome==='a')===(you===0)),draw=L.outcome==='draw',mine=(L.picks||[])[you];
- var f=safe(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((innerWidth-f.l-f.r)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
+ var f=safe(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((VW()-f.l-f.r)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
  var mode=m.mode,rk=L.rank&&L.rank[you],ec=L.econ&&L.econ[you];
  $('app').innerHTML='<div class="res3'+(win?' win':draw?' draw':' lose')+'"><div class="rl"><div class="rimg" style="'+(mine?artFill(mine,half):'')+'"></div></div>'
   +'<div class="rr"><button class="ib rmenu" id="rmore" title="더보기">⋯</button><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(L.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[L.reason]||L.reason||''))+(mine?' · '+esc(ch(mine).name):'')+'</div>'
@@ -1072,6 +1079,6 @@ document.addEventListener('keydown',function(e){var m=S.st;if(!m||e.target.tagNa
  else if(e.key==='e'){if(me.gauge>=100&&!me.mySubmission){S.sel.active=!S.sel.active;render()}}
  else if(e.code==='Space'){e.preventDefault();submitTurn()}
  else if(e.key==='t')send({type:'timebank'});else if(e.key==='l'){S.showLog=!S.showLog;refreshLog()}});
-var rz;addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){applySafe();if(S.st&&!S.anim)render()},150)});
+var rz;addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){applySafe();applyZoom();if(S.st&&!S.anim)render()},150)});
 boot();
 </script></body></html>`;
