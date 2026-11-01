@@ -323,11 +323,16 @@ function bindBg(d,cur,ch){var key=T.ach+':'+T.askin,m=bgModeOf(cur);
    실제 게임은 Godot 셰이더로 그린다. 여기는 등록한 그림이 어울리는지 보는 근사치(CSS). 카드 800×1120, 그림 창 720×960(좌 40·위 40, 가정값), 프레임 928×1248(바깥 64px) */
 var HOLO=[['0','없음'],['1','메탈 테두리'],['2','리버스 홀로(배경만)'],['3','풀 홀로 + 스파클'],['4','풀 홀로 + 스파클 + 입체 시차']];
 var TIERS=[['BRONZE','브론즈'],['SILVER','실버'],['GOLD','골드'],['PLATINUM','플래티넘'],['DIAMOND','다이아'],['MASTER','마스터'],['LEGEND','레전드']];
+/* 캐릭터 카드 그림 배치(사용자 요청 2026-11-02): BO에서 지정한 카드 영역(cr)이 창 안에 전부 보이게(다리 잘림 방지).
+   full = 전투 프로필처럼 테두리 여백 없이 카드 전체를 창으로 쓰고, 폭을 꽉 채움(영역 위쪽 기준, 남는 아래는 그림 그대로). 단위는 카드 폭 1 기준 */
+function artBg(src,cr,url,full){var ww=full?1:0.9,wh=full?1.4:1.2,rw=cr.w*src.w,rh=cr.h*src.h,s=full?ww/rw:Math.min(ww/rw,wh/rh),bw=src.w*s,bh=src.h*s;
+ var ox=(ww-rw*s)/2-cr.x*src.w*s,oy=(full?0:(wh-rh*s)/2)-cr.y*src.h*s,px=Math.abs(ww-bw)<1e-6?0:ox/(ww-bw)*100,py=Math.abs(wh-bh)<1e-6?0:oy/(wh-bh)*100;
+ return 'background-image:'+url+';background-size:'+(bw/ww*100).toFixed(2)+'% '+(bh/wh*100).toFixed(2)+'%;background-position:'+px.toFixed(2)+'% '+py.toFixed(2)+'%'}
 function pvCard(d,c,skin,o){var a=((d.art||{})[c.id]||{})[skin]||{},sl=d.assets.slots||{},u=function(f){return f&&f.path?'url('+d.base+f.path+')':''};
  var m=bgModeOf(a);if(o.bg!=='saved')m={mode:o.bg,color:o.bg==='color'?(m.color||'#8E44AD'):m.color};
  var slotBg=sl[BG_OF[c.faction]||'CARD_BG_NEUTRAL'],bgCss=m.mode==='color'&&m.color?'background:linear-gradient(180deg,'+m.color+','+darken(m.color,0.35)+')':slotBg?'background-image:'+u(slotBg):'background:#334';
  var src=m.mode==='combined'&&a.combined?a.combined:a.full,cr=a.card||{x:0.125,y:0.05,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3},ch='';
- if(src){var bw=100/cr.w,bh=bw*(src.h/src.w)*(720/960);ch='background-image:'+u(src)+';background-size:'+bw.toFixed(2)+'% '+bh.toFixed(2)+'%;background-position:'+(cr.w>=1?0:(cr.x/(1-cr.w)*100)).toFixed(2)+'% '+(cr.h>=1?0:(cr.y/(1-cr.h)*100)).toFixed(2)+'%'}
+ if(src)ch=artBg(src,cr,u(src),false);
  var fr=sl['FRAME_'+o.tier],bd=o.badge>1?sl['MASTERY_'+o.badge]:null;
  return '<div class="pvc h'+o.holo+'" style="--w:'+o.w+'px"><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
   +'<div class="pvwin"><div class="pvl pvchar" style="'+ch+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'

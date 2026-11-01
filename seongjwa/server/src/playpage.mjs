@@ -435,6 +435,7 @@ button.sm{padding:5px 10px;font-size:12px}
 @keyframes tsp{0%{opacity:1;transform:rotate(var(--a)) translateX(0) scale(1.3)}100%{opacity:0;transform:rotate(var(--a)) translateX(var(--d)) scale(.3)}}
 .tflash{position:absolute;inset:0;z-index:39;pointer-events:none;background:radial-gradient(ellipse at 50% 42%,rgba(255,244,210,.45),transparent 62%);animation:fo .45s ease-out forwards}.tflash.rush{background:radial-gradient(ellipse at 50% 42%,rgba(255,120,60,.5),transparent 62%)}
 @media (prefers-reduced-motion:reduce){.bt3::before,.bt3::after,.bt3 .vc,.bt3 .bc.can,.bt3 .confirm.go,.bt3 .ring.red{animation:none}#bt.shk,#bt.shk2{animation:none}}
+.pvc.full .pvwin{left:0;top:0;width:100%;height:100%}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -461,12 +462,17 @@ function now(){return Date.now()+S.off}
 function left(t){return t?Math.max(0,Math.ceil((t-now())/1000)):0}
 
 /* ---------- 카드 그리기 ---------- */
+/* 캐릭터 카드 그림 배치(사용자 요청 2026-11-02): BO에서 지정한 카드 영역(cr)이 창 안에 전부 보이게(다리 잘림 방지).
+   full = 전투 프로필처럼 테두리 여백 없이 카드 전체를 창으로 쓰고, 폭을 꽉 채움(영역 위쪽 기준, 남는 아래는 그림 그대로). 단위는 카드 폭 1 기준 */
+function artBg(src,cr,url,full){var ww=full?1:0.9,wh=full?1.4:1.2,rw=cr.w*src.w,rh=cr.h*src.h,s=full?ww/rw:Math.min(ww/rw,wh/rh),bw=src.w*s,bh=src.h*s;
+ var ox=(ww-rw*s)/2-cr.x*src.w*s,oy=(full?0:(wh-rh*s)/2)-cr.y*src.h*s,px=Math.abs(ww-bw)<1e-6?0:ox/(ww-bw)*100,py=Math.abs(wh-bh)<1e-6?0:oy/(wh-bh)*100;
+ return 'background-image:'+url+';background-size:'+(bw/ww*100).toFixed(2)+'% '+(bh/wh*100).toFixed(2)+'%;background-position:'+px.toFixed(2)+'% '+py.toFixed(2)+'%'}
 function pvCard(id,o){var c=ch(id),a=((S.A.art||{})[id]||{})['000']||{},sl=S.A.slots;
  var bgCss=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':(sl[a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))]?'background-image:'+slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))):'background:#334');
  var src=a.bg==='combined'&&a.combined?a.combined:a.full,cr=a.card||{x:0.125,y:0.05,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3},chs='';
- if(src){var bw=100/cr.w,bh=bw*(src.h/src.w)*(720/960);chs='background-image:url('+src.url+');background-size:'+bw.toFixed(2)+'% '+bh.toFixed(2)+'%;background-position:'+(cr.w>=1?0:(cr.x/(1-cr.w)*100)).toFixed(2)+'% '+(cr.h>=1?0:(cr.y/(1-cr.h)*100)).toFixed(2)+'%'}
+ if(src)chs=artBg(src,cr,'url('+src.url+')',!!o.full);
  var fr=o.tier?sl['FRAME_'+o.tier]:null,bd=o.badge>1?sl['MASTERY_'+o.badge]:null,fc=sl['FACTION_'+FAC[c.faction]];
- return '<div class="pvc h'+(o.holo||0)+(o.cls?' '+o.cls:'')+'" style="--w:'+o.w+'px"'+(o.attr||'')+'><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
+ return '<div class="pvc h'+(o.holo||0)+(o.full?' full':'')+(o.cls?' '+o.cls:'')+'" style="--w:'+o.w+'px"'+(o.attr||'')+'><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
   +'<div class="pvwin"><div class="pvl pvchar" style="'+chs+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'
   +'<div class="pvl pvname">'+esc(c.name)+(o.sub?'<small>'+esc(o.sub)+'</small>':'')+'</div></div><div class="pvring"></div>'
   +(fc?'<div class="pvfac" style="background-image:url('+fc.url+')"></div>':'')
@@ -720,7 +726,7 @@ function hurt(sd,big){var v=$('side_'+sd),b=$('bt');if(v){v.classList.remove('hu
  if(big)shakeBt(2);else shakeBt(1);if(sd==='me'&&b){var vg=document.createElement('div');vg.className='vign';b.appendChild(vg);setTimeout(function(){vg.remove()},500)}}
 function clash(){var b=$('bt');if(!b)return;var c=document.createElement('div');c.className='clash';c.innerHTML='<i></i><i></i><b>공개!</b>';b.appendChild(c);setTimeout(function(){c.remove()},900)}
 function vCard(p,who,m,z){var c=ch(p.char),fac=S.A.slots['FACTION_'+FAC[c.faction]],max=p.maxHp,hp=p.hp,sh=Math.min(p.shield,max),w=Math.max(0,100*hp/max),sw=Math.min(100-w,100*sh/max);
- return '<div class="vc side" id="side_'+who+'" style="width:'+z.cw+'px;height:'+z.ch+'px"><div class="vfa" id="face_'+who+'">'+pvCard(p.char,{w:z.cw,holo:0,cls:'rnd'})+'</div>'
+ return '<div class="vc side" id="side_'+who+'" style="width:'+z.cw+'px;height:'+z.ch+'px"><div class="vfa" id="face_'+who+'">'+pvCard(p.char,{w:z.cw,holo:0,cls:'rnd',full:true})+'</div>'
   +(who==='opp'&&p.submitted&&m.phase==='battle'?'<span class="chip on okc">확정</span>':'')
   +'<div class="vbot"><div class="nmrow">'+(fac?'<i style="background-image:url('+fac.url+')"></i>':'')+'<span>'+esc(c.name)+'</span></div>'
   +'<div class="hpbar"><div class="gh" id="gh_'+who+'" style="width:'+w+'%"></div><div class="hp" id="hp_'+who+'" style="width:'+w+'%"></div><div class="sh" id="sh_'+who+'" style="left:'+w+'%;width:'+sw+'%"></div></div>'
