@@ -19,7 +19,7 @@ pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220
 <p class="dim">탭 2개에서 서로 다른 ID로 로그인 → 한쪽이 방을 만들고 다른 쪽이 코드로 참가합니다.</p></section>
 <section id="lobby" hidden><div class="row">
 <label><input type="checkbox" id="optBans" checked> 밴 켜기</label>
-<select id="optTurn"><option value="20">턴 20초</option><option value="30">턴 30초</option></select>
+<select id="optTurn"><option value="0">턴 기본(설정값)</option><option value="20">턴 20초</option><option value="30">턴 30초</option><option value="60">턴 60초</option></select>
 <button id="btnCreate">방 만들기</button><span class="dim">또는</span>
 <input id="joinCode" placeholder="상대의 방 코드 6자리" maxlength="6" size="8"><button id="btnJoin">참가</button></div></section>
 <section id="ranked" hidden><div class="row"><b>랭킹전</b> <span id="rankInfo" class="dim"></span></div>
@@ -76,7 +76,7 @@ function btn(label,fn,on,dis){var b=document.createElement('button');b.textConte
 function left(t){return t?Math.max(0,Math.ceil((t-Date.now())/1000))+'초':''}
 function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lobby').hidden=true;$('ranked').hidden=true;$('econ').hidden=true;$('social').hidden=true;$('cup').hidden=true;
  var head=document.createElement('div');head.className='row';
- var MODE={friend:'친구방',practice:'AI 대전',ranked:'랭킹전',ranked_ai:'AI 랭킹전'};head.innerHTML='<b>'+MODE[m.mode]+'</b>'+(m.mode==='friend'?' <span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span>':'')+'<span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+m.options.turnSec+'초'+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
+ var MODE={friend:'친구방',practice:'AI 대전',ranked:'랭킹전',ranked_ai:'AI 랭킹전'};head.innerHTML='<b>'+MODE[m.mode]+'</b>'+(m.mode==='friend'?' <span>방 코드 <b style="font-size:22px;letter-spacing:3px;color:var(--acc)">'+m.code+'</b></span>':'')+'<span class="dim">단계: '+m.phase+' · 밴 '+(m.options.bans?'켜짐':'꺼짐')+' · 턴 '+(m.options.turnSec?m.options.turnSec+'초':'기본')+(m.dataVersion?' · 데이터 v'+m.dataVersion:'')+'</span><span id="timer"></span>';
  el.appendChild(head);
  var mem=document.createElement('p');mem.className='dim';mem.textContent=m.members.map(function(x){return (x.seat===m.you?'나':(x.ai?'AI('+x.ai.difficulty+')':'상대'))+(x.host&&m.mode==='friend'?'(방장)':'')+(x.connected?' 접속':' 끊김')+(x.ready?' 준비':'')}).join(' / ');el.appendChild(mem);
  var row=document.createElement('div');row.className='row';el.appendChild(row);

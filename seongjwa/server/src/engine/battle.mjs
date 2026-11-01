@@ -696,7 +696,8 @@ export function view(state, seat) {
     } : {})
   });
   return {
-    turn: state.turn, dataVersion: state.dataVersion, rules: { max_turn: state.rules.max_turn, rush_start_turn: state.rules.rush_start_turn, rush_dmg_step: state.rules.rush_dmg_step, cards_per_turn_max: state.rules.cards_per_turn_max },
+    turn: state.turn, dataVersion: state.dataVersion, rules: { max_turn: state.rules.max_turn, rush_start_turn: state.rules.rush_start_turn, rush_dmg_step: state.rules.rush_dmg_step, cards_per_turn_max: state.rules.cards_per_turn_max,
+      turn_select_sec: state.rules.turn_select_sec, reveal_max_sec: state.rules.reveal_max_sec, reveal_zoom_sec: state.rules.reveal_zoom_sec },
     you: seat, me: pub(state.players[seat], true), opp: pub(state.players[1 - seat], false),
     log: state.log, result: state.result
   };

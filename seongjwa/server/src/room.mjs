@@ -65,7 +65,7 @@ export class FriendRoom extends DurableObject {
       const now = Date.now();
       if (url.pathname === "/create") {
         if (this.room) return json({ ok: false, error: "room_exists" }, 409);
-        const turnSec = [20, 30].includes(Number(body.options?.turnSec)) ? Number(body.options.turnSec) : 20;
+        const turnSec = [20, 30, 60].includes(Number(body.options?.turnSec)) ? Number(body.options.turnSec) : null;  // null = 시트 설정값 turn_select_sec(기본 60초, 기획지시 전투UI개편)
         this.room = {
           code: body.code, host: body.acc, createdAt: now, expiresAt: now + LOBBY_TTL_MS,
           options: { bans: body.options?.bans !== false, turnSec },
@@ -82,7 +82,7 @@ export class FriendRoom extends DurableObject {
         if (!["ranked", "cup"].includes(mode)) members.push({ acc: null, ready: true, ai: { difficulty: body.difficulty ?? null }, defaults: sanitizeDefaults({}) });
         this.room = {
           code: body.code, mode, host: members[0].acc, createdAt: now, expiresAt: now + LOBBY_TTL_MS, seasonId: body.seasonId ?? null,
-          options: { bans: mode !== "practice", turnSec: 20 },
+          options: { bans: mode !== "practice", turnSec: null },
           members, phase: "lobby", game: null, last: null, saves: [], ranks: [], games: 0
         };
         await this.startPrep(now);
@@ -237,7 +237,7 @@ export class FriendRoom extends DurableObject {
       case "options": {
         if (seat !== 0 || room.phase !== "lobby" || (room.mode ?? "friend") !== "friend") throw new Error("host_only");
         if (typeof msg.bans === "boolean") room.options.bans = msg.bans;
-        if ([20, 30].includes(Number(msg.turnSec))) room.options.turnSec = Number(msg.turnSec);
+        if ([20, 30, 60].includes(Number(msg.turnSec))) room.options.turnSec = Number(msg.turnSec);
         room.members.forEach((m) => { m.ready = false; });
         return;
       }
@@ -455,7 +455,7 @@ export class FriendRoom extends DurableObject {
     });
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
     g.battle = createBattle({
-      seed, data: g.data, rules: { turn_select_sec: room.options.turnSec },
+      seed, data: g.data, rules: room.options.turnSec ? { turn_select_sec: room.options.turnSec } : {},
       players: g.picks.map((characterId, seat) => ({ characterId, spells: g.loadouts[seat].spells, deck: g.loadouts[seat].deck }))
     });
     g.battleStartedAt = now;
@@ -477,7 +477,7 @@ export class FriendRoom extends DurableObject {
     g.deadline = [now + rv + ms, now + rv + ms];
     g.paused = null;
     const ai = this.room.members.findIndex((m) => m.ai);
-    g.aiAt = ai >= 0 ? now + rv + Math.min(this.thinkMs(), ms - 1000) : 0;
+    g.aiAt = ai >= 0 ? now + rv : 0;  // AI는 선택 시작 때 바로 정해 둔다(대기 연출 없음, 상세 03 확정 시간 2026-11-01). 내가 확정하면 바로 공개
     if (rv && g.revealDone.every(Boolean)) this.endReveal(now);
     for (const seat of [0, 1]) {  // AFK 2턴째 경고(총괄 10장)
       if (g.battle.players[seat].idle === g.battle.rules.afk_turns_leave - 1 && g.warned[seat] !== g.battle.turn) {
@@ -494,7 +494,7 @@ export class FriendRoom extends DurableObject {
     g.turnAt = now;
     g.deadline = [0, 1].map((s) => now + ms + (g.timebank[s] === g.battle.turn ? g.battle.rules.timebank_sec * 1000 : 0));
     const ai = this.room.members.findIndex((m) => m.ai);
-    if (ai >= 0 && !g.battle.players[ai].submitted) g.aiAt = now + Math.min(this.thinkMs(), ms - 1000);
+    if (ai >= 0 && !g.battle.players[ai].submitted) g.aiAt = now;
   }
 
   resolve(now) {

@@ -1,7 +1,7 @@
 // 규칙 상수. 기본값은 기획 문서 값이고, 데이터 버전 settings에 같은 키가 있으면 그 값을 쓴다(상세 14 원격 데이터 원칙).
 // 근거: 총괄 5·6장, 상세 02, 시트 `설정값`.
 export const RULE_DEFAULTS = Object.freeze({
-  turn_select_sec: 20,       // 시트 설정값
+  turn_select_sec: 60,       // 시트 설정값(2026-11-01 20→60, 기획지시 전투UI개편)
   timebank_sec: 15,
   max_turn: 10,
   rush_start_turn: 7,
@@ -9,7 +9,8 @@ export const RULE_DEFAULTS = Object.freeze({
   rush_heal_cut: 0.5,
   crit_mult: 1.5,
   reconnect_grace_sec: 60,
-  reveal_max_sec: 10,        // 공개 연출 상한(총괄 6장 8→10초, 기획지시 효과연출). 양쪽이 연출을 끝내면 바로 다음 선택
+  reveal_max_sec: 20,        // 공개 연출 상한(총괄 6장, 2026-11-01 10→20초 가안). 양쪽이 연출을 끝내면 바로 다음 선택
+  reveal_zoom_sec: 2,        // 공개 연출 확대 단계 기본(글자 수에 따라 최대 3초, 행동 7개 이상이면 1초)
   // 아래는 총괄 6장·상세 02 문구 값(시트에 키가 생기면 그쪽 우선)
   energy_max: 5,
   energy_carry_max: 1,

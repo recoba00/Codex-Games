@@ -82,11 +82,12 @@ try {
       await page.waitForFunction(() => { const b = document.querySelector("#ok"); return b && !b.disabled; }, null, { timeout: 20000 });
       const before = await page.$$eval(".hand .bc", (x) => x.length);
       assert.ok(before >= 3, `손패 ${before}`);
+      await sleep(300);  // AI가 선택 시작 때 바로 확정 → 화면 갱신이 한 번 지나가도록
       const playable = await page.$(".hand .bc:not(.cant):not(.lock)");
       if (playable) {
-        await playable.click();
+        await page.locator(".hand .bc:not(.cant):not(.lock)").first().click();
         assert.equal(await page.$$eval(".slot.mine .bc", (x) => x.length), 1, "내 슬롯에 카드");
-        assert.match(await page.textContent(".slot.mine .lab"), /^[0-5] /, "슬롯 처리 단계 라벨");
+        assert.match(await page.textContent(".slot.mine .lab"), /^[0-5]\S/, "슬롯 처리 단계 라벨(큰 번호 + 이름)");
       }
       if (t === 1 && !vp.touch) {  // 카드 상세(호버 0.2초)
         await page.mouse.move(0, 0);
@@ -102,6 +103,8 @@ try {
       await page.waitForSelector("#cap.show", { timeout: 8000 });  // 효과 자막
       assert.ok(await page.$(".obar i"), "처리 순서 막대");
       if (t === 2) { await sleep(1300); await page.screenshot({ path: `/tmp/play_rev_${vp.width}.png` }); }
+      if (t >= 2) await page.click("#skip");  // 건너뛰기(연출 상한 20초라 시험 시간 단축)
+      await page.waitForSelector("#logline div");
       await page.waitForFunction((n) => /턴 (\d+)/.test(document.querySelector(".turn")?.textContent ?? "") && !document.querySelector(".skip") && Number(document.querySelector(".turn").textContent.match(/턴 (\d+)/)[1]) === n, t + 1, { timeout: 20000 });
       // 양쪽 연출이 끝나면(AI는 즉시) 남은 공개 시간을 버리고 선택 20초가 새로 시작
       await page.waitForFunction(() => Number(document.querySelector("#rt")?.textContent) >= 18, null, { timeout: 4000 });

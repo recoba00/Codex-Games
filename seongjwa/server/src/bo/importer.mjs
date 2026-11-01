@@ -226,7 +226,9 @@ export function importWorkbook(sheets) {
       const cost = cell(row, h["비용(E)"]);
       if (!isInt(cost) || cost < 0 || cost > 3) err(`${where}: 비용 0~3 위반 → ${JSON.stringify(cost)}`);
       cards[id] = { id, name: norm(cell(row, h["카드명"])), kind, phase, owner_character: owner, cost,
-        coef: cell(row, h["계수"]), hits: cell(row, h["타수"]) || 1, pierce: cell(row, h["관통"]) || 0, effect_text: norm(cell(row, h["효과"])) };
+        coef: cell(row, h["계수"]), hits: cell(row, h["타수"]) || 1, pierce: cell(row, h["관통"]) || 0, effect_text: norm(cell(row, h["효과"])),
+        effect_short: h["효과_짧게"] === undefined ? null : norm(cell(row, h["효과_짧게"])) || null };  // 카드 면 짧은 문구(기획지시 전투UI개편 7, 열 없으면 효과 문구 앞부분으로 대신)
+      if (cards[id].effect_short && [...cards[id].effect_short].length > 20) warnings.push(`${where}: 효과_짧게 ${[...cards[id].effect_short].length}자(15자 안팎 권장)`);
     }
     for (const cid of Object.keys(chars)) {
       const n = Object.values(cards).filter((k) => k.owner_character === cid).length;
