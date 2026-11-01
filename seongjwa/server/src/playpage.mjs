@@ -21,7 +21,7 @@ button.on{outline:2px solid var(--acc);background:rgba(127,180,255,.2)}
 #net.off{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(8,10,22,.92);color:var(--tx);font-size:18px}
 .hint{max-width:420px;background:rgba(127,180,255,.12);border:1px solid rgba(127,180,255,.35);border-radius:12px;padding:8px 12px;font-size:13px}
 #app::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(8,10,22,.25),rgba(8,10,22,.75))}
-.scr{position:absolute;inset:0;display:flex;flex-direction:column;padding:max(10px,var(--st,0px)) max(10px,var(--sr,0px)) max(10px,var(--sb,0px)) max(10px,var(--sl,0px))}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;padding:max(12px,var(--st,0px)) max(10px,var(--sr,0px)) max(12px,var(--sb,0px)) max(10px,var(--sl,0px))}
 .mu{color:var(--mu)}.small{font-size:12px}
 h1{margin:0;font-size:28px;letter-spacing:2px}
 .home{align-items:center;justify-content:center;gap:16px;text-align:center}
@@ -196,7 +196,7 @@ table.calc{border-collapse:collapse;margin:8px 0;font-size:13px;width:100%}table
 .sumL{color:#ffe7a3;font-weight:700}
 @media (max-height:500px){
  .obar i{min-width:24px;height:24px;font-size:11px}.recent i{width:16px;height:16px;font-size:9px}.zi{width:48px;height:48px}.zw{padding:6px 10px}.zw p{font-size:12px}
- .scr{padding:max(4px,var(--st,0px)) max(8px,var(--sr,0px)) max(4px,var(--sb,0px)) max(8px,var(--sl,0px))}
+ .scr{padding:max(12px,var(--st,0px)) max(8px,var(--sr,0px)) max(12px,var(--sb,0px)) max(8px,var(--sl,0px))}
  .home{gap:10px}h1{font-size:22px}.bt{gap:2px}.top{min-height:0}
  .face{width:34px;height:34px}.side{padding:3px 8px;gap:6px;border-radius:10px}.hpbar{height:8px;margin:2px 0}.hptx{font-size:10px}.nmrow{font-size:13px}
  .sp{width:30px;height:30px}.sp small{display:none}.opps button{padding:4px 8px;font-size:12px}.eng{font-size:10px}.eng b{font-size:13px!important}
@@ -307,8 +307,9 @@ button.sm{padding:5px 10px;font-size:12px}
 .pvc.rnd{transform:none!important}
 .pband{height:var(--band);font-size:max(10px,11px);line-height:1.4;overflow:hidden;padding:0 6px}.pband div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pbar{margin-top:12px;justify-content:space-between;min-height:46px}
-.lo3b{flex:1;min-height:0;display:grid;grid-template-columns:var(--cw) minmax(0,1fr);gap:var(--g)}
-.lcol2{display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:var(--g)}
+.lo3b{flex:1;min-height:0;display:grid;grid-template-columns:var(--cw) minmax(0,1fr) var(--cw);gap:var(--g)}
+.lcol2{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:0}.lcol2.me{justify-content:flex-end}.lcol2.opp{justify-content:flex-start}
+.lcol2 .lab2{font-size:12px;font-weight:800;color:#fff;padding:1px 10px;border-radius:99px;background:#2b5fd0}.lcol2.opp .lab2{background:#b23a63}
 .rcol2{display:flex;flex-direction:column;gap:8px;min-width:0;justify-content:center}
 .sprow{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .spb2{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border:2px solid transparent;background:rgba(14,18,36,.8);border-radius:10px;transition:border-color .12s,filter .12s;min-width:0}
@@ -325,7 +326,7 @@ button.sm{padding:5px 10px;font-size:12px}
 .rr{position:relative;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:max(16px,var(--st,0px)) max(24px,var(--sr,0px)) max(16px,var(--sb,0px)) 24px}
 .rr h2{margin:0;font-size:52px;letter-spacing:6px}.res3.win h2{color:var(--gold);text-shadow:0 0 24px rgba(255,213,107,.5)}.res3.lose h2{color:#c8cbe0}
 .rr .rmenu{position:absolute;right:max(12px,var(--sr,0px));top:max(10px,var(--st,0px));width:36px;height:32px;border-radius:9px;border:1px solid var(--line);background:rgba(14,18,36,.8)}
-@media (max-height:500px){.pk3 .top,.lo3 .top{margin-bottom:6px;min-height:30px;height:30px}.pbar{margin-top:6px;min-height:40px;height:40px}.pband{height:30px;font-size:10px;line-height:1.45}.rr h2{font-size:36px}.rr{gap:8px}.spb2{padding:4px 2px}.spb2 i{width:24px;height:24px}.spb2 b{font-size:11px}.pnm{font-size:12px}}
+@media (max-height:500px){.pk3 .top,.lo3 .top{margin-bottom:6px;min-height:30px;height:30px}.pk3 .top{margin-bottom:4px}.pbar{margin-top:6px;min-height:40px;height:40px}.pk3 .pbar{margin-top:4px}.pband{height:28px;font-size:10px;line-height:1.4}.rr h2{font-size:36px}.rr{gap:8px}.spb2{padding:4px 2px}.spb2 i{width:24px;height:24px}.spb2 b{font-size:11px}.pnm{font-size:12px}}
 
 /* 카드 면 텍스트 뱃지(유형에너지텍스트): 왼쪽 위 비용 "2E"(남색), 오른쪽 위 유형(종류 색 배경). 휴대폰 손패 68pt에서도 9pt 이상 */
 .bc .bdc,.bc .bdk{position:absolute;top:3.5%;font-size:max(9px,8.5cqw);line-height:1;font-weight:800;padding:.28em .45em;border-radius:99px;white-space:nowrap;z-index:2}
@@ -371,8 +372,17 @@ button.sm{padding:5px 10px;font-size:12px}
 .ring.wait{--acc:#7d8296}.ring.wait span{color:#aab0c4}
 .cap.warn{font-size:11px;font-weight:600;color:#ffb3b3}
 .bt3 .bdg{display:flex;flex-direction:column;gap:2px;height:auto;overflow:visible}.bt3 .bdg .bg{height:auto;min-height:18px;padding:2px 6px;line-height:1.25;white-space:normal;text-overflow:clip;overflow:visible;max-width:none;word-break:keep-all}
-.tban{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:40;pointer-events:none;font-size:clamp(26px,7vh,52px);font-weight:900;color:#fff;letter-spacing:2px;padding:6px 28px;border-radius:14px;background:linear-gradient(90deg,transparent,rgba(30,40,90,.85) 20%,rgba(30,40,90,.85) 80%,transparent);text-shadow:0 2px 6px #000;white-space:nowrap;animation:tb 1.1s ease-out forwards}
-@keyframes tb{0%{opacity:0;transform:translate(-50%,-50%) scale(.85)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+/* 턴 시작 배너(전투UX2차 4 + 사용자 요청 2026-11-01: 글자 부각): 띠가 펼쳐지고 글자가 크게 내려앉으며 빛이 훑고 지나감, 1.1초 */
+.tban{position:absolute;left:0;right:0;top:42%;transform:translateY(-50%);z-index:40;pointer-events:none;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px}
+.tban::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(16,24,70,.92) 22%,rgba(16,24,70,.92) 78%,transparent);border-top:1px solid rgba(255,214,110,.7);border-bottom:1px solid rgba(255,214,110,.7);animation:tbb 1.1s cubic-bezier(.2,.9,.3,1) forwards}
+.tban b{position:relative;font-size:clamp(32px,10vh,68px);line-height:1.05;font-weight:900;letter-spacing:4px;white-space:nowrap;color:transparent;background:linear-gradient(100deg,#fff 0 38%,#ffe9a0 46%,#fffbe8 50%,#ffe9a0 54%,#fff 62% 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 14px rgba(255,210,90,.75)) drop-shadow(0 2px 3px #000);animation:tbt 1.1s cubic-bezier(.2,1.5,.4,1) forwards,tbs 1.1s linear forwards}
+.tban small{position:relative;margin-top:2px;font-size:clamp(12px,3.6vh,18px);font-weight:900;letter-spacing:2px;color:#ffb070;text-shadow:0 0 10px rgba(255,120,40,.8),0 1px 2px #000;animation:tbt2 1.1s ease-out forwards}
+.tban.rush::before{background:linear-gradient(90deg,transparent,rgba(90,20,20,.92) 22%,rgba(90,20,20,.92) 78%,transparent);border-color:rgba(255,140,80,.85)}
+.tban.rush b{background-image:linear-gradient(100deg,#fff 0 38%,#ffc28a 46%,#fff3e0 50%,#ffc28a 54%,#fff 62% 100%);filter:drop-shadow(0 0 16px rgba(255,110,40,.85)) drop-shadow(0 2px 3px #000)}
+@keyframes tbb{0%{transform:scaleX(0);opacity:0}16%{transform:scaleX(1);opacity:1}82%{opacity:1}100%{opacity:0;transform:scaleX(1.04)}}
+@keyframes tbt{0%{opacity:0;transform:scale(1.9);letter-spacing:26px}20%{opacity:1;transform:scale(1);letter-spacing:4px}30%{transform:scale(1.06)}38%{transform:scale(1)}82%{opacity:1}100%{opacity:0;transform:scale(.97)}}
+@keyframes tbs{0%,30%{background-position:100% 0}75%,100%{background-position:0 0}}
+@keyframes tbt2{0%,22%{opacity:0;transform:translateY(6px)}36%{opacity:1;transform:none}82%{opacity:1}100%{opacity:0}}
 .wpanel{position:absolute;display:flex;flex-direction:column;gap:10px;z-index:5}
 .wdet{flex:none;max-height:42%;overflow:auto;background:rgba(14,18,36,.9);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45}
 .wdet p{margin:6px 0}.wlog{position:static!important;flex:1;min-height:0;width:auto!important;max-height:none!important;display:flex;flex-direction:column}
@@ -507,10 +517,10 @@ function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.h
 /* 밴·픽: 가로 3단(기획지시 2026-11-01 밴픽화면재배치). 왼쪽 내 선택 · 가운데 4열 목록(이 화면만 세로 스크롤, 줄 단위 멈춤) · 오른쪽 상대 "?".
    선택 테두리 자리는 처음부터 2pt(투명) → 눌러도 크기·위치 불변. 눌러 둔 캐릭터는 서버에 hint로 보내 시간 초과 때 그것으로 확정(37차) */
 /* 픽 배치(기획지시 픽5열안전영역): 폭 = 화면 − 좌우 안전 영역 − 좌우 14 → 좌 19% / 중앙 62% / 우 19%, 단 사이 12. 중앙 5열(9명 5+4), 크기 = min(폭, 2줄 높이), 72 미만이면 4열 */
-function prepPad(){var f=safe(),short=innerHeight<=500;return {t:Math.max(short?8:12,f.t),r:f.r+14,b:f.b>0?f.b+12:(short?8:12),l:f.l+14,short:short}}  // 확정 버튼은 홈 표시줄 위로 12
+function prepPad(){var f=safe(),short=innerHeight<=500;return {t:Math.max(12,f.t),r:f.r+14,b:Math.max(12,f.b),l:f.l+14,short:short}}  // 상하단 12 확보(사용자 요청 2026-11-01), 안전 영역이 더 크면 그만큼  // 확정 버튼은 홈 표시줄 위로 12
 function padCss(p){return 'padding:'+p.t+'px '+p.r+'px '+p.b+'px '+p.l+'px'}
 function pickLay(n){var W=innerWidth,H=innerHeight,p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
- var topH=short?30:40,topM=short?6:12,band=short?30:44,barH=short?40:46,barM=short?6:12,g8=8;
+ var topH=short?30:40,topM=short?4:12,band=short?28:44,barH=short?40:46,barM=short?4:12,g8=8;  // 상하단 12 확보 후에도 휴대폰 5열 유지
  var listH=H-p.t-p.b-topH-topM-band-6-barH-barM,rowsFit=function(cols,w){return Math.ceil(n/cols)*(w*1.4+4)+(Math.ceil(n/cols)-1)*g8+8};
  var cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor(((listH-4-g8)/2)/1.4)-4,cw=Math.min(wW,wH,170);
  if(cw<72){cols=4;cw=Math.min(Math.floor((cen-8-3*g8)/4)-4,170)}
@@ -536,7 +546,7 @@ function confirmPick(){var m=S.st;if(!m||(m.phase!=='pick'&&m.phase!=='ban'))ret
  var id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id})}
 /* 스펠·덱(재배치 3): 왼쪽 상대(위)·나(아래) 같은 크기, 오른쪽 스펠 8종 한 줄(링+체크, 2개) + 설명 한 줄 + 덱 탭 + 덱 12장 한 줄(이름 없이, 길게 누르면 상세). 폭 44 미만이면 6×2 */
 function loLay(){var W=innerWidth,H=innerHeight,p=prepPad(),short=p.short,gap=12,topH=short?30:40,topM=short?8:12,botH=short?40:46,botM=short?8:12;
- var colH=H-p.t-p.b-topH-topM-botH-botM,ch2=Math.floor((colH-gap)/2),cw=Math.floor(Math.min(ch2*5/7,200)),main=W-p.l-p.r-cw-gap;
+ var colH=H-p.t-p.b-topH-topM-botH-botM,ch2=Math.floor(colH*0.56),cw=Math.floor(Math.min(ch2*5/7,200)),main=W-p.l-p.r-2*(cw+gap);  // 사선: 나 왼쪽 아래·상대 오른쪽 위, 같은 크기
  var dw=Math.floor((main-11*4)/12),two=dw<44;if(two)dw=Math.floor(Math.min((main-5*6)/6,(colH*0.42)/2/1.4));
  return {p:p,gap:gap,cw:cw,main:main,dw:Math.min(dw,90),two:two,short:short}}
 function renderLoadout(m){var P=m.prep,z=loLay();S.load=S.load||lastLoad(P.myPick);var L=P.myLoadout||S.load,done=!!P.myLoadout;
@@ -544,12 +554,13 @@ function renderLoadout(m){var P=m.prep,z=loLay();S.load=S.load||lastLoad(P.myPic
  var own=Object.keys(S.data.cards).filter(function(id){return S.data.cards[id].owner_character===P.myPick}).sort(),deck=preset.cards.concat(own);  // 덱 12장 = 프리셋 10 + 전용 2(엔진 buildDeck)
  var sp=L.spells,desc=sp.map(function(id){return sname(id)+': '+((S.data.spells[id]||{}).effect_text||'')}).join(' / ');
  var h='<div class="scr lo3" style="'+padCss(z.p)+';--cw:'+z.cw+'px;--g:'+z.gap+'px">'+topBar(m,done?'준비 완료 · 상대 '+(P.oppLoadoutDone?'완료':'선택 중'):'스펠 2개와 덱을 고르세요')
-  +'<div class="lo3b"><div class="lcol2">'+pvCard(P.oppPick,{w:z.cw,holo:0,cls:'rnd',badge:(P.mastery.opp||{})[P.oppPick]||1,sub:'상대 (AI)'})+pvCard(P.myPick,{w:z.cw,holo:0,cls:'rnd',badge:(P.mastery.mine||{})[P.myPick]||1,sub:'나'})+'</div>'
+  +'<div class="lo3b"><div class="lcol2 me"><div class="lab2">나</div>'+pvCard(P.myPick,{w:z.cw,holo:0,cls:'rnd',badge:(P.mastery.mine||{})[P.myPick]||1})+'</div>'
   +'<div class="rcol2"><div class="sprow">'+Object.keys(S.data.spells).map(function(id){var s=S.data.spells[id],ic=S.A.slots['SPELL_'+id],on=sp.indexOf(id)>=0;
    return '<button class="spb2'+(on?' on':'')+'" data-sp="'+id+'"'+(done?' disabled':'')+' data-tip="'+esc(s.name+' · 쿨다운 '+s.cooldown+'턴 — '+(s.effect_text||''))+'"><i style="'+(ic?'background-image:url('+ic.url+')':'')+'">'+(ic?'':esc(s.name.slice(0,1)))+'</i><b>'+esc(s.name)+'</b><small>쿨 '+s.cooldown+'</small>'+(on?'<em>✓</em>':'')+'</button>'}).join('')+'</div>'
   +'<div class="small mu line1" id="spinfo">'+esc(desc||'스펠 2개를 고르세요')+'</div>'
   +'<div class="row tabs">'+(S.data.presets[P.myPick]||[]).map(function(p){return '<button data-pre="'+p.slot+'" class="sm tab2'+(L.preset===p.slot?' on':'')+'"'+(done?' disabled':'')+'>'+({aggro:'공세',balance:'균형',defense:'수비'}[p.style]||p.style)+' 덱</button>'}).join('')+'<span class="small mu">카드를 누르면(마우스는 올리면) 상세</span></div>'
-  +'<div class="deck2'+(z.two?' two':'')+'" style="--dw:'+z.dw+'px">'+deck.map(function(id){return bcCard(id,{w:z.dw,mode:'hand',cls:'mini',attr:' data-cid="'+id+'"'})}).join('')+'</div></div></div>'
+  +'<div class="deck2'+(z.two?' two':'')+'" style="--dw:'+z.dw+'px">'+deck.map(function(id){return bcCard(id,{w:z.dw,mode:'hand',cls:'mini',attr:' data-cid="'+id+'"'})}).join('')+'</div></div>'
+  +'<div class="lcol2 opp"><div class="lab2">상대'+(m.mode==='practice'?' (AI)':'')+'</div>'+pvCard(P.oppPick,{w:z.cw,holo:0,cls:'rnd',badge:(P.mastery.opp||{})[P.oppPick]||1})+'</div></div>'
   +'<div class="row bar pbar"><button id="qt">나가기</button><button class="pri confirm" id="ok"'+(done||sp.length!==2?' disabled':'')+'>'+(done?'대기 중…':'준비 완료 (Space)')+'</button></div></div>';
  $('app').innerHTML=h;
  document.querySelectorAll('[data-sp]').forEach(function(b){b.onclick=function(){var id=b.dataset.sp,i=S.load.spells.indexOf(id);if(i>=0)S.load.spells.splice(i,1);else{if(S.load.spells.length>=2)S.load.spells.shift();S.load.spells.push(id)}render()};
@@ -634,7 +645,7 @@ function iconsHtml(op){return '<button id="menu" class="ib" title="메뉴">⋯</
  +'<span class="ib pop txt" data-tip="상대 에너지 '+op.energy+'">⚡'+op.energy+'</span><span class="ib pop txt" data-tip="상대 손패 '+op.handCount+'장"><s class="bk" style="'+(S.A.slots.CARD_BACK?'background-image:'+slotU('CARD_BACK'):'')+'"></s>'+op.handCount+'</span>'}
 /* 전투 화면 사선 구도 + 전투 UX 2차(기획지시 2026-11-01): 손패·낸 칸 위치는 고정, 캐릭터 열(카드·상태 뱃지·액티브)은 내 것은 아래, 상대 것은 위에 붙여 뱃지가 늘어도 다른 구역이 밀리지 않음.
    넓은 화면(안전 영역 안쪽 1180pt 이상·높이 600 이상)은 전투판 폭을 960으로 묶고 오른쪽에 카드 상세 + 전체 로그 패널 */
-function lay3(n){var W=innerWidth,H=innerHeight,short=H<=500,f=safe(),pad=short?8:12,pl=Math.max(pad,f.l),pr=Math.max(pad,f.r),pt=Math.max(pad,f.t),pb=Math.max(pad,f.b),g=short?6:10;
+function lay3(n){var W=innerWidth,H=innerHeight,short=H<=500,f=safe(),pad=short?8:12,pl=Math.max(pad,f.l),pr=Math.max(pad,f.r),pt=Math.max(12,f.t),pb=Math.max(12,f.b),g=short?6:10;
  var inner=W-pl-pr,wide=inner>=1180&&H>=600,panelW=wide?Math.min(440,inner-960-16):0,bR=wide?pl+960:W-pr;
  var topH=short?26:34,actH=short?26:32,ctlW=short?176:232;
  var ch=short?Math.min(150,Math.round((H-pt-pb)*0.42)):Math.round(Math.min(230,H*0.28)),cw=Math.round(ch*5/7);
@@ -649,8 +660,8 @@ function lay3(n){var W=innerWidth,H=innerHeight,short=H<=500,f=safe(),pad=short?
 function wdetHelp(){return '<b>처리 순서</b><div class="small">0 스펠 → 1 보호(방어·반격·면역) → 2 방해(침묵·방해) → 3 스킬·액티브 → 4 공격 → 5 턴 끝(작열·재생)</div><div class="small mu">손패 카드에 마우스를 올리면 여기에 효과 전문이 나와요.</div>'}
 function wdetCard(id){var k=card(id),d=$('wdet');if(!d)return;d.innerHTML='<div class="row" style="gap:8px;align-items:flex-start;flex-wrap:nowrap">'+bcCard(id,{w:110,mode:'hand'})+'<div><b>'+esc(k.name)+'</b><div class="mu small">'+esc(KIND_KO[k.kind]||k.kind)+' · 비용 '+k.cost+'E · '+phLab(id)+(k.owner_character?' · '+esc(ch(k.owner_character).name)+' 전용':'')+'</div><p style="margin:6px 0">'+esc(k.effect_text)+'</p><div class="aff small">'+(AFF[k.kind]||'')+'</div></div></div>'}
 /* 턴 시작 연출(전투UX2차 4): 가운데 상시 턴 표시 대신 매 턴 "N턴"(마지막 턴, 7턴~ 폭주) 약 1초 */
-function turnBanner(b){var key=S.room+':'+b.turn;if(S.bannerKey===key)return;S.bannerKey=key;var r=b.rules,t=b.turn,txt=(t>=r.max_turn?'마지막 턴':t+'턴')+(t>=r.rush_start_turn?' · 폭주 +'+Math.round((r.rush_dmg_step||0.25)*(t-r.rush_start_turn+1)*100)+'%':'');
- var e=document.createElement('div');e.className='tban';e.textContent=txt;$('bt').appendChild(e);setTimeout(function(){e.remove()},1100)}
+function turnBanner(b){var key=S.room+':'+b.turn;if(S.bannerKey===key)return;S.bannerKey=key;var r=b.rules,t=b.turn,rush=t>=r.rush_start_turn,txt=t>=r.max_turn?'마지막 턴':t+'턴',sub=rush?'폭주 +'+Math.round((r.rush_dmg_step||0.25)*(t-r.rush_start_turn+1)*100)+'%':'';
+ var e=document.createElement('div');e.className='tban'+(rush?' rush':'');e.innerHTML='<b>'+txt+'</b>'+(sub?'<small>'+sub+'</small>':'');$('bt').appendChild(e);setTimeout(function(){e.remove()},1100)}
 function vCard(p,who,m,z){var c=ch(p.char),fac=S.A.slots['FACTION_'+FAC[c.faction]],max=p.maxHp,hp=p.hp,sh=Math.min(p.shield,max),w=Math.max(0,100*hp/max),sw=Math.min(100-w,100*sh/max);
  return '<div class="vc side" id="side_'+who+'" style="width:'+z.cw+'px;height:'+z.ch+'px"><div class="vfa" id="face_'+who+'">'+pvCard(p.char,{w:z.cw,holo:0,cls:'rnd'})+'</div>'
   +(who==='opp'&&p.submitted&&m.phase==='battle'?'<span class="chip on okc">확정</span>':'')
