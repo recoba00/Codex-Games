@@ -455,6 +455,10 @@ button.sm{padding:5px 10px;font-size:12px}
 .bt3 .float.fx{position:absolute;transform:translateX(-50%);z-index:38;white-space:nowrap;pointer-events:none;font-weight:900;text-shadow:0 2px 4px #000,0 0 3px #000,0 0 12px rgba(0,0,0,.6);animation:fl3 1.6s forwards}
 @keyframes fl3{0%{transform:translate(-50%,0) scale(.5);opacity:0}10%{transform:translate(-50%,-4px) scale(1.2);opacity:1}20%{transform:translate(-50%,-6px) scale(1)}80%{opacity:1;transform:translate(-50%,-14px)}100%{opacity:0;transform:translate(-50%,-28px)}}
 @media (prefers-reduced-motion:reduce){.bt3 .ring,.bt3 .ring::after,.bt3 .ring.red,.bt3 .ring.crit5{animation:none}}
+.ko{position:absolute;inset:0;z-index:45;pointer-events:none;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 50%,rgba(255,40,40,.25),rgba(0,0,0,.55) 70%);animation:fi .2s}
+.ko b{font-size:clamp(48px,16vh,120px);font-weight:900;letter-spacing:8px;color:#fff;text-shadow:0 0 24px #ff3b3b,0 0 48px #ff8a3c,0 4px 6px #000;animation:kob .9s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes kob{0%{transform:scale(3);opacity:0}30%{transform:scale(.9);opacity:1}45%{transform:scale(1.05)}100%{transform:scale(1)}}
+.bt3 .vc.down{filter:grayscale(1) brightness(.5);animation:none;transition:filter .3s}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -743,6 +747,8 @@ function hurt(sd,big){var v=$('side_'+sd),b=$('bt');if(v){v.classList.remove('hu
  if(b&&v){var r=v.getBoundingClientRect(),br=b.getBoundingClientRect(),x=document.createElement('div');x.className='burst'+(big?' big':'');x.style.left=(r.left-br.left+r.width/2)+'px';x.style.top=(r.top-br.top+r.height*(sd==='me'?0.35:0.6))+'px';
   var h='';for(var k=0;k<(big?14:9);k++)h+='<s style="--a:'+Math.round(k*360/(big?14:9)+Math.random()*20)+'deg;--d:'+Math.round((big?60:40)+Math.random()*40)+'px"></s>';x.innerHTML=h;b.appendChild(x);setTimeout(function(){x.remove()},650)}
  if(big)shakeBt(2);else shakeBt(1);if(sd==='me'&&b){var vg=document.createElement('div');vg.className='vign';b.appendChild(vg);setTimeout(function(){vg.remove()},500)}}
+function koShow(hp){var b=$('bt');if(!b)return;document.querySelectorAll('.zoom,.orb,#bub').forEach(function(x){x.remove()});var dead=['me','opp'].filter(function(k){return hp[k]<=0});
+ dead.forEach(function(k){var v=$('side_'+k);if(v)v.classList.add('down')});var e=document.createElement('div');e.className='ko';e.innerHTML='<b>K.O.</b>';b.appendChild(e);shakeBt(2);if(navigator.vibrate)navigator.vibrate([60,40,90])}
 function clash(){var b=$('bt');if(!b)return;var c=document.createElement('div');c.className='clash';c.innerHTML='<i></i><i></i><b>공개!</b>';b.appendChild(c);setTimeout(function(){c.remove()},900)}
 function vCard(p,who,m,z){var c=ch(p.char),fac=S.A.slots['FACTION_'+FAC[c.faction]],max=p.maxHp,hp=p.hp,sh=Math.min(p.shield,max),w=Math.max(0,100*hp/max),sw=Math.min(100-w,100*sh/max);
  return '<div class="vc side" id="side_'+who+'" style="width:'+z.cw+'px;height:'+z.ch+'px"><div class="vfa" id="face_'+who+'">'+pvCard(p.char,{w:z.cw,holo:0,cls:'rnd',full:true})+'</div>'
@@ -950,7 +956,7 @@ function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me'
  var cellOf=function(sd,g,mark){var arr=rv[sd],kd=g.k==='active'?'active':g.k==='spell'?'spell':null;for(var i=0;i<arr.length;i++){var x=arr[i];if((kd?x.k===kd:x.id===g.id)&&!(mark&&used[sd][i])){if(mark)used[sd][i]=1;return $('rv_'+sd+i)}}return null};
  var face=function(sd){return $('side_'+sd)};
  var firsts=(function(){try{return JSON.parse(lsGet(firstKey())||'{}')}catch(e){return {}}})();
- var steps=[{d:400,f:function(){clash()}}],lit=null,tm=null,done=false,i=0;
+ var steps=[{d:400,f:function(){clash()}}],lit=null,tm=null,done=false,i=0,koPh=null;
  var applyEv=function(e){var t=side(e.seat);
   if(e.t==='dmg'){if(e.absorbed){sh[t]=Math.max(0,sh[t]-e.absorbed);float(t,'-'+e.absorbed,'abs')}if(e.guard)float(t,'수호 0','abs');else if(e.v||!e.absorbed){hp[t]=Math.max(0,hp[t]-e.v);float(t,'-'+e.v,e.crit?'crit':e.src==='burn'?'burn':'');if(e.v>0)hurt(t,!!e.crit||e.v>=mx[t]*0.1)}if(e.crit&&navigator.vibrate)navigator.vibrate(40)}
   else if(e.t==='heal'){hp[t]=Math.min(mx[t],hp[t]+e.v);float(t,'+'+e.v,'heal')}else if(e.t==='shield'){sh[t]+=e.v;float(t,'실드 +'+e.v,'abs')}
@@ -960,7 +966,7 @@ function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me'
  acts.forEach(function(g){var gi=G.indexOf(g),sd=g.seat==null?null:side(g.seat),kd=kindOf(g),col=KCOL[kd],D=per(g)*k;
   var tgt=(function(){var e=g.ev.find(function(x){return x.t==='dmg'||x.t==='debuff'||x.t==='blocked'});if(e)return side(e.seat);if(g.ev.length)return side(g.ev[0].seat);return kd==='attack'||kd==='silence'||kd==='disrupt'?(sd==='me'?'opp':'me'):sd})();
   var zoomD=zt(g)*k,flyD=(D-zoomD)*0.57,arrD=D-zoomD-flyD;
-  steps.push({d:zoomD,f:function(){
+  steps.push({gph:g.ph,d:zoomD,f:function(){
    var bi=document.querySelector('.obar [data-bi="'+gi+'"]');document.querySelectorAll('.obar i.now').forEach(function(x){x.classList.remove('now');x.classList.add('past')});if(bi)bi.classList.add('now');
    document.querySelectorAll('.chips .chip').forEach(function(c){c.classList.toggle('on',Number(c.dataset.ph)===g.ph)});
    if(lit){lit.classList.remove('lit');lit.classList.add('done')}lit=sd?cellOf(sd,g,true):null;if(g.k==='counter'){lit=cellOf(sd,{k:'card',id:g.id},false)}if(lit){lit.classList.remove('done');lit.classList.add('lit');lit.style.setProperty('--kc',col)}if(g.lock&&lit)lockCell(lit,g.lock);if(lit&&g.ev.some(function(e){return e.t==='blocked'}))stamp(lit,'면역')
@@ -973,7 +979,7 @@ function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me'
    else if(g.k==='void'){fly(lit||face(sd),face(tgt===sd?(sd==='me'?'opp':'me'):tgt),col,flyD,true);}
    else if(kd==='counter'&&g.k==='card'){fly(lit,face(sd),col,flyD);markWait(sd)}
    else if(g.k!=='rush'&&g.k!=='auto')fly(g.k==='tick'?null:lit,face(tgt),col,flyD,!!g.bad)}});
-  steps.push({d:arrD,f:function(){g.ev.forEach(applyEv);if(g.ev.length&&tgt)pulse(face(tgt),col)}});
+  steps.push({d:arrD,f:function(){g.ev.forEach(applyEv);if(g.ev.length&&tgt)pulse(face(tgt),col);if(koPh==null&&(hp.me<=0||hp.opp<=0))koPh=g.ph}});
   steps.push({wait:1,d:0,f:function(){}})});
  steps.push({d:(acts.length?0:1500)*k,f:function(){logPush('<span class="sumL">요약 · '+esc(sum)+'</span>');var bb=$('bub');if(bb)bb.remove();if(!acts.length){var cp=$('cap');if(cp){cp.innerHTML='<span class="sumL">'+esc(sum)+'</span>';cp.className='cap show';cp.style.color=''}}document.querySelectorAll('.obar i.now').forEach(function(x){x.classList.remove('now');x.classList.add('past')})}});
  var finish=function(){if(done)return;done=true;clearTimeout(tm);dimOff();document.querySelectorAll('.zoom,.orb,#bub').forEach(function(x){x.remove()});S.anim=null;S.lastOpp=rv.opp;S.lastTurn=ob.turn;var p=S.pending||S.st;S.pending=null;S.st=p;
@@ -983,6 +989,8 @@ function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me'
  var hint=null,waitOff=function(){S.anim.waiting=false;if(hint){hint.remove();hint=null}};
  S.anim.next=function(){if(!S.anim||!S.anim.waiting)return;waitOff();clearTimeout(tm);tick()};
  var tick=function(){if(done)return;if(i>=steps.length)return finish();var s=steps[i++];
+  if(koPh!=null&&((s.gph!=null&&s.gph!==koPh)||i>=steps.length)){koShow(hp);tm=setTimeout(finish,1100);return}  // HP 0이면 바로 끝(사용자 요청 2026-11-02): 같은 단계(동시 판정)만 마저 보여 주고 나머지 연출은 건너뜀
+
   if(s.wait){if(S.manual&&manualOk()&&Date.now()<capAt-300){S.anim.waiting=true;hint=document.createElement('div');hint.className='manual';hint.textContent='탭하면 다음 행동 ▶';$('bt').appendChild(hint);tm=setTimeout(function(){waitOff();tick()},capAt-Date.now())}else tick();return}
   try{s.f()}catch(err){}tm=setTimeout(tick,s.d*spd())};tick()}
 function spk(){return SPD_K[S.rspd||'normal']||1}

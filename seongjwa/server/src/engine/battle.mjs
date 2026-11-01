@@ -375,6 +375,12 @@ export function resolveTurn(state) {
     }
     plays.set(p, { cards, spell: sub.spell, active: sub.active, spellOn: false, live: [] });
     state.log.push({ t: "reveal", seat: p.seat, cards: cards.map((c) => c.id), spell: sub.spell, active: sub.active, auto: Boolean(sub.auto) });
+    // 판 통계(기획답변 59차: 사람 대 AI 비교): 낸 카드 종류·스펠·액티브·무행동 턴 수
+    p.tally ??= { kinds: {}, spells: {}, active: 0, idle: 0 };
+    for (const c of cards) { const k = state.cards[c.id].kind; p.tally.kinds[k] = (p.tally.kinds[k] ?? 0) + 1; }
+    if (sub.spell) p.tally.spells[sub.spell] = (p.tally.spells[sub.spell] ?? 0) + 1;
+    if (sub.active) p.tally.active += 1;
+    if (!cards.length && !sub.spell && !sub.active) p.tally.idle += 1;
   }
   for (const p of state.players) p.revealed = p.revealed.filter((x) => opp(p).hand.some((c) => c.uid === x.uid));  // 통찰 공개분 중 아직 상대 손에 있는 것만
   const ctx = { hpAt: [A.hp, B.hp] };

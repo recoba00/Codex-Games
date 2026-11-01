@@ -591,6 +591,7 @@ export class FriendRoom extends DurableObject {
           hp: b.players.map((p) => p.hp), dealt: b.players.map((p) => p.dealt), blocked: b.players.map((p) => p.absorbed ?? 0),
           battle_sec: Math.round((now - (g.battleStartedAt ?? now)) / 1000), options: room.options,
           ai: room.members.find((m) => m.ai)?.ai ?? null,
+          tally: b.players.map((p) => p.tally ?? null),  // 낸 카드 종류·스펠 횟수·액티브·무행동 턴(기획답변 59차)
           ...(b.result?.koBoth ? { ko_both: true } : {})  // 동시 HP 0을 준 피해로 가른 판(기획답변 56차)
         }
       }
