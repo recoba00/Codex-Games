@@ -292,7 +292,8 @@ button.sm{padding:5px 10px;font-size:12px}
 /* ===== 밴·픽·스펠덱·결과 재배치(기획지시 2026-11-01 밴픽화면재배치) ===== */
 .pk3 .top,.lo3 .top{margin-bottom:12px;min-height:40px}
 .pk3b{flex:1;min-height:0;display:grid;grid-template-columns:var(--side) var(--cen) var(--side);gap:var(--g);justify-content:center}
-.pcol{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:0}.lab2{font-size:12px;color:var(--mu)}.pnm{font-size:14px}
+.pcol{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:0}.pcol.me{justify-content:flex-end}.pcol.opp{justify-content:flex-start}
+.pcol.me .lab2,.pcol.opp .lab2{font-weight:800;color:#fff;padding:1px 10px;border-radius:99px;background:#2b5fd0}.pcol.opp .lab2{background:#b23a63}.lab2{font-size:12px;color:var(--mu)}.pnm{font-size:14px}
 .emp,.qcard{aspect-ratio:5/7;border-radius:12%/8.6%;border:2px dashed rgba(255,255,255,.2);display:grid;place-items:center;color:var(--mu);font-size:13px}
 .qcard{border-style:solid;background:linear-gradient(160deg,#232a4a,#141a30);font-size:56px;font-weight:900;color:#5a6390}
 .pmid{display:flex;flex-direction:column;min-height:0;gap:6px}
@@ -318,9 +319,9 @@ button.sm{padding:5px 10px;font-size:12px}
 .deck2{display:grid;grid-template-columns:repeat(12,var(--dw));gap:4px;justify-content:start}.deck2.two{grid-template-columns:repeat(6,var(--dw));gap:6px}
 .bc.mini .txt{display:none}.bc.mini .shade{height:25%}.bc.mini .sock{width:30%}.bc.mini .sock.c b{font-size:16cqw}.bc.mini .sock.c{left:17%;top:13%}.bc.mini .sock.k{left:83%;top:13%}.bc.mini .own{display:none}
 .res3{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;background:#0b0d1a;padding:0 var(--sr,0px) 0 var(--sl,0px)}
-.rl{position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#1c2340,#0b0d1a)}
-.rimg{position:absolute;inset:0;-webkit-mask-image:linear-gradient(#000 65%,transparent);mask-image:linear-gradient(#000 65%,transparent)}
-.res3.lose .rimg{filter:saturate(.35) brightness(.65)}.res3.win .rl{box-shadow:inset 0 0 80px rgba(255,213,107,.18)}
+.rl{position:relative;overflow:hidden}
+.rimg{position:absolute;inset:max(8px,var(--st,0px)) 8px 0 8px;background:center bottom/contain no-repeat;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6))}
+.res3.lose .rimg{filter:saturate(.35) brightness(.65) drop-shadow(0 6px 18px rgba(0,0,0,.6))}
 .rr{position:relative;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:max(16px,var(--st,0px)) max(24px,var(--sr,0px)) max(16px,var(--sb,0px)) 24px}
 .rr h2{margin:0;font-size:52px;letter-spacing:6px}.res3.win h2{color:var(--gold);text-shadow:0 0 24px rgba(255,213,107,.5)}.res3.lose h2{color:#c8cbe0}
 .rr .rmenu{position:absolute;right:max(12px,var(--sr,0px));top:max(10px,var(--st,0px));width:36px;height:32px;border-radius:9px;border:1px solid var(--line);background:rgba(14,18,36,.8)}
@@ -513,18 +514,18 @@ function pickLay(n){var W=innerWidth,H=innerHeight,p=prepPad(),short=p.short,gap
  var listH=H-p.t-p.b-topH-topM-band-6-barH-barM,rowsFit=function(cols,w){return Math.ceil(n/cols)*(w*1.4+4)+(Math.ceil(n/cols)-1)*g8+8};
  var cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor(((listH-4-g8)/2)/1.4)-4,cw=Math.min(wW,wH,170);
  if(cw<72){cols=4;cw=Math.min(Math.floor((cen-8-3*g8)/4)-4,170)}
- var sideH=H-p.t-p.b-topH-topM-barH-barM-40,sw=Math.floor(Math.min(side,sideH/1.4));
+ var sideH=H-p.t-p.b-topH-topM-barH-barM-40,sw=Math.floor(Math.min(side,sideH*0.7/1.4));  // 사선(전투와 같게): 나 왼쪽 아래, 상대 오른쪽 위 — 높이를 다 쓰지 않아 위아래 차이가 보이게
  return {p:p,gap:gap,side:side,cen:cen,cw:cw,cols:cols,listH:listH,sw:sw,band:band,short:short,scroll:rowsFit(cols,cw)>listH+1}}
 function renderPick(m){var P=m.prep,ban=m.phase==='ban',z=pickLay(P.characters.length),done=ban?!!P.myBan:!!P.myPick;
  var cur=ban?(P.myBan||S.banSel):(P.myPick||(S.pickSel&&P.banned.indexOf(S.pickSel)<0?S.pickSel:null));if(cur&&P.characters.indexOf(cur)<0)cur=null;
  var c=cur?ch(cur):null,badge=function(id){return (P.mastery.mine||{})[id]||1};
  var mine=cur?pvCard(cur,{w:z.sw,holo:0,badge:ban?1:badge(cur),cls:'rnd'+(ban?' ban':'')}):'<div class="emp" style="width:'+z.sw+'px">'+(ban?'밴할 캐릭터':'선택 전')+'</div>';
  var h='<div class="scr pk3" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--band:'+z.band+'px">'+topBar(m,done?(ban?'밴 완료':'선택 완료')+' · 상대 '+((ban?P.oppBanDone:P.oppPickDone)?'완료':'선택 중'):(ban?'상대가 못 쓰게 할 캐릭터를 고르세요':'캐릭터를 고르고 확정하세요 (동시·비공개)'))
-  +'<div class="pk3b"><div class="pcol"><div class="lab2">'+(ban?'내 밴':'내 캐릭터')+'</div>'+mine+'<b class="pnm">'+(c?esc(c.name):'&nbsp;')+'</b></div>'
+  +'<div class="pk3b"><div class="pcol me"><div class="lab2">'+(ban?'나 · 내 밴':'나')+'</div>'+mine+'<b class="pnm">'+(c?esc(c.name):'&nbsp;')+'</b></div>'
   +'<div class="pmid"><div class="plist c'+z.cols+(z.scroll?' scr2':'')+'" id="plist" style="--pw:'+(z.cw+4)+'px">'+P.characters.map(function(id){var x=ch(id),bn=!ban&&P.banned.indexOf(id)>=0;
    return '<div class="pk'+(cur===id?' sel':'')+(bn?' off':'')+'" data-pick="'+id+'">'+pvCard(id,{w:z.cw,holo:0,badge:badge(id),sub:x.role||'',cls:'rnd'+(bn?' ban':'')})+'<i class="ck">✓</i></div>'}).join('')+'</div>'
   +'<div class="pband">'+(c?'<div><b>'+esc(c.name)+'</b> <span class="mu">'+esc((c.job||'')+' · '+(c.role||''))+'</span> · 패시브 <b>'+esc(c.passive_name||'')+'</b> '+esc(c.passive_text||'')+'</div><div>액티브 <b>'+esc(c.active_name||'')+'</b> '+esc(c.active_text||'')+'</div>':'<div class="mu">캐릭터를 누르면 스킬이 보여요 · 시간이 지나면 '+(ban?'눌러 둔 캐릭터를 밴(없으면 밴 없음)':'눌러 둔 캐릭터 → 직전에 쓴 캐릭터 순으로 자동 선택')+'</div>')+'</div></div>'
-  +'<div class="pcol"><div class="lab2">상대 (AI)</div><div class="qcard" style="width:'+z.sw+'px">?</div><b class="pnm">&nbsp;</b></div></div>'
+  +'<div class="pcol opp"><div class="lab2">상대'+(m.mode==='practice'?' (AI)':'')+'</div><div class="qcard" style="width:'+z.sw+'px">?</div><b class="pnm">&nbsp;</b></div></div>'
   +'<div class="row bar pbar"><button id="qt">나가기</button><button class="pri confirm" id="pok"'+(done||!cur?' disabled':'')+'>'+(done?'대기 중…':(ban?'밴 확정':'선택 확정')+' (Space)')+'</button></div></div>';
  var keep=$('plist')?$('plist').scrollTop:0;$('app').innerHTML=h;var pl=$('plist');pl.scrollTop=keep;
  var fade=function(){pl.classList.toggle('more',z.scroll&&pl.scrollTop+pl.clientHeight<pl.scrollHeight-4)};pl.onscroll=fade;fade();
@@ -934,8 +935,7 @@ function stamp(el,t){if(!el)return;var s=document.createElement('div');s.classNa
 
 /* ---------- 결과 ---------- */
 /* 결과(재배치 4): 1:1 분할. 왼쪽 50% = 전신 PNG의 카드 영역(3:4)만, 공용 어두운 배경, 폭을 꽉 채우고 위 맞춤(넘치는 아래는 잘림), 아래 35% 마스크. 오른쪽 50% = 데이터 */
-function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{},src=a.full,cr=a.card||{x:0.125,y:0,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3};
- if(!src)return '';var iw=w/cr.w,ih=iw*src.h/src.w;return 'background-image:url('+src.url+');background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'px '+ih.toFixed(1)+'px;background-position:'+(-cr.x*iw).toFixed(1)+'px '+(12-cr.y*ih).toFixed(1)+'px'}  // 위 12pt 안쪽(기획답변 38차: 정수리 닿는 3명 임시 대응)
+function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{},src=a.full;if(!src)return '';return 'background-image:url('+src.url+')'}
 function renderResult(m){var L=m.last||{},you=m.you,win=L.outcome!=='draw'&&L.outcome!=='void'&&((L.outcome==='a')===(you===0)),draw=L.outcome==='draw',mine=(L.picks||[])[you];
  var f=safe(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((innerWidth-f.l-f.r)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
  var mode=m.mode,rk=L.rank&&L.rank[you],ec=L.econ&&L.econ[you];
