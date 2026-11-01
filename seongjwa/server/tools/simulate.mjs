@@ -10,7 +10,10 @@ const DATA = JSON.parse(readFileSync(process.argv[3] ?? new URL("../test/fixture
 // SIM_ATK_COEF=공용 공격 카드 계수 배율, SIM_HP=전 캐릭터 HP 배율,
 // SIM_CP=스킬 수치 덮어쓰기 JSON(시트 `패시브 수치`·`액티브 수치` 키) 예: '{"PY":{"active_turns":1,"passive_atk_per10":0.03}}'
 const opt = { survival: Number(process.env.SIM_SURVIVAL ?? 1), slots: (process.env.SIM_SLOTS ?? "1,2,3").split(",").map(Number),
-  atkCoef: Number(process.env.SIM_ATK_COEF ?? 1), hp: Number(process.env.SIM_HP ?? 1) };
+  atkCoef: Number(process.env.SIM_ATK_COEF ?? 1), hp: Number(process.env.SIM_HP ?? 1),
+  // SIM_G=전역 피해 배율(시트 설정값 dmg_global_mult, 기획답변 42차), SIM_DIFF=AI 난이도(hard|normal)
+  g: Number(process.env.SIM_G ?? DATA.settings?.dmg_global_mult ?? 1), diff: process.env.SIM_DIFF ?? "hard" };
+DATA.settings = { ...(DATA.settings ?? {}), dmg_global_mult: opt.g };
 for (const [id, c] of Object.entries(DATA.cards)) if (c.kind === "attack" && !c.owner_character) c.coef = Number(c.coef) * opt.atkCoef;
 for (const c of Object.values(DATA.characters)) c.hp = Math.round(c.hp * opt.hp);
 const cpOver = JSON.parse(process.env.SIM_CP ?? "{}");
@@ -28,6 +31,7 @@ const char = Object.fromEntries(CHARS.map((c) => [c, { w: 0, n: 0 }]));
 const deck = {};
 const pair = {};
 let turns = 0, games = 0, draws = 0;
+const tdist = {}; const judge = { n: 0, loserPct: 0, winnerPct: 0 }; const quick = { n: 0, loserPct: 0 };
 const kinds = {};
 const reasons = {};
 for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
@@ -37,7 +41,7 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
   const mem = [{ oppKinds: [] }, { oppKinds: [] }];
   while (!st.result) {
     for (const s of [0, 1]) {
-      const act = chooseAction(st, s, { difficulty: "hard", random: r, memory: mem[s], weights: { survival: opt.survival } }).action;
+      const act = chooseAction(st, s, { difficulty: opt.diff, random: r, memory: mem[s], weights: { survival: opt.survival } }).action;
       const me = st.players[s];
       const spent = cardCost(st, me, act.cards.map((uid) => me.hand.find((h) => h.uid === uid).id)).reduce((x, y) => x + y, 0);
       leftAll.n += 1; leftAll.e += Math.max(0, me.energy - spent);
@@ -57,7 +61,9 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
     resolveTurn(st);
     remember(st, 0, mem[0]); remember(st, 1, mem[1]);
   }
-  games += 1; turns += st.result.turn;
+  games += 1; turns += st.result.turn; tdist[st.result.turn] = (tdist[st.result.turn] ?? 0) + 1;
+  { const hp = st.players.map((p) => Math.max(0, p.hp) / p.maxHp); const lo = st.result.outcome === "a" ? 1 : st.result.outcome === "b" ? 0 : (hp[0] <= hp[1] ? 0 : 1);
+    if (st.result.reason === "turn_limit") { judge.n += 1; judge.loserPct += hp[lo]; judge.winnerPct += hp[1 - lo]; } }
   if (a !== b) sl.games += ids.filter((c) => c === "SL").length;
   reasons[st.result.reason] = (reasons[st.result.reason] ?? 0) + 1;
   const score = st.result.outcome === "a" ? [1, 0] : st.result.outcome === "b" ? [0, 1] : [0.5, 0.5];
@@ -73,7 +79,9 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
 }
 const pct = (x) => (x.n ? Math.round((100 * x.w) / x.n) : 0);
 const out = [];
-out.push(`# AI 대 AI 시뮬레이션 (어려움, 데이터 v${DATA.version})`, "");
+out.push(`# AI 대 AI 시뮬레이션 (${opt.diff === "hard" ? "어려움" : opt.diff}, 데이터 v${DATA.version}, dmg_global_mult ${opt.g})`, "");
+const six8 = [6, 7, 8].reduce((a, t) => a + (tdist[t] ?? 0), 0);
+out.push(`- 요약: 10턴 판정 ${Math.round((100 * judge.n) / games)}%, 평균 ${(turns / games).toFixed(2)}턴, 6~8턴 종료 ${Math.round((100 * six8) / games)}%, 판정 패자 남은 HP ${judge.n ? Math.round((100 * judge.loserPct) / judge.n) : "-"}% (승자 ${judge.n ? Math.round((100 * judge.winnerPct) / judge.n) : "-"}%), 종료 턴 분포 ${JSON.stringify(tdist)}`);
 const totalCards = Object.values(kinds).reduce((a, b) => a + b, 0);
 out.push(`- 판수 ${games} (조합당 ${per}), 평균 ${(turns / games).toFixed(1)}턴, 10턴 판정 ${Math.round((100 * (reasons.turn_limit ?? 0)) / games)}%, 무승부 ${draws}, 종료 사유 ${JSON.stringify(reasons)}`);
 out.push(`- 옵션 ${JSON.stringify(opt)}, 낸 카드 중 공격 ${Math.round((100 * (kinds.attack ?? 0)) / totalCards)}% (${Object.entries(kinds).map(([k, v]) => `${k} ${Math.round((100 * v) / totalCards)}%`).join(", ")})`);

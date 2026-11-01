@@ -248,10 +248,11 @@ function strike(state, attacker, target, { coef, hits = 1, pierce = 0, attackCar
     let v = atk * coef * mult * defense;
     const critM = crit ? state.rules.crit_mult * (marked ? 1 + state.rules.mark_crit_bonus : 1) : 1;
     const rush = rushMult(state), recv = receivedMult(state, attacker, target, attackCard);
-    v *= critM * rush * recv;
+    const g = state.rules.dmg_global_mult ?? 1;
+    v *= critM * rush * recv * g;
     const fx = (n) => Math.round(n * 1000) / 1000;
     const r = dealDirect(state, attacker, target, v, { source: attackCard ? "card" : "counter",
-      calc: { atk: Math.round(atk), coef, mult: fx(mult), def: fx(defense), crit: fx(critM), rush: fx(rush), recv: fx(recv) } });
+      calc: { atk: Math.round(atk), coef, mult: fx(mult), def: fx(defense), crit: fx(critM), rush: fx(rush), recv: fx(recv), ...(g !== 1 ? { g } : {}) } });
     if (crit) state.log.push({ t: "crit", seat: target.seat });
     total += r.hp;
   }
@@ -606,7 +607,7 @@ function addBurn(state, target, stacks) {
 
 function useActive(state, p, o) {
   const cp = p.cp;
-  const fixed = (raw, opts = {}) => dealDirect(state, p, o, raw * rushMult(state) * receivedMult(state, p, o, false), { source: "active", ...opts });
+  const fixed = (raw, opts = {}) => dealDirect(state, p, o, raw * rushMult(state) * receivedMult(state, p, o, false) * (state.rules.dmg_global_mult ?? 1), { source: "active", ...opts });
   switch (p.char) {
     case "AU": {  // 일륜 반격: 실드 전부(이월 포함) ×150% → 피해, 방어력·치명 무시, 상대 실드 먼저
       const total = p.shield.carried + p.shield.norm + p.shield.full;
@@ -618,7 +619,7 @@ function useActive(state, p, o) {
     case "IG": {  // 대화재: 남은 작열 피해 ×2 즉시, 스택 소모
       const ticks = o.st.burn.reduce((sum, b) => sum + Math.max(0, b.to - state.turn + 1), 0);
       o.st.burn = [];
-      if (ticks) dealDirect(state, p, o, o.invuln ? 0 : o.maxHp * state.rules.burn_pct * ticks * cp.activeMult * rushMult(state), { ignoreShield: true, source: "active" });
+      if (ticks) dealDirect(state, p, o, o.invuln ? 0 : o.maxHp * state.rules.burn_pct * ticks * cp.activeMult * rushMult(state) * (state.rules.dmg_global_mult ?? 1), { ignoreShield: true, source: "active" });
       break;
     }
     case "SE": {  // 만월 역행: 2턴 전 시작 HP로(기록 없으면 1턴), 지금보다 낮으면 효과 없음
