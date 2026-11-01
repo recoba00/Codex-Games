@@ -13,7 +13,9 @@ const opt = { survival: Number(process.env.SIM_SURVIVAL ?? 1), slots: (process.e
   atkCoef: Number(process.env.SIM_ATK_COEF ?? 1), hp: Number(process.env.SIM_HP ?? 1),
   // SIM_G=전역 피해 배율(시트 설정값 dmg_global_mult, 기획답변 42차), SIM_DIFF=AI 난이도(hard|normal)
   g: Number(process.env.SIM_G ?? DATA.settings?.dmg_global_mult ?? 1), diff: process.env.SIM_DIFF ?? "hard" };
-DATA.settings = { ...(DATA.settings ?? {}), dmg_global_mult: opt.g };
+// SIM_SET=설정값 덮어쓰기 JSON 예: '{"rush_dmg_step":0.5}'
+DATA.settings = { ...(DATA.settings ?? {}), ...JSON.parse(process.env.SIM_SET ?? "{}"), dmg_global_mult: opt.g };
+if (process.env.SIM_SET) opt.set = JSON.parse(process.env.SIM_SET);
 for (const [id, c] of Object.entries(DATA.cards)) if (c.kind === "attack" && !c.owner_character) c.coef = Number(c.coef) * opt.atkCoef;
 for (const c of Object.values(DATA.characters)) c.hp = Math.round(c.hp * opt.hp);
 const cpOver = JSON.parse(process.env.SIM_CP ?? "{}");
