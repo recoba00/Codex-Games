@@ -56,6 +56,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--panel2)}
 .bc .sock.c b{font-size:11cqw;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .bc .sock.nos{border-radius:50%;background:radial-gradient(circle at 35% 30%,#7fc8ff,#1d5fae 70%);border:.6cqw solid rgba(255,255,255,.8)}
 .bc .sock i{width:70%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat;background-position:center}
+.bc .bdc,.bc .bdk{position:absolute;top:3.5%;font-size:max(9px,8.5cqw);line-height:1;font-weight:800;padding:.28em .45em;border-radius:99px;white-space:nowrap;z-index:2}.bc .bdc{left:4%;background:rgba(10,14,30,.88);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.55)}.bc .bdk{right:4%;color:#0b0e1c}.bc .own{top:17%}
 .bc .sock.k.nos{background:rgba(0,0,0,.55)}.bc .sock .kt{font-size:4.2cqw;font-weight:700;font-style:normal}
 .bc .txt{position:absolute;left:0;right:0;bottom:0;padding:0 6cqw 6cqw}
 .bc .txt .nm{font-weight:800;font-size:5.5cqw;line-height:1.2}
@@ -357,19 +358,20 @@ V.cardPreview.bind=function(){$('view').onclick=function(e){var b=e.target.close
  pvAnim()};
 
 /* ---------- 전투카드 미리보기(기획지시 2026-10-29 전투카드일러): 일러스트 → 틀(CARD_FRAME) → 비용(좌상단) → 종류 아이콘(우상단) → 이름 띠 → 효과 문구(상세·데스크톱) → 처리 단계 띠(데스크톱 손패).
-   일러스트가 없으면 CARD_BG_NEUTRAL + KIND_* 중앙 심볼. 전용 카드는 주인 캐릭터 전신의 카드 영역을 쓴다(스킨 따라 바뀜) */
-var KIND_SLOT={immune:'IMMUNE',defense:'DEFENSE',counter:'COUNTER',silence:'SILENCE',disrupt:'DISRUPT',skill:'SKILL',attack:'ATTACK'};
+   일러스트가 없으면 CARD_BG_NEUTRAL + 유형 글자. 전용 카드는 주인 캐릭터 전신의 카드 영역을 쓴다(스킨 따라 바뀜) */
+/* 유형·비용 텍스트 뱃지(기획지시 2026-11-01 유형에너지텍스트, KIND_* 아이콘 폐지). 색은 게임의 종류 색(KCOL)과 같게 */
+var BCOL_K={attack:'#ff5a5a',defense:'#4f8dff',counter:'#ff9a3c',silence:'#a86bff',immune:'#f2c94c',disrupt:'#3fc77a',skill:'#2ec4c4'};
 var PHASE={0:['0 스펠','#5a4a8a'],1:['1 보호','#2f6db5'],2:['2 방해','#8a3fa0'],3:['3 스킬','#2f8f74'],4:['4 공격','#b5452f']};
-function bcCard(d,id,k,o){var sl=d.assets.slots||{},u=function(f){return f&&f.path?'url('+d.base+f.path+')':''},art=sl['CARD_ART_'+id],ks=sl['KIND_'+KIND_SLOT[k.kind]],bgN=sl.CARD_BG_NEUTRAL,lay='';
+function bcCard(d,id,k,o){var sl=d.assets.slots||{},u=function(f){return f&&f.path?'url('+d.base+f.path+')':''},art=sl['CARD_ART_'+id],bgN=sl.CARD_BG_NEUTRAL,lay='';
  if(k.owner){var ch=d.characters.find(function(x){return x.id===k.owner})||{},a=((d.art||{})[k.owner]||{})['000']||{},f=a.full,cr=a.card,fb=sl[BG_OF[ch.faction]||'CARD_BG_NEUTRAL'];
   lay='<div class="l art" style="'+(fb?'background-image:'+u(fb):'background:#334')+'"></div>';
   if(f){if(cr){var iw=o.w/cr.w,ih=iw*f.h/f.w;lay+='<div class="l" style="background-image:'+u(f)+';background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'px '+ih.toFixed(1)+'px;background-position:'+(-cr.x*iw).toFixed(1)+'px '+(-cr.y*ih).toFixed(1)+'px"></div>'}else lay+='<div class="l" style="background:'+u(f)+' center 10%/cover no-repeat"></div>'}}
  else if(art)lay='<div class="l art" style="background-image:'+u(art)+'"></div>';
- else lay='<div class="l art" style="'+(bgN?'background-image:'+u(bgN):'background:linear-gradient(160deg,#3a4058,#1b1f2e)')+'"></div>'+(ks?'<div class="sym" style="background-image:'+u(ks)+'"></div>':'<div class="symt">'+esc(KIND_KO[k.kind]||k.kind)+'</div>');
- var fr=sl.CARD_FRAME,kicon=ks?'<i style="background-image:'+u(ks)+'"></i>':'<i class="kt">'+esc(KIND_KO[k.kind]||k.kind)+'</i>';
+ else lay='<div class="l art" style="'+(bgN?'background-image:'+u(bgN):'background:linear-gradient(160deg,#3a4058,#1b1f2e)')+'"></div>'+'<div class="symt">'+esc(KIND_KO[k.kind]||k.kind)+'</div>';
+ var fr=sl.CARD_FRAME;
  /* 전투카드 구성 규격(기획지시 2026-10-30, 가안): 일러스트 → 어두운 바탕(아래 40%) → 틀 → 소켓(비용 (100,100)·종류 (700,100), 지름 160) → 이름 44·문구 28(최대 3줄) */
  return '<div class="bc'+(o.mode==='hand'?' hand':'')+'" style="--w:'+o.w+'px">'+lay+'<div class="l shade"></div>'+(fr?'<div class="l frm" style="background-image:'+u(fr)+'"></div>':'')
-  +'<div class="sock c'+(fr?'':' nos')+'"><b>'+k.cost+'</b></div><div class="sock k'+(fr?'':' nos')+'">'+kicon+'</div>'
+  +'<div class="bdc">'+k.cost+'E</div><div class="bdk" style="background:'+(BCOL_K[k.kind]||'#8a90a8')+'">'+esc(KIND_KO[k.kind]||k.kind)+'</div>'
   +(k.owner?'<div class="own">전용</div>':'')+'<div class="txt"><div class="nm">'+esc(k.name)+'</div>'+(o.mode==='hand'?'':'<div class="tx">'+esc(k.text)+'</div>')+'</div></div>'}
 function bcView(d,P,seg){var ids=Object.keys(d.cards||{}).sort(function(a,b){var ca=d.cards[a],cb=d.cards[b];return (ca.owner?1:0)-(cb.owner?1:0)||a.localeCompare(b)});
  if(P.bf==='common')ids=ids.filter(function(i){return !d.cards[i].owner});else if(P.bf==='own')ids=ids.filter(function(i){return d.cards[i].owner});

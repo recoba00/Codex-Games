@@ -25,11 +25,10 @@ export const SLOTS = Object.freeze([
   ...[1, 2, 3, 4].map((n) => S(`MASTERY_${n}`, "카드", `숙련도 뱃지 ${n}단계`, 256, 256, true)),  // 카드 우상단 뱃지 1:1(기획지시 숙련도뱃지)
   ...[["BRONZE", "브론즈"], ["SILVER", "실버"], ["GOLD", "골드"], ["PLATINUM", "플래티넘"], ["DIAMOND", "다이아"], ["MASTER", "마스터"], ["LEGEND", "레전드"]]
     .map(([k, n]) => S(`FRAME_${k}`, "카드", `티어 프레임 ${n}`, 928, 1248, true)),  // 카드 프레임 = 현재 티어(LoL식 정리). 본체보다 상하좌우 64px 큼(기획지시 프레임여백)
-  ...[["IMMUNE", "면역"], ["DEFENSE", "방어"], ["COUNTER", "반격"], ["SILENCE", "침묵"], ["DISRUPT", "방해"], ["SKILL", "스킬"], ["ATTACK", "공격"]]
-    .map(([k, n]) => S(`KIND_${k}`, "카드", `카드 종류 아이콘 ${n}`, 256, 256, true)),
+  // 카드 종류 아이콘 KIND_* 7종은 폐지(기획지시 2026-11-01 유형에너지텍스트): 유형·비용은 게임이 텍스트 뱃지로 그린다
   ...[["FIRE", "불"], ["WATER", "물"], ["WIND", "바람"], ["NEUTRAL", "중립"]].map(([k, n]) => S(`CARD_BG_${k}`, "카드", `카드 배경 ${n}`, ...CARD, "corners")),
   S("CARD_FRAME", "카드", "전투카드 틀", ...CARD, true), S("CARD_BACK", "카드", "카드 뒷면", ...CARD, "corners"),
-  // 공용 전투카드 일러스트(기획지시 2026-10-29 전투카드일러): 카드 ID와 같은 번호, 불투명, 글자 없음. 없으면 게임이 CARD_BG_NEUTRAL + KIND_* 중앙 심볼로 대체
+  // 공용 전투카드 일러스트(기획지시 2026-10-29 전투카드일러): 카드 ID와 같은 번호, 불투명, 글자 없음. 없으면 게임이 CARD_BG_NEUTRAL + 유형 글자로 대체
   ...Array.from({ length: 16 }, (_, i) => `C${String(i + 1).padStart(2, "0")}`).map((id) => S(`CARD_ART_${id}`, "카드 일러스트", `카드 일러스트 ${id}`, ...CARD, false)),  // 별도 묶음(기획답변 28차)
   S("SKILL_FRAME_PASSIVE", "카드", "스킬 아이콘 프레임 패시브", 256, 256, true), S("SKILL_FRAME_ACTIVE", "카드", "스킬 아이콘 프레임 액티브", 256, 256, true),
   ...[["BANNED", "밴됨"], ["LOCKED", "잠긴 스킨"], ["OPP_PICK", "상대 선택"]].map(([k, n]) => S(`OVERLAY_${k}`, "카드", `상태 오버레이 ${n}`, ...CARD, true)),

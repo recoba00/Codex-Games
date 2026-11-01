@@ -325,6 +325,14 @@ button.sm{padding:5px 10px;font-size:12px}
 .rr h2{margin:0;font-size:52px;letter-spacing:6px}.res3.win h2{color:var(--gold);text-shadow:0 0 24px rgba(255,213,107,.5)}.res3.lose h2{color:#c8cbe0}
 .rr .rmenu{position:absolute;right:max(12px,var(--sr,0px));top:max(10px,var(--st,0px));width:36px;height:32px;border-radius:9px;border:1px solid var(--line);background:rgba(14,18,36,.8)}
 @media (max-height:500px){.pk3 .top,.lo3 .top{margin-bottom:6px;min-height:30px;height:30px}.pbar{margin-top:6px;min-height:40px;height:40px}.pband{height:30px;font-size:10px;line-height:1.45}.rr h2{font-size:36px}.rr{gap:8px}.spb2{padding:4px 2px}.spb2 i{width:24px;height:24px}.spb2 b{font-size:11px}.pnm{font-size:12px}}
+
+/* 카드 면 텍스트 뱃지(유형에너지텍스트): 왼쪽 위 비용 "2E"(남색), 오른쪽 위 유형(종류 색 배경). 휴대폰 손패 68pt에서도 9pt 이상 */
+.bc .bdc,.bc .bdk{position:absolute;top:3.5%;font-size:max(9px,8.5cqw);line-height:1;font-weight:800;padding:.28em .45em;border-radius:99px;white-space:nowrap;z-index:2}
+.bc .bdc{left:4%;background:rgba(10,14,30,.88);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.55)}
+.bc .bdk{right:4%;color:#0b0e1c}
+.bc.mini .bdc,.bc.mini .bdk{top:4%;padding:.22em .3em}.bc.mini .bdc{left:3%}.bc.mini .bdk{right:3%}
+.bc .own{top:17%}
+.obar i{border-radius:50%!important}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -361,15 +369,15 @@ function pvCard(id,o){var c=ch(id),a=((S.A.art||{})[id]||{})['000']||{},sl=S.A.s
   +'<div class="pvl pvname">'+esc(c.name)+(o.sub?'<small>'+esc(o.sub)+'</small>':'')+'</div></div><div class="pvring"></div>'
   +(fc?'<div class="pvfac" style="background-image:url('+fc.url+')"></div>':'')
   +(fr?'<div class="pvframe" style="background-image:url('+fr.url+')"></div>':'')+(bd?'<div class="pvbadge" style="background-image:url('+bd.url+')"></div>':'')+'</div>'}
-function bcCard(id,o){var k=card(id),sl=S.A.slots,art=sl['CARD_ART_'+id],ks=sl['KIND_'+KIND_SLOT[k.kind]],lay='',own=k.owner_character;
+function bcCard(id,o){var k=card(id),sl=S.A.slots,art=sl['CARD_ART_'+id],lay='',own=k.owner_character;
  if(own){var c=ch(own),a=((S.A.art||{})[own]||{})['000']||{},f=a.full,cr=a.card,fb=slotU('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'));
   lay='<div class="l art" style="'+(fb?'background-image:'+fb:'background:#334')+'"></div>';
   if(f){if(cr){var iw=100/cr.w,ih=iw*(f.h/f.w)*(5/7);lay+='<div class="l" style="background-image:url('+f.url+');background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'% '+ih.toFixed(1)+'%;background-position:'+(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(1)+'% '+(cr.h>=1?0:cr.y/(1-cr.h)*100).toFixed(1)+'%"></div>'}else lay+='<div class="l" style="background:url('+f.url+') center 10%/cover no-repeat"></div>'}}
  else if(art)lay='<div class="l art" style="background-image:url('+art.url+')"></div>';
  else lay='<div class="l art" style="'+(sl.CARD_BG_NEUTRAL?'background-image:'+slotU('CARD_BG_NEUTRAL'):'background:linear-gradient(160deg,#3a4058,#1b1f2e)')+'"></div><div class="symt">'+esc(KIND_KO[k.kind]||k.kind)+'</div>';
- var fr=sl.CARD_FRAME,cost=o.cost==null?k.cost:o.cost,kicon=ks?'<i style="width:70%;aspect-ratio:1;background:url('+ks.url+') center/contain no-repeat"></i>':'<i class="kt">'+esc(KIND_KO[k.kind]||k.kind)+'</i>';
+ var fr=sl.CARD_FRAME,cost=o.cost==null?k.cost:o.cost;  // 유형·비용은 텍스트 뱃지(기획지시 2026-11-01 유형에너지텍스트, KIND_* 아이콘 폐지)
  return '<div class="bc'+(o.mode==='hand'?' hand':'')+(o.face?' face2':'')+(o.cls?' '+o.cls:'')+'" style="--w:'+o.w+'px;width:'+o.w+'px"'+(o.attr||'')+' title="'+esc(k.name+' · '+(KIND_KO[k.kind]||'')+' '+cost+'E\n'+(k.effect_text||''))+'">'+lay+'<div class="l shade"></div>'+(fr?'<div class="l frm" style="background-image:url('+fr.url+')"></div>':'')
-  +'<div class="sock c'+(fr?'':' nos')+'"><b>'+cost+'</b></div><div class="sock k'+(fr?'':' nos')+'">'+kicon+'</div>'
+  +'<div class="bdc">'+cost+'E</div><div class="bdk" style="background:'+(KCOL[k.kind]||'#8a90a8')+'">'+esc(KIND_KO[k.kind]||k.kind)+'</div>'
   +(own?'<div class="own">전용</div>':'')+'<div class="txt"><div class="nm">'+esc(k.name)+'</div>'+(o.mode==='hand'?(o.face?'<div class="sht">'+esc(shortOf(id))+'</div>':''):'<div class="tx">'+esc(k.effect_text)+'</div>')+'</div>'+(o.extra||'')+'</div>'}
 function shortOf(id){var k=card(id),t=k.effect_short||String(k.effect_text||'');return k.effect_short?t:(Array.from(t).length>15?Array.from(t).slice(0,15).join('')+'…':t)}  // 시트 효과_짧게, 없으면 효과 문구 앞 15자(임시)
 function backCard(w,extra){return '<div class="bc back" style="--w:'+w+'px;width:'+w+'px;'+(S.A.slots.CARD_BACK?'background-image:'+slotU('CARD_BACK'):'background:linear-gradient(160deg,#2a3a7a,#141a3a)')+'">'+(extra||'')+'</div>'}
@@ -762,7 +770,7 @@ function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me'
  var per=function(g){return g.k==='rush'?900:g.k==='tick'||g.k==='auto'?600:zt(g)+700},tot=400+acts.reduce(function(a,g){return a+per(g)},0)+1500,k=Math.min(1,cap/tot);
  // 처리 순서 막대(효과연출 3): 지금 행동은 빛나고 끝난 건 흐리게, 내/상대 테두리 구분, 최대 10개
  var bar=acts.filter(function(g){return g.k!=='rush'&&g.k!=='auto'}).slice(0,10),phc=$('phc');
- if(phc){phc.className='obar';phc.innerHTML=bar.map(function(g,i){var kd=kindOf(g),sd=g.seat==null?'':side(g.seat),ic=kd==='spell'&&S.A.slots['SPELL_'+g.id];
+ if(phc){phc.className='obar';phc.innerHTML=bar.map(function(g,i){var kd=kindOf(g),sd=g.seat==null?'':side(g.seat),ic=null;
   return '<i data-bi="'+G.indexOf(g)+'" class="'+sd+'" style="background:'+(ic?'url('+ic.url+') center/80% no-repeat,':'')+KCOL[kd]+'" data-tip="'+esc((sd==='me'?'나':sd?'상대':'')+' · '+(g.k==='card'||g.k==='void'||g.k==='counter'?card(g.id).name:g.k==='spell'?'스펠 '+sname(g.id):g.k==='active'?'액티브':'턴 끝')+' ('+g.ph+' '+PH[g.ph]+')')+'">'+(ic?'':KSH[kd])+'<sub>'+g.ph+'</sub></i>'}).join('')}
  var cellOf=function(sd,g,mark){var arr=rv[sd],kd=g.k==='active'?'active':g.k==='spell'?'spell':null;for(var i=0;i<arr.length;i++){var x=arr[i];if((kd?x.k===kd:x.id===g.id)&&!(mark&&used[sd][i])){if(mark)used[sd][i]=1;return $('rv_'+sd+i)}}return null};
  var face=function(sd){return $('side_'+sd)};
