@@ -178,3 +178,18 @@ test("설정값 상품 ID 키(…_item)는 문자 허용(LoL식 정리 mastery_e
   assert.match(e, /mastery_emote_item: 상품 ID 형식 오류/);
   assert.match(e, /mastery_emote_stage: 값이 숫자가 아님/);
 });
+
+test("추천덱: 세 번째 유형 '변칙'은 슬롯 3(variant)으로, 수비·변칙 둘 다 있으면 오류 (기획답변 46차)", async () => {
+  const s = structuredClone(await sheetsP);
+  const rows = s["추천덱"];
+  const hr = rows.findIndex((r) => r?.includes("유형"));
+  const ty = rows[hr].indexOf("유형"), cn = rows[hr].indexOf("캐릭터");
+  const si = rows.findIndex((r, i) => i > hr && r?.[ty] === "수비" && (r?.[cn] === "실렌티아" || r?.[cn] === "SI"));
+  rows[si][ty] = "변칙";
+  const r = importWorkbook(s);
+  assert.deepEqual(r.errors, []);
+  const p = r.data.presets.find((x) => x.character_id === "SI" && x.slot === 3);
+  assert.equal(p.style, "variant");
+  rows.push([...rows[si]].map((v, i) => (i === ty ? "수비" : v)));
+  assert.ok(importWorkbook(s).errors.some((e) => e.includes("SI 공세·균형·수비(또는 변칙)")));
+});

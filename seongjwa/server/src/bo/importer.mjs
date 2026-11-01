@@ -11,7 +11,8 @@ const OFFER = { "본편 포함": "included", "유료 추가": "addon" };
 const KIND = { "면역": "immune", "방어": "defense", "반격": "counter", "침묵": "silence", "방해": "disrupt", "스킬": "skill", "공격": "attack" };
 const KIND_PHASE = { immune: 1, defense: 1, counter: 1, silence: 2, disrupt: 2, skill: 3, attack: 4 };
 const DEFAULT_STAT_RANGE = { hp: [600, 1500], atk: [60, 140], def: [20, 70], spd: [60, 140], crit: [0, 30] };
-const STYLE = { "공세": "aggro", "균형": "balance", "수비": "defense" };
+const STYLE = { "공세": "aggro", "균형": "balance", "수비": "defense", "변칙": "variant" };  // 변칙: 세 번째 덱을 수비 대신(기획답변 46차, 상세 15)
+const STYLE_SLOT = { aggro: 1, balance: 2, defense: 3, variant: 3 };
 const DIFFICULTY = { "쉬움": "easy", "보통": "normal", "어려움": "hard" };  // 캐릭터 난이도 뱃지(기획지시 2026-10-25 숙련도, 등급 폐지)
 
 export function kitKeys() {
@@ -275,10 +276,11 @@ export function importWorkbook(sheets) {
       }
       if (deck.length !== 10) err(`${where}: 공용 카드 ${deck.length}장 (10장이어야 함)`);
       (seen[cid] ??= []).push(style);
-      presets.push({ character_id: cid, slot: Object.values(STYLE).indexOf(style) + 1, style, cards: deck });
+      presets.push({ character_id: cid, slot: STYLE_SLOT[style], style, cards: deck });
     }
     for (const cid of Object.keys(chars)) {
-      if ([...(seen[cid] ?? [])].sort().join() !== Object.values(STYLE).sort().join()) err(`추천덱: ${cid} 공세·균형·수비 3개가 아님 → ${JSON.stringify(seen[cid] ?? null)}`);
+      const got = [...(seen[cid] ?? [])].map((s) => (s === "variant" ? "defense" : s)).sort().join();
+      if (got !== "aggro,balance,defense") err(`추천덱: ${cid} 공세·균형·수비(또는 변칙) 3개가 아님 → ${JSON.stringify(seen[cid] ?? null)}`);
     }
   }
 

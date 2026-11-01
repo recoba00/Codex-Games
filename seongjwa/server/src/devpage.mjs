@@ -100,7 +100,7 @@ function render(){var m=S.st,el=$('room');el.hidden=false;el.innerHTML='';$('lob
   S.load=S.load||{spells:[],preset:2};
   Object.keys(S.data.spells).forEach(function(id){row.appendChild(btn(nm('spells',id),function(){var i=S.load.spells.indexOf(id);if(i>=0)S.load.spells.splice(i,1);else if(S.load.spells.length<2)S.load.spells.push(id);render()},S.load.spells.indexOf(id)>=0))});
   var r2=document.createElement('div');r2.className='row';el.appendChild(r2);
-  [1,2,3].forEach(function(s){r2.appendChild(btn(['','공세','균형','수비'][s]+' 덱',function(){S.load.preset=s;render()},S.load.preset===s))});
+  [1,2,3].forEach(function(s){var pr=((S.data.presets||{})[P2.myPick]||[]).find(function(x){return x.slot===s});r2.appendChild(btn(((pr&&{aggro:'공세',balance:'균형',defense:'수비',variant:'변칙'}[pr.style])||['','공세','균형','수비'][s])+' 덱',function(){S.load.preset=s;render()},S.load.preset===s))});
   r2.appendChild(btn('확정',function(){send({type:'loadout',spells:S.load.spells,preset:S.load.preset})},false,S.load.spells.length!==2||!!P2.myLoadout));
  }else if(m.phase==='battle'){S.load=null;renderBattle(m,el)}
  tick()}
