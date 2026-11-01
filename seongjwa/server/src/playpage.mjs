@@ -370,7 +370,7 @@ button.sm{padding:5px 10px;font-size:12px}
 .cap.warn{font-size:11px;font-weight:600;color:#ffb3b3}
 .bt3 .bdg{display:flex;flex-direction:column;gap:2px;height:auto;overflow:visible}.bt3 .bdg .bg{height:auto;min-height:18px;padding:2px 6px;line-height:1.25;white-space:normal;text-overflow:clip;overflow:visible;max-width:none;word-break:keep-all}
 /* 턴 시작 배너(전투UX2차 4 + 사용자 요청 2026-11-01: 글자 부각): 띠가 펼쳐지고 글자가 크게 내려앉으며 빛이 훑고 지나감, 1.1초 */
-.tban{position:absolute;left:0;right:0;top:42%;transform:translateY(-50%);z-index:40;pointer-events:none;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px}
+.tban{position:fixed;left:0;right:0;top:50%;transform:translateY(-50%);z-index:60;pointer-events:none;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px}
 .tban::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(16,24,70,.92) 22%,rgba(16,24,70,.92) 78%,transparent);border-top:1px solid rgba(255,214,110,.7);border-bottom:1px solid rgba(255,214,110,.7);animation:tbb 1.1s cubic-bezier(.2,.9,.3,1) forwards}
 .tban b{position:relative;font-size:clamp(32px,10vh,68px);line-height:1.05;font-weight:900;letter-spacing:4px;white-space:nowrap;color:transparent;background:linear-gradient(100deg,#fff 0 38%,#ffe9a0 46%,#fffbe8 50%,#ffe9a0 54%,#fff 62% 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 14px rgba(255,210,90,.75)) drop-shadow(0 2px 3px #000);animation:tbt 1.1s cubic-bezier(.2,1.5,.4,1) forwards,tbs 1.1s linear forwards}
 .tban small{position:relative;margin-top:2px;font-size:clamp(12px,3.6vh,18px);font-weight:900;letter-spacing:2px;color:#ffb070;text-shadow:0 0 10px rgba(255,120,40,.8),0 1px 2px #000;animation:tbt2 1.1s ease-out forwards}
@@ -733,7 +733,7 @@ function wdetCard(id){var k=card(id),d=$('wdet');if(!d)return;d.innerHTML='<div 
 /* 턴 시작 연출(전투UX2차 4): 가운데 상시 턴 표시 대신 매 턴 "N턴"(마지막 턴, 7턴~ 폭주) 약 1초 */
 function turnBanner(b){var key=S.room+':'+b.turn;if(S.bannerKey===key)return;S.bannerKey=key;var r=b.rules,t=b.turn,rush=t>=r.rush_start_turn,txt=t>=r.max_turn?'마지막 턴':t+'턴',sub=rush?'폭주 +'+Math.round((r.rush_dmg_step||0.25)*(t-r.rush_start_turn+1)*100)+'%':'';
  var bt=$('bt');if(!bt)return;var sp='';for(var k=0;k<14;k++)sp+='<s style="--a:'+Math.round(k*360/14+Math.random()*12)+'deg;--d:'+Math.round(90+Math.random()*120)+'px"></s>';
- var e=document.createElement('div');e.className='tban'+(rush?' rush':'');e.innerHTML='<i class="tsw"></i><i class="tsw t2"></i><em></em><em></em><em></em>'+sp+'<b>'+txt+'</b>'+(sub?'<small>'+sub+'</small>':'');bt.appendChild(e);
+ var e=document.createElement('div');e.className='tban'+(rush?' rush':'');e.innerHTML='<i class="tsw"></i><i class="tsw t2"></i><em></em><em></em><em></em>'+sp+'<b>'+txt+'</b>'+(sub?'<small>'+sub+'</small>':'');document.querySelectorAll('body > .tban').forEach(function(x){x.remove()});document.body.appendChild(e);  // 화면 맨 위 고정 층: 상대 확정 등으로 전투 화면이 다시 그려져도 끊기지 않고, 화면 정가운데
  var f=document.createElement('div');f.className='tflash'+(rush?' rush':'');bt.appendChild(f);setTimeout(function(){f.remove()},500);
  setTimeout(function(){shakeBt(rush?2:1)},200);setTimeout(function(){e.remove()},1100);
  var hd=bt.querySelector('.hand');if(hd){hd.classList.add('deal');setTimeout(function(){hd.classList.remove('deal')},1300)}var rg=$('ring');if(rg){rg.classList.add('enter');setTimeout(function(){rg.classList.remove('enter')},1400)}}  // 턴 시작: 띠·글자 내려앉음·충격파·불꽃·빛줄기·화면 흔들림 + 손패 나눠 주기

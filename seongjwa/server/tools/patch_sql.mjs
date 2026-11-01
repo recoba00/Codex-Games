@@ -1,7 +1,7 @@
 // 수치 패치 CSV(개발/수치패치_vN.csv) → 라이브 버전을 복사한 새 데이터 버전을 만드는 SQL (사용자 요청 2026-11-01).
 // CSV 열: 시트,셀,항목,이전,이후. '이전'이 기준 버전 값과 다르면 SQL을 만들지 않고 멈춘다(엉뚱한 칸을 고치는 사고 방지).
 // 지원: 캐릭터(F~J 스탯, N 패시브 문구, O 액티브 문구, R 패시브 수치, S 액티브 수치), 전투카드(F 비용·G 계수·H 타수·I 관통·J 효과·M 효과_짧게),
-//       설정값(항목에 키 이름 포함, 값만), 추천덱(B 유형 또는 카드 장수 칸: 항목에 '캐릭터 유형' 포함, 이후 = 공용 10장 목록 "C01,C01,…").
+//       스펠(B 효과·C 효과값·D 쿨다운, 항목에 스펠 이름), 설정값(항목에 키 이름 포함, 값만), 추천덱(B 유형 또는 카드 장수 칸: 항목에 '캐릭터 유형' 포함, 이후 = 공용 10장 목록 "C01,C01,…").
 // 사용: node tools/patch_sql.mjs <patch.csv> <base_version.json> <base_id> <staff_uuid> "<메모>" > patch.sql
 //   base_version.json = 기준 버전 스냅샷(data_versions.snapshot). 결과 SQL은 초안 생성 → 수정 → 검수 요청·승인(1인 운영 모드) → 배포까지 한 번에 한다.
 import { readFileSync } from "node:fs";
@@ -82,6 +82,14 @@ for (const r of rows) {
     const f = CARD_COL[letter], k = base.cards[id];
     if (f === "effect_text" || f === "effect_short") { if (before.trim() !== (k[f] ?? "")) errors.push(`${where}: 이전 문구가 기준과 다름 → 기준 '${k[f] ?? ""}'`); if (f === "effect_short" && [...after.trim()].length > 20) errors.push(`${where}: 효과_짧게 20자 초과`); updates.push(`update public.cards set ${f} = ${lit(after.trim())} where version_id = v and id = ${lit(id)};`); }
     else { if (Number(k[f]) !== num(before, where)) errors.push(`${where}: 이전 값 ${before} ≠ 기준 ${k[f]}`); updates.push(`update public.cards set ${f} = ${num(after, where)} where version_id = v and id = ${lit(id)};`); }
+    changed.push(where);
+  } else if (sheet === "스펠") {
+    const SP_COL = { B: "effect_text", C: "value", D: "cooldown" };
+    const id = byName(base.spells, item), f = SP_COL[letter];
+    if (!id || !f) { errors.push(`${where}: 스펠 또는 열을 찾지 못함`); continue; }
+    const k = base.spells[id];
+    if (f === "effect_text") { if (before.trim() !== k.effect_text) errors.push(`${where}: 이전 문구가 기준과 다름`); updates.push(`update public.spells set effect_text = ${lit(after.trim())} where version_id = v and id = ${lit(id)};`); }
+    else { if (Number(k[f]) !== num(before, where)) errors.push(`${where}: 이전 값 ${before} ≠ 기준 ${k[f]}`); updates.push(`update public.spells set ${f} = ${num(after, where)} where version_id = v and id = ${lit(id)};`); }
     changed.push(where);
   } else if (sheet === "설정값") {
     const key = (item.match(/[a-z][a-z0-9_]{2,}/) ?? [])[0];
