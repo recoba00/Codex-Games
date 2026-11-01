@@ -39,7 +39,10 @@ let turns = 0, games = 0, draws = 0;
 const tdist = {}; const judge = { n: 0, loserPct: 0, winnerPct: 0 }; const quick = { n: 0, loserPct: 0 };
 const kinds = {};
 const reasons = {};
+// SIM_PAIRS=특정 대결만(양쪽 자리 모두) 예: "PY-MO,PY-SE" → 상성 칸 판수를 늘려 볼 때
+const PAIRS = process.env.SIM_PAIRS ? new Set(process.env.SIM_PAIRS.split(",").flatMap((x) => { const [p, q] = x.split("-"); return [`${p}>${q}`, `${q}>${p}`]; })) : null;
 for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
+  if (PAIRS && !PAIRS.has(`${a}>${b}`)) continue;
   const slots = [opt.slots[Math.floor(r() * opt.slots.length)], opt.slots[Math.floor(r() * opt.slots.length)]];
   const ids = [a, b];
   const st = createBattle({ seed: Math.floor(r() * 2 ** 31), data: DATA, players: ids.map((c, s) => ({ characterId: c, spells: chooseLoadout(DATA, c, ids[1 - s]).spells, deck: presetDeck(DATA, c, slots[s]) })) });
