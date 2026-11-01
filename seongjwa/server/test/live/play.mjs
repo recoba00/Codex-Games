@@ -82,7 +82,7 @@ try {
     await noScroll(page, "스펠·덱");
     step(`${vp.name}: 시작 → 픽 → 스펠·덱 화면(스크롤 없음)`);
     await page.click("#ok");
-    await page.waitForSelector("#side_me .face", { timeout: 15000 });
+    await page.waitForSelector("#side_me", { timeout: 15000 });
     await page.waitForSelector("#guide", { timeout: 5000 });  // 첫 턴 안내 3장(계정 첫 3판)
     for (let i = 0; i < 3; i += 1) await page.click("#gnext");
     assert.equal(await page.$("#guide"), null);
@@ -113,7 +113,7 @@ try {
       if (!playable) await page.click("#dY");  // 빈 확정 확인
       await page.waitForSelector(".skip", { timeout: 15000 });  // 공개 연출 시작(확정 버튼 자리에 건너뛰기)
       assert.equal(await page.$("#ok"), null, "공개 중 확정 버튼 없음");
-      await page.waitForSelector("#cap.show", { timeout: 8000 });  // 효과 자막
+      await page.waitForSelector("#bub", { timeout: 8000 });  // 효과 자막(슬롯 옆 말풍선)
       assert.ok(await page.$(".obar i"), "처리 순서 막대");
       if (t === 2) { await sleep(1300); await page.screenshot({ path: `/tmp/play_rev_${vp.width}.png` }); }
       if (t >= 2) await page.click("#skip");  // 건너뛰기(연출 상한 20초라 시험 시간 단축)
