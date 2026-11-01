@@ -91,7 +91,8 @@ for (const r of rows) {
     changed.push(where);
   } else if (sheet === "추천덱") {
     const id = byName(base.characters, item), STY = { 공세: ["aggro", 1], 균형: ["balance", 2], 수비: ["defense", 3], 변칙: ["variant", 3] };
-    const sty = Object.keys(STY).find((s) => item.includes(s));
+    const tail = item.includes("→") ? item.slice(item.indexOf("→") + 1) : item;  // '수비→변칙'처럼 유형을 바꾸면 화살표 뒤가 새 유형
+    const sty = Object.keys(STY).find((s) => tail.includes(s));
     if (!id || !sty) { errors.push(`${where}: 캐릭터·유형을 항목에서 찾지 못함`); continue; }
     const slot = STY[sty][1], cur = (base.presets[id] ?? []).find((p) => p.slot === slot);
     const list = (s) => String(s).split(/[,\s]+/).filter(Boolean).sort().join(",");
