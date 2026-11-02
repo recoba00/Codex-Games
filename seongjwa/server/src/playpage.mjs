@@ -517,8 +517,8 @@ function faceCss(id){var a=((S.A.art||{})[id]||{})['000']||{},f=a.full,r=a.faceR
  if(a.thumb||f)return 'background-image:url('+(a.thumb||f).url+');background-size:220% auto;background-position:50% 8%';return ''}
 
 /* 안전 영역(노치·카메라 구멍·홈 표시줄, 기획지시 2026-11-01 픽5열안전영역): env() 값을 읽어 CSS 변수 --st/--sr/--sb/--sl와 배치 계산에 같이 쓴다. 시험은 window.__SAFE로 흉내 */
-function safe(){if(window.__SAFE)return window.__SAFE;var e=S.safeEl;if(!e){e=document.createElement('div');e.style.cssText='position:fixed;inset:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';document.body.appendChild(e);S.safeEl=e}
- var c=getComputedStyle(e),f=function(x){return parseFloat(x)||0};return {t:f(c.paddingTop),r:f(c.paddingRight),b:f(c.paddingBottom),l:f(c.paddingLeft)}}
+function safe(){var k=S.zs||1;if(window.__SAFE){var w=window.__SAFE;return {t:w.t/k,r:w.r/k,b:w.b/k,l:w.l/k}}var e=S.safeEl;if(!e){e=document.createElement('div');e.style.cssText='position:fixed;inset:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';document.body.appendChild(e);S.safeEl=e}
+ var c=getComputedStyle(e),f=function(x){return (parseFloat(x)||0)/k};return {t:f(c.paddingTop),r:f(c.paddingRight),b:f(c.paddingBottom),l:f(c.paddingLeft)}}
 function applySafe(){var f=safe(),d=document.documentElement.style;d.setProperty('--st',f.t+'px');d.setProperty('--sr',f.r+'px');d.setProperty('--sb',f.b+'px');d.setProperty('--sl',f.l+'px');return f}
 /* ---------- 시작 ---------- */
 function boot(){applySafe();
@@ -589,11 +589,12 @@ function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.h
 /* 밴·픽: 가로 3단(기획지시 2026-11-01 밴픽화면재배치). 왼쪽 내 선택 · 가운데 4열 목록(이 화면만 세로 스크롤, 줄 단위 멈춤) · 오른쪽 상대 "?".
    선택 테두리 자리는 처음부터 2pt(투명) → 눌러도 크기·위치 불변. 눌러 둔 캐릭터는 서버에 hint로 보내 시간 초과 때 그것으로 확정(37차) */
 /* 픽 배치(기획지시 픽5열안전영역): 폭 = 화면 − 좌우 안전 영역 − 좌우 14 → 좌 19% / 중앙 62% / 우 19%, 단 사이 12. 중앙 5열(9명 5+4), 크기 = min(폭, 2줄 높이), 72 미만이면 4열 */
-/* 큰 화면(사용자 요청 2026-11-02, 4K 등): 높이 800 기준으로 앱 전체를 확대. 배치는 가상 크기 VW()×VH()로 계산하고 #app을 scale로 키움.
+/* 화면 배율(사용자 요청 2026-11-02, 4K·태블릿·휴대폰): 기준 높이로 앱 전체를 확대·축소. 배치는 가상 크기 VW()×VH()로 계산하고 #app을 scale로 키움.
    몸통 위에 띄우는 팝업(카드 상세·툴팁·턴 배너)은 실제 화면 기준 */
-function bigScale(){var W=innerWidth,H=innerHeight;return (H>=900&&W>=1400)?Math.min(H/800,W/1300):1}
+/* 기기별로 화면을 꽉 쓰게(사용자 요청 2026-11-02): 휴대폰 가로(높이 500 이하)는 높이 390 기준, 높이 700 이상(태블릿·노트북·4K)은 높이 800 기준으로 배율. 안전 영역 값도 같은 배율로 나눠 유지 */
+function bigScale(){var W=innerWidth,H=innerHeight,s=1;if(H<=500&&W>H)s=Math.max(1,Math.min(1.25,H/390,W/760));else if(H>=700&&W>H)s=Math.max(1,Math.min(H/800,W/1000));return Math.round(s*1000)/1000}
 function VW(){return innerWidth/(S.zs||1)}function VH(){return innerHeight/(S.zs||1)}
-function applyZoom(){var z=bigScale(),a=$('app');S.zs=z;if(!a)return;if(z>1){a.style.width=(innerWidth/z)+'px';a.style.height=(innerHeight/z)+'px';a.style.right='auto';a.style.bottom='auto';a.style.transform='scale('+z+')';a.style.transformOrigin='0 0'}else{a.style.width='';a.style.height='';a.style.right='';a.style.bottom='';a.style.transform='';a.style.transformOrigin=''}}
+function applyZoom(){var z=bigScale(),a=$('app'),ch=S.zs!==z;S.zs=z;if(ch)applySafe();if(!a)return;if(z!==1){a.style.width=(innerWidth/z)+'px';a.style.height=(innerHeight/z)+'px';a.style.right='auto';a.style.bottom='auto';a.style.transform='scale('+z+')';a.style.transformOrigin='0 0'}else{a.style.width='';a.style.height='';a.style.right='';a.style.bottom='';a.style.transform='';a.style.transformOrigin=''}}
 function prepPad(){var f=safe(),short=VH()<=500;return {t:Math.max(12,f.t),r:f.r+14,b:Math.max(12,f.b),l:f.l+14,short:short}}  // 상하단 12 확보(사용자 요청 2026-11-01), 안전 영역이 더 크면 그만큼  // 확정 버튼은 홈 표시줄 위로 12
 function padCss(p){return 'padding:'+p.t+'px '+p.r+'px '+p.b+'px '+p.l+'px'}
 function pickLay(n){var W=VW(),H=VH(),p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;

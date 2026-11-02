@@ -49,7 +49,7 @@ try {
   assert.match(await (await fetch(`${API}/sw.js`)).text(), /shell-/);
   assert.equal((await fetch(`${API}/icons/maskable-512.png`)).headers.get("content-type"), "image/png");
   step("PWA: 매니페스트(전체 화면·가로·시작 /play)·서비스 워커·아이콘");
-  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 2000, height: 1080, name: "4K(배율 2 화면)" }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }, { width: 844, height: 390, name: "안전 영역 큰 휴대폰(좌우 47·아래 21)", touch: true, safe: { t: 0, r: 47, b: 21, l: 47 } }]) {
+  for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 2000, height: 1080, name: "4K(배율 2 화면)" }, { width: 932, height: 430, name: "큰 폰(아이폰 프로맥스)", touch: true, safe: { t: 0, r: 59, b: 21, l: 59 } }, { width: 1366, height: 1024, name: "태블릿(아이패드 프로)", touch: true, safe: { t: 0, r: 0, b: 20, l: 0 } }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }, { width: 844, height: 390, name: "안전 영역 큰 휴대폰(좌우 47·아래 21)", touch: true, safe: { t: 0, r: 47, b: 21, l: 47 } }]) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(vp.touch ? { isMobile: true, hasTouch: true } : {}) });
     if (vp.safe) await ctx.addInitScript((sf) => { window.__SAFE = sf; }, vp.safe);
     const page = await ctx.newPage();
@@ -90,6 +90,8 @@ try {
     const [opp, me] = await page.evaluate(() => ["#side_opp", "#side_me"].map((q) => document.querySelector(q).getBoundingClientRect().left));
     await page.screenshot({ path: `/tmp/play_t1_${vp.width}${vp.safe ? 's' : ''}.png` });
     assert.ok(opp > me + 100, `상대 프로필 우상단, 내 프로필 좌하단 ${opp} ${me}`);
+    { const g = await page.evaluate(() => { const sf = window.__SAFE || { b: 0 }; let bot = 0; for (const e of document.querySelectorAll(".hand .bc,.ctl,.mec")) bot = Math.max(bot, e.getBoundingClientRect().bottom); return Math.round(innerHeight - sf.b - bot); });
+      console.log(`  전투 하단 여백(안전 영역 제외) ${vp.name} ${g}px`); }
     step(`${vp.name}: 첫 턴 안내 3장 → 전투 화면(상대 프로필 우상단, 스크롤 없음)`);
     for (let t = 1; t <= 3; t += 1) {
       await page.waitForFunction(() => { const b = document.querySelector("#ok"); return b && !b.disabled; }, null, { timeout: 20000 });
