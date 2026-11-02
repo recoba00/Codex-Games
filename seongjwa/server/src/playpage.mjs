@@ -459,6 +459,7 @@ button.sm{padding:5px 10px;font-size:12px}
 .ko b{font-size:clamp(48px,16vh,120px);font-weight:900;letter-spacing:8px;color:#fff;text-shadow:0 0 24px #ff3b3b,0 0 48px #ff8a3c,0 4px 6px #000;animation:kob .9s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes kob{0%{transform:scale(3);opacity:0}30%{transform:scale(.9);opacity:1}45%{transform:scale(1.05)}100%{transform:scale(1)}}
 .bt3 .vc.down{filter:grayscale(1) brightness(.5);animation:none;transition:filter .3s}
+.bt3.lefty .slots.opp .tag{left:auto;right:-6px;transform:translate(100%,-50%)}  /* 왼손 모드: '지난 턴' 표시를 프로필 반대쪽으로 */
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -778,7 +779,7 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
   opItems=reveal.opp.map(function(x,i){var at=' id="rv_opp'+i+'"';return x.k==='spell'?cellSpell(x.id,z.sw,at,true):x.k==='active'?cellActive(op.char,z.sw,at,true,fo):cellCard(x.id,z.sw,at)});
   meItems=reveal.me.map(function(x,i){var at=' id="rv_me'+i+'"';return x.k==='spell'?cellSpell(x.id,z.sw,at,true):x.k==='active'?cellActive(me.char,z.sw,at,true,fm):cellCard(x.id,z.sw,at)})}
  else{
-  if(op.submitted){for(var i=0;i<3;i++)opItems.push({html:backCard(z.sw)});opTag='확정'}
+  if(op.submitted){for(var i=0;i<3;i++)opItems.push({html:backCard(z.sw)})}  // 확정 표시는 상대 프로필 뱃지 하나로(사용자 제보: 두 개 겹침)
   else if(S.lastOpp&&S.lastTurn===b.turn-1&&S.lastOpp.length){opItems=S.lastOpp.map(function(x){return x.k==='spell'?cellSpell(x.id,z.sw,'',false):x.k==='active'?cellActive(op.char,z.sw,'',false,fo):cellCard(x.id,z.sw)});opTag='지난 턴';opCls='old'}
   chosen.forEach(function(u){var c=me.hand.find(function(x){return x.uid===u});if(c){var it=cellCard(c.id,z.sw,' data-unpick="'+u+'"');it.skey='u'+u;meItems.push(it)}});
   var sp=sub?sub.spell:S.sel.spell,ac=sub?sub.active:S.sel.active;
