@@ -513,7 +513,7 @@ function bcCard(id,o){var k=card(id),sl=S.A.slots,art=sl['CARD_ART_'+id],lay='',
   +(own?'<div class="own">전용</div>':'')+'<div class="txt"><div class="nm">'+esc(k.name)+'</div>'+(o.mode==='hand'?(o.face?'<div class="sht">'+esc(shortOf(id))+'</div>':''):'<div class="tx">'+esc(k.effect_text)+'</div>')+'</div>'+(o.extra||'')+'</div>'}
 function shortOf(id){var k=card(id),t=k.effect_short||String(k.effect_text||'');return k.effect_short?t:(Array.from(t).length>15?Array.from(t).slice(0,15).join('')+'…':t)}  // 시트 효과_짧게, 없으면 효과 문구 앞 15자(임시)
 function backCard(w,extra){return '<div class="bc back" style="--w:'+w+'px;width:'+w+'px;'+(S.A.slots.CARD_BACK?'background-image:'+slotU('CARD_BACK'):'background:linear-gradient(160deg,#2a3a7a,#141a3a)')+'">'+(extra||'')+'</div>'}
-function faceCss(id){var a=((S.A.art||{})[id]||{})['000']||{},f=a.full,r=a.faceRect;
+function faceCss(id){var a=((S.A.art||{})[id]||{})['000']||{},f=a.full,r=a.faceRect;if(a.faceFrom==='combined'&&a.combined&&a.faceRectC){f=a.combined;r=a.faceRectC}
  if(f&&r){var s=100/r.w;return 'background-image:url('+f.url+');background-size:'+s.toFixed(1)+'% auto;background-position:'+(r.w>=1?0:r.x/(1-r.w)*100).toFixed(1)+'% '+(r.h>=1?0:r.y/(1-r.h)*100).toFixed(1)+'%'}
  if(a.thumb||f)return 'background-image:url('+(a.thumb||f).url+');background-size:220% auto;background-position:50% 8%';return ''}
 

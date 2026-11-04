@@ -54,7 +54,7 @@ const STATUS = {
   payment_unavailable: 503, payment_pending: 409, payment_failed: 402, steam_txn_failed: 502, item_not_owned: 403,
   friend_not_found: 404, already_friends: 409, friend_blocked: 403, friend_limit: 409, friend_in_game: 409, invite_expired: 410, not_friend: 403, invite_limit: 429, block_limit: 409,
   asset_not_webp: 400, asset_too_large: 413, asset_spec: 422, asset_region: 422, asset_slot_invalid: 400, asset_kind_invalid: 400, asset_skin_invalid: 400,
-  asset_char_invalid: 400, asset_full_missing: 409, asset_no_previous: 409, storage_failed: 502, state_invalid: 409,
+  asset_char_invalid: 400, asset_full_missing: 409, asset_combined_missing: 409, asset_no_previous: 409, storage_failed: 502, state_invalid: 409,
   rate_limited: 429, cup_closed: 409, cup_not_eligible: 403, cup_entry_active: 409, cup_left_this_week: 409, cup_no_ticket: 409, cup_no_entry: 409, cup_roster_invalid: 400,
   name_banned: 422, provider_taken: 409, provider_invalid: 400, choice_invalid: 400, account_not_active: 409, link_unavailable: 503, events_invalid: 400, confirm_required: 400,
   forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,

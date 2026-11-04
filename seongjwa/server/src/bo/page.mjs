@@ -215,6 +215,20 @@ function regionEditor(img,W,H,R){var host=$('aReg');if(!host)return;var mode='ca
  var drag=false;function mv(e){if(!drag)return;var rc=full.getBoundingClientRect(),x=(e.clientX-rc.left)/rc.width,y=(e.clientY-rc.top)/rc.height,r=R[mode];r.x=x-r.w/2;r.y=y-r.h/2;clamp(mode);draw()}
  full.onpointerdown=function(e){drag=true;full.setPointerCapture(e.pointerId);mv(e)};full.onpointermove=mv;full.onpointerup=function(){drag=false};
  clamp('card');clamp('face');draw()}
+/* 합본 얼굴 영역(1:1): 얼굴 프로필을 합본에서 자를 때 쓰는 영역. 합본 그림 위에서 끌어 옮김 */
+function faceEditorC(img,W,H,R){var host=$('aRegC');if(!host)return;var rh=W/H,maxW=Math.min(1,1/rh);
+ R.face=R.face?{x:R.face.x,y:R.face.y,w:R.face.w,h:R.face.w*rh}:{x:0.3,y:0.05,w:0.4,h:0.4*rh};
+ host.innerHTML='<div class="row" style="align-items:flex-start"><canvas id="rcFull" width="240" height="'+Math.round(240*H/W)+'" style="border:1px solid var(--line);touch-action:none;cursor:move"></canvas><div><div class="small muted">합본 얼굴(1:1)</div><canvas id="rcFace" width="100" height="100" style="border-radius:50%;border:1px solid var(--line)"></canvas></div></div>'
+ +'<label class="small" style="display:block;margin-top:8px">합본 얼굴 영역 크기 <input type="range" id="rcS" min="50" max="1000" value="'+Math.round(R.face.w/maxW*1000)+'" style="width:100%"></label><div class="small" id="rcWarn"></div>';
+ var cv=$('rcFull'),sc=cv.width/W;
+ function clamp(){var r=R.face;r.w=Math.min(maxW,Math.max(0.05,r.w));r.h=r.w*rh;r.x=Math.min(1-r.w,Math.max(0,r.x));r.y=Math.min(1-r.h,Math.max(0,r.y))}
+ function draw(){var g=cv.getContext('2d'),r=R.face;g.clearRect(0,0,cv.width,cv.height);g.drawImage(img,0,0,cv.width,cv.height);g.lineWidth=3;g.strokeStyle='#ffb020';g.strokeRect(r.x*W*sc,r.y*H*sc,r.w*W*sc,r.h*H*sc);
+  var f=$('rcFace').getContext('2d');f.clearRect(0,0,100,100);f.drawImage(img,r.x*img.naturalWidth,r.y*img.naturalHeight,r.w*img.naturalWidth,r.h*img.naturalHeight,0,0,100,100);
+  var px=Math.round(r.w*W);$('rcWarn').innerHTML=px<512?'<span class="tag warn">합본 얼굴 영역 '+px+'px — 출력 512px보다 작아 흐릴 수 있어요(상세 10)</span>':'<span class="tag ok">합본 얼굴 영역 '+px+'px</span>'}
+ $('rcS').oninput=function(e){var r=R.face,cx=r.x+r.w/2,cy=r.y+r.h/2;r.w=maxW*e.target.value/1000;r.h=r.w*rh;r.x=cx-r.w/2;r.y=cy-r.h/2;clamp();draw()};
+ var drag=false;function mv(e){if(!drag)return;var rc=cv.getBoundingClientRect(),r=R.face;r.x=(e.clientX-rc.left)/rc.width-r.w/2;r.y=(e.clientY-rc.top)/rc.height-r.h/2;clamp();draw()}
+ cv.onpointerdown=function(e){drag=true;cv.setPointerCapture(e.pointerId);mv(e)};cv.onpointermove=mv;cv.onpointerup=function(){drag=false};
+ clamp();draw()}
 
 /* 목록 → 상세: 에셋 등록(목록: 캐릭터 카드·슬롯 카드) → 캐릭터 상세 / 슬롯 상세 */
 function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
@@ -266,11 +280,12 @@ V.assetChar=function(){T.ach=T.ach||ssGet('bo_ach');T.askin=T.askin||ssGet('bo_a
  +'<p class="small muted" style="margin:-6px 0 12px">라이브 v'+d.live+' 수치(읽기 전용, xlsx로 바꿈): HP '+st.hp+' · ATK '+st.atk+' · DEF '+st.def+' · SPD '+st.spd+' · CRIT '+st.crit+'%. 스킨은 외형만 바뀌고 수치는 캐릭터 값 그대로예요(총괄 4장).</p>'
  +'<div class="card" style="margin-bottom:14px"><div class="row"><b>스킨</b>'+ids.map(function(s){return '<button class="btn sm'+(s===T.askin?' pri':'')+'" data-askin="'+s+'">'+(s==='000'?'000 기본':s)+(skins[s]&&skins[s].full?'':' ·비어 있음')+'</button>'}).join('')+(ed?'<input id="aSkinNew" placeholder="새 스킨 ID(숫자 3자리)" size="12" maxlength="3"><button class="btn sm" id="aSkinAdd">추가</button>':'')+'</div></div>'
  +'<div class="card" style="margin-bottom:14px"><h3>스킨 '+T.askin+' 이미지</h3><div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">전신(9:16)</div>'+aImg(cur.full,220)+'</div><div><div class="small muted">밴픽 축소본</div>'+aImg(cur.thumb,110)+'</div><div><div class="small muted">얼굴 파일(선택)</div>'+aImg(cur.face,80,true)+'</div></div>'
- +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes)+' '+metaLine(K('full')):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+'</div>'
+ +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes)+' '+metaLine(K('full')):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+(cur.combined?' · 얼굴 프로필 '+(cur.faceFrom==='combined'?'<span class="tag ok">합본 기준</span>':'캐릭터 PNG 기준'):'')+'</div>'
  +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+revBtn('aFullRev',K('full'),'전신 이전 파일로')+revBtn('aFaceRev',K('face'),'얼굴 파일 이전으로')+'</div>':'')
  +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경 권장(투명이 아니어도 올릴 수 있어요, 상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
  +bgCard(d,c,cur,ed,K)
- +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button>'+revBtn('aRegRev',K('regions'),'이전 영역으로')+' '+metaLine(K('regions'))+'</div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
+ +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'
+  +(cur.combined?'<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><div class="row" style="margin-bottom:8px"><b class="small">얼굴 프로필 기준</b><button class="btn sm'+(cur.faceFrom!=='combined'?' pri':'')+'" data-ff="full">캐릭터 PNG</button><button class="btn sm'+(cur.faceFrom==='combined'?' pri':'')+'" data-ff="combined">합본</button><span class="small muted">합본을 고르면 인게임 얼굴 프로필을 아래 합본 영역으로 잘라요(합본이 빠지면 캐릭터 PNG 영역으로 대체).</span></div><div id="aRegC"></div></div>':'')+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button>'+revBtn('aRegRev',K('regions'),'이전 영역으로')+' '+metaLine(K('regions'))+'</div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
 V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var cur=((d.art[T.ach]||{})[T.askin])||{},ch='&char='+T.ach+'&skin='+T.askin;
  $('view').onclick=function(e){var s=e.target.closest('[data-askin]');if(s){T.askin=s.dataset.askin;ssSet('bo_askin',T.askin);render()}};
  if($('aSkinAdd'))$('aSkinAdd').onclick=function(){var s=val('aSkinNew');if(!/^\d{3}$/.test(s))return toast('스킨 ID는 숫자 3자리');T.askin=s;ssSet('bo_askin',s);render()};
@@ -284,7 +299,10 @@ V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bind
  if($('aFaceRev'))$('aFaceRev').onclick=rv('face','얼굴 파일을 직전 파일로 되돌릴까요?');
  if($('aRegRev'))$('aRegRev').onclick=rv('regions','카드·얼굴 영역을 직전 값으로 되돌릴까요?');
  if(cur.full&&$('aReg'))loadImg(d.base+cur.full.path).then(function(img){var R={card:cur.card,face:cur.faceRect};regionEditor(img,cur.full.w,cur.full.h,R);
-  if($('aRegSave'))$('aRegSave').onclick=function(){api('/assets/regions',{char:T.ach,skin:T.askin,card:R.card,face:R.face}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
+  var RC=null,ff=cur.faceFrom==='combined'?'combined':'full';
+  document.querySelectorAll('[data-ff]').forEach(function(b){b.onclick=function(){ff=b.dataset.ff;document.querySelectorAll('[data-ff]').forEach(function(x){x.className='btn sm'+(x.dataset.ff===ff?' pri':'')})}});
+  if(cur.combined&&cur.combined.path&&$('aRegC'))loadImg(d.base+cur.combined.path).then(function(ci){RC={face:cur.faceRectC||cur.faceRect||null};faceEditorC(ci,cur.combined.w||ci.naturalWidth,cur.combined.h||ci.naturalHeight,RC)}).catch(fail);
+  if($('aRegSave'))$('aRegSave').onclick=function(){if(ff==='combined'&&!RC)return toast('합본 그림을 불러오는 중이에요');api('/assets/regions',{char:T.ach,skin:T.askin,card:R.card,face:R.face,faceC:RC?RC.face:undefined,faceFrom:ff}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
 
 /* 카드 배경 3가지(기획지시 2026-10-30 배경방식): 기본(진영 슬롯) / 컬러(12색, 세로 그라데이션) / 합본(배경+캐릭터 한 장). 방식을 바꿔도 다른 방식의 파일·색은 그대로 */
 var BG_OF={'불':'CARD_BG_FIRE','물':'CARD_BG_WATER','바람':'CARD_BG_WIND'};

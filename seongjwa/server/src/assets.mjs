@@ -85,6 +85,16 @@ export function checkUpload(kind, info, bytes, slot = null) {
 }
 
 // 영역 좌표 검사(0~1 비율). 카드: 3:4·이미지 안(크기·위치 자유, 사용자 결정 2026-10-24), 얼굴: 1:1·이미지 안. 얼굴 영역이 512px 미만이면 경고
+const round = (r) => Object.fromEntries(["x", "y", "w", "h"].map((k) => [k, Math.round(r[k] * 1e5) / 1e5]));
+// 합본에서 고른 얼굴 영역(1:1, 합본 이미지 기준 비율 좌표)
+export function checkFaceOn(img, face, label = "합본") {
+  const bad = (msg) => Object.assign(new Error("asset_region"), { extra: { detail: msg } });
+  if (!(face && ["x", "y", "w", "h"].every((k) => Number.isFinite(face[k]) && face[k] >= 0 && face[k] <= 1))) throw bad("좌표는 0~1 비율 x·y·w·h");
+  if (Math.abs(face.w * img.w - face.h * img.h) > 2) throw bad(`${label} 얼굴 영역 비율 1:1`);
+  if (face.x + face.w > 1.002 || face.y + face.h > 1.002) throw bad(`${label} 얼굴 영역이 이미지 밖`);
+  const px = Math.round(face.w * img.w);
+  return { face: round(face), warnings: px < ART.faceRect.minPx ? [`${label} 얼굴 영역 ${px}px — 출력 512px보다 작아 흐릴 수 있음(상세 10)`] : [] };
+}
 export function checkRegions(full, card, face) {
   const bad = (msg) => Object.assign(new Error("asset_region"), { extra: { detail: msg } });
   const num = (r) => r && ["x", "y", "w", "h"].every((k) => Number.isFinite(r[k]) && r[k] >= 0 && r[k] <= 1);
@@ -95,7 +105,6 @@ export function checkRegions(full, card, face) {
   if (card.x + card.w > 1 + eps || card.y + card.h > 1 + eps) throw bad("카드 영역이 이미지 밖");
   if (Math.abs(face.w * W - face.h * H) > 2) throw bad("얼굴 영역 비율 1:1");
   if (face.x + face.w > 1 + eps || face.y + face.h > 1 + eps) throw bad("얼굴 영역이 이미지 밖");
-  const round = (r) => Object.fromEntries(["x", "y", "w", "h"].map((k) => [k, Math.round(r[k] * 1e5) / 1e5]));
   const warnings = [];
   if (card.w * W < ART.cardRect.minPx) warnings.push(`카드 영역 ${Math.round(card.w * W)}×${Math.round(card.h * H)}px — 출력 720×960px보다 작아 흐릴 수 있음(상세 10)`);
   if (face.w * W < ART.faceRect.minPx) warnings.push(`얼굴 영역 ${Math.round(face.w * W)}px — 출력 512px보다 작아 흐릴 수 있음(상세 10)`);
@@ -152,7 +161,7 @@ export function shapeAssets(rows = {}, pick = "cur") {
     else if (p[0] === "slot") slots[p[1]] = v;
     else if (p[0] === "art") {
       const s = ((art[p[1]] ??= {})[p[2]] ??= {});
-      if (p[3] === "regions") { if (v.card) s.card = v.card; if (v.faceRect) s.faceRect = v.faceRect; } else s[p[3]] = v;
+      if (p[3] === "regions") { if (v.card) s.card = v.card; if (v.faceRect) s.faceRect = v.faceRect; if (v.faceRectC) s.faceRectC = v.faceRectC; if (v.faceFrom) s.faceFrom = v.faceFrom; } else s[p[3]] = v;
     }
   }
   return { slots, art };
@@ -181,6 +190,8 @@ export function assetManifest(shaped, env, factions = {}) {
     for (const [skin, a] of Object.entries(skins)) {
       if (!a.full) continue;  // 전신이 없는 스킨은 내보내지 않음
       (art[ch] ??= {})[skin] = { full: file(a.full), thumb: file(a.thumb), face: file(a.face), combined: file(a.combined), card: a.card ?? null, faceRect: a.faceRect ?? null,
+        // 얼굴 프로필 기준: "combined"이면 합본 + faceRectC로 자른다(합본이 없으면 전신 + faceRect로 대체)
+        faceRectC: a.faceRectC ?? null, faceFrom: a.faceFrom === "combined" && a.combined && a.faceRectC ? "combined" : "full",
         ...bgOf(a, FACTION_BG[factions[ch]] ?? "CARD_BG_NEUTRAL") };
     }
   }

@@ -9,7 +9,7 @@ import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
 import { offerRule } from "../shop-rules.mjs";
 import { cupRewardCfg, cupWindow } from "../cup.mjs";
-import { ART, SLOTS, artKey, checkBg, assetPath, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storageDelete, storagePut, webpInfo } from "../assets.mjs";
+import { ART, SLOTS, artKey, checkBg, assetPath, checkFaceOn, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storageDelete, storagePut, webpInfo } from "../assets.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -341,10 +341,21 @@ export async function handleBo(request, env, url) {
       const b = await body(request);
       const skin = String(b.skin ?? "000");
       if (!/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(skin)) throw new Error("value_invalid");
-      const full = shapeAssets(await rpc(env, "asset_list", {})).art?.[b.char]?.[skin]?.full;
+      const a = shapeAssets(await rpc(env, "asset_list", {})).art?.[b.char]?.[skin] ?? {};
+      const full = a.full;
       if (!full) throw new Error("asset_full_missing");
       const r = checkRegions(full, b.card, b.face);
-      await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(b.char, skin, "regions"), p_value: { card: r.card, faceRect: r.face }, p_action: "카드·얼굴 영역 지정", p_detail: { card: r.card, face: r.face } });
+      // 합본 얼굴 영역(선택): faceC = 합본 기준 1:1 영역, faceFrom = "full" | "combined"(얼굴 프로필을 어느 그림에서 자를지)
+      const faceFrom = b.faceFrom === "combined" ? "combined" : "full";
+      let faceC = null;
+      if (b.faceC) {
+        if (!a.combined?.w) throw new Error("asset_combined_missing");
+        const c = checkFaceOn(a.combined, b.faceC);
+        faceC = c.face; r.warnings.push(...c.warnings);
+      }
+      if (faceFrom === "combined" && !faceC) throw new Error("asset_combined_missing");
+      const value = { card: r.card, faceRect: r.face, ...(faceC ? { faceRectC: faceC } : {}), ...(faceFrom === "combined" ? { faceFrom } : {}) };
+      await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(b.char, skin, "regions"), p_value: value, p_action: "카드·얼굴 영역 지정", p_detail: { card: r.card, face: r.face, faceC, faceFrom } });
       dropAssetCache();
       return json({ ok: true, ...r });
     }

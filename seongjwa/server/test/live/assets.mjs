@@ -123,6 +123,14 @@ try {
   assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].bgMode], ["combined", "combined"]);
   await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color" }, admin));  // 색을 안 보내면 전에 고른 색 유지
   assert.equal((await ok(call("/v1/assets"))).art.AU["000"].bgColor, "#1FA3A3");
+  // 얼굴 프로필을 합본에서 자르기: 합본 기준 1:1 영역 + 기준 "combined" → 게임 목록 faceFrom/faceRectC, 기준 "full"로 저장하면 전신으로 돌아옴
+  const RG = { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.75 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } };
+  await err(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0, y: 0, w: 0.5, h: 0.5 }, faceFrom: "combined" }, admin), "asset_region");
+  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.28125 }, faceFrom: "combined" }, admin));
+  mm = await ok(call("/v1/assets"));
+  assert.deepEqual([mm.art.AU["000"].faceFrom, mm.art.AU["000"].faceRectC.x], ["combined", 0.25]);
+  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.28125 }, faceFrom: "full" }, admin));
+  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].faceFrom, "full");
   const audit = await sql("select action from public.audit_log where target like '에셋 %' order by id desc limit 20");
   assert.ok(audit.some((a) => a.action === "이전 파일로 되돌리기") && audit.some((a) => a.action === "슬롯 파일 교체"));
   step("게임 목록 바로 반영(ETag 304), xlsx 배포와 무관, 직전 파일 되돌리기(한 번 더 = 원복), 빼기 되돌리기, 합본(기본 배경 안 씀)·진영 기본 배경, 감사 로그");
@@ -183,6 +191,20 @@ try {
   await page.waitForSelector('[data-ach="SE"]');
   await page.locator('[data-ach="AU"]').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_assets_list.png` });
+  // 합본이 있는 아우렐: 얼굴 프로필 기준 "합본" → 합본 위 얼굴 영역 끌기 → 저장 → 게임 목록 faceFrom combined
+  await page.click('[data-ach="AU"]');
+  await page.waitForSelector("#rcFull");
+  await page.click('[data-ff="combined"]');
+  const cb = await page.locator("#rcFull").boundingBox();
+  await page.mouse.click(cb.x + cb.width / 2, cb.y + cb.height * 0.2);
+  await page.click("#aRegSave");
+  for (let i = 0; i < 20 && (await ok(call("/v1/assets"))).art.AU["000"].faceFrom !== "combined"; i += 1) await sleep(200);
+  const auF = (await ok(call("/v1/assets"))).art.AU["000"];
+  assert.equal(auF.faceFrom, "combined");
+  assert.ok(Math.abs(auF.faceRectC.y + auF.faceRectC.h / 2 - 0.2) < 0.04, JSON.stringify(auF.faceRectC));
+  await page.waitForSelector("#rcFull"); await page.locator("#aRegC").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_face_combined.png` });
+  await page.click("#aBack"); await page.waitForSelector('[data-ach="SE"]');
   await page.evaluate(() => sessionStorage.setItem("bo_wasm_webp", "1"));  // iPhone Safari처럼 브라우저 WebP 저장이 없을 때 → libwebp 인코더(/bo/vendor)
   await page.click('[data-ach="SE"]');
   await page.waitForSelector("#aFull", { state: "attached" });
