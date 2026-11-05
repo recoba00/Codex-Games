@@ -132,6 +132,10 @@ try {
           await page.screenshot({ path: `/tmp/play_spell_${vp.width}.png` }); await page.click("button[data-spell].on"); }
         await page.evaluate(() => { float("opp", "-128", ""); float("me", "-245", "crit"); setTimeout(() => float("opp", "+60", "heal"), 120); });
         await sleep(450); await page.screenshot({ path: `/tmp/play_fx_${vp.width}.png` });
+        await page.evaluate(() => { emoteShow({ seat: S.st.you, id: "EMOTE_HELLO" }, true); emoteShow({ seat: 1 - S.st.you, id: "EMOTE_THINK" }, true); });
+        await sleep(300); await page.screenshot({ path: `/tmp/play_emo_${vp.width}.png` });
+        const au = await page.evaluate(() => ({ st: SND.ctx && SND.ctx.state, cur: SND.cur }));  // 소리: 첫 클릭 뒤 오디오 켜짐, 전투 곡
+        assert.equal(au.cur, "battle", JSON.stringify(au));
         await page.mouse.move(0, 0);
       }
       await page.click("#ok");
