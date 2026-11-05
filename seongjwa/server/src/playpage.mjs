@@ -776,6 +776,10 @@ body.rmo .bt4 .cir.ac.ready::before{animation:none}
 .bt4 .emp4 button{padding:3px}
 .bt4 .emp4 button .emi{transition:transform .15s}.bt4 .emp4 button:hover .emi{transform:scale(1.15) rotate(-6deg)}
 body.rmo .bt4 .emb .emi{animation:none}
+
+/* 카드 테두리(CARD_FRAME) 밖으로 배경·그림이 삐져나오지 않게: 프레임이 있는 카드는 안쪽 층을 테두리 두께만큼 들여서 자르고, 카드 자체 바탕·그림자는 없앰 */
+.bc:has(>.frm){background:transparent}
+.bc:has(>.frm)>.l:not(.frm){inset:2.8% 3.4%;border-radius:7%/5%;overflow:hidden}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
