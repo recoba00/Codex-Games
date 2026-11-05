@@ -189,6 +189,10 @@ try {
       pages.push([pg, nick]);
     }
     for (const [pg] of pages) await pg.waitForSelector("[data-pick],[data-ban]", { timeout: 30000 });
+    for (const [pg] of pages) {  // 시간 보장: 두 사람 모두 접속한 때부터 밴 시간(로컬 데이터 10초)을 센다
+      const leftMs = await pg.evaluate(() => S.st.phaseDeadline - now());
+      assert.ok(leftMs > 7000, `매칭 뒤 밴 시간이 줄어 있음 ${leftMs}ms`);
+    }
     const labs = await Promise.all(pages.map(([pg]) => pg.$$eval(".lab2", (x) => x.map((e) => e.textContent))));
     assert.ok(labs[0].join(" ").includes(pages[0][1]) && labs[0].join(" ").includes(pages[1][1]), `밴픽에 닉네임 ${labs[0]}`);
     assert.ok(labs[1].join(" ").includes(pages[1][1]) && labs[1].join(" ").includes(pages[0][1]), `밴픽에 닉네임 ${labs[1]}`);

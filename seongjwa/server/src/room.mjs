@@ -18,6 +18,7 @@ import { masteryDbCfg, masteryTiers } from "./mastery.mjs";
 import { frameOf, masterTierNo } from "./badges.mjs";
 
 export const PREP = Object.freeze({ ban_sec: 10, pick_sec: 15, loadout_sec: 15, grace_ms: 500 });
+const JOIN_GRACE_MS = 15000;  // 매칭 뒤 접속까지 기다려 주는 최대 시간(한 명이 끝내 안 들어오면 이 뒤로 시간이 흐름)
 const LOBBY_TTL_MS = 30 * 60 * 1000;
 const TICKET_TTL_MS = 45 * 1000;
 const SAVE_RETRY_MS = 30 * 1000;
@@ -135,10 +136,13 @@ export class FriendRoom extends DurableObject {
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment({ seat, acc: t.acc, sid: t.sid });
     const g = this.room.game;
-    // AI 대전: 픽 시간(총괄 7장 15초)은 플레이어가 실제로 접속한 때부터 센다(방 생성~화면 표시 사이 손실 방지, 기획지시 전투화면정리 확인 1)
-    if (g && this.room.mode === "practice" && this.room.phase === "pick" && !g.joinedAt && seat >= 0 && !this.room.members[seat].ai) {
-      g.joinedAt = now;
-      this.room.phaseDeadline = now + this.prepSec("pick_sec") * 1000 + PREP.grace_ms;
+    // 첫 준비 단계 시간은 사람이 모두 실제로 접속한 때부터 센다(AI 대전·매칭 모두, 방 생성~화면 표시 사이 손실 방지: 기획지시 전투화면정리 확인 1, 사용자 요청 2026-11-05)
+    if (g?.waitJoin && ["ban", "pick"].includes(this.room.phase) && seat >= 0 && !this.room.members[seat].ai) {
+      g.joined[seat] = true;
+      if (g.joined.every(Boolean)) {
+        g.waitJoin = false;
+        this.room.phaseDeadline = now + this.prepSec(this.room.phase === "ban" ? "ban_sec" : "pick_sec") * 1000 + PREP.grace_ms;
+      }
       await this.save();
     }
     if (g?.away?.[seat]) {
@@ -367,6 +371,10 @@ export class FriendRoom extends DurableObject {
       room.phase = "ban";
       room.phaseDeadline = now + this.prepSec("ban_sec") * 1000 + PREP.grace_ms;
     } else this.toPick(now);
+    // 첫 준비 단계(밴, 밴 없으면 픽) 시간 보장(사용자 요청 2026-11-05): 사람이 모두 접속한 때부터 센다. 접속 전에는 대기 여유(JOIN_GRACE_MS)만큼 늘려 둠
+    const g0 = room.game;
+    g0.joined = room.members.map((m, s) => Boolean(m.ai) || this.sockets(s).length > 0);
+    if (!g0.joined.every(Boolean)) { g0.waitJoin = true; room.phaseDeadline += JOIN_GRACE_MS; }
     this.aiPrep(now);
   }
 
