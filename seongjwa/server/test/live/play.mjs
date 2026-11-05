@@ -106,8 +106,19 @@ try {
       }
       if (t === 1 && !vp.touch) {  // 카드 상세(호버 0.2초)
         await page.mouse.move(0, 0);
-        await page.hover(".hand .bc:not(.picked)", { force: true });
-        await page.waitForSelector("#peek", { timeout: 3000 });  // 시안 반영 후 넓은 화면 패널 없음 → 카드 상세 팝업
+        // 전투카드 길게 누르기(사용자 요청 2026-11-05): 딤 + 왼쪽 카드·오른쪽 설명, 누르면 닫힘. 호버만으로는 안 뜸
+        await page.hover(".hand .bc:not(.picked)", { force: true }); await sleep(400);
+        assert.equal(await page.$("#peek"), null, "호버만으로 카드 상세 안 뜸");
+        await page.mouse.down(); await sleep(500); await page.mouse.up();
+        await page.waitForSelector("#peek.cdm", { timeout: 3000 });
+        await page.screenshot({ path: `/tmp/play_card_${vp.width}.png` });
+        await page.mouse.click(10, 10);
+        await page.waitForFunction(() => !document.querySelector("#peek"), null, { timeout: 2000 });
+        // 액티브 스킬 연출(시안): 2초, 오른쪽 아래 스킵
+        await page.evaluate(() => skillCut(S.st.battle.me.char, "me", 2000));
+        await sleep(700); await page.screenshot({ path: `/tmp/play_skill_${vp.width}.png` });
+        await page.click(".scut .sskip");
+        assert.equal(await page.$(".scut"), null, "스킵하면 바로 닫힘");
         await page.mouse.move(0, 0);
       }
       await page.click("#ok");
