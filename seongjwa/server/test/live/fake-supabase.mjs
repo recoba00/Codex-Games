@@ -21,6 +21,7 @@ function reply(res, status, body) {
   res.end(body === undefined ? "" : JSON.stringify(body));
 }
 
+const names = new Map();
 export function startFakeSupabase(port) {
   const server = createServer((req, res) => {
     let raw = "";
@@ -42,6 +43,8 @@ export function startFakeSupabase(port) {
         const s = sessions.get(body.p_session);
         return reply(res, 200, Boolean(s && !s.revoked));
       }
+      if (url.pathname === "/rest/v1/rpc/profile_get") return reply(res, 200, { id: body.p_account, name: names.get(body.p_account) ?? null, equipped: {}, seasons: [] });  // 닉네임(밴픽 표시)
+      if (url.pathname === "/rest/v1/rpc/profile_rename") { names.set(body.p_account, body.p_name); return reply(res, 200, { name: body.p_name, cost: 0 }); }
       if (url.pathname === "/rest/v1/rpc/asset_list") return reply(res, 200, {});  // 에셋 없음 → 게임 내장 기본(전투 프로토타입 시험)
       if (url.pathname === "/rest/v1/rpc/season_current") return reply(res, 200, season);
       if (url.pathname === "/rest/v1/rpc/account_unban_expired") return reply(res, 200, false);

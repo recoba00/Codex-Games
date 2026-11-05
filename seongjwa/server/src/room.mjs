@@ -349,11 +349,16 @@ export class FriendRoom extends DurableObject {
     const mast = accs.length && this.env.SUPABASE_URL ? await rpc(this.env, "mastery_get", { p_accounts: accs }).catch(() => ({})) : {};
     const season = room.seasonId ?? (accs.length && this.env.SUPABASE_URL ? (await currentSeason(this.env).catch(() => null))?.id : null);
     const badges = season ? await rpc(this.env, "badges_get", { p_accounts: accs, p_season: season, p_master_tier: masterTierNo(pinned.snapshot) }).catch(() => ({})) : {};
+    // 닉네임(사용자 요청 2026-11-05: 밴픽에서 나/상대 대신 닉네임). AI는 'AI · 난이도'
+    const profs = accs.length && this.env.SUPABASE_URL ? await Promise.all(accs.map((a) => rpc(this.env, "profile_get", { p_account: a }).catch(() => null))) : [];
+    const nameOf = Object.fromEntries(accs.map((a, i) => [a, profs[i]?.name ?? null]));
+    const DIFF_KO = { easy: "쉬움", normal: "보통", hard: "어려움" };
     room.game = {
       id: crypto.randomUUID(), startedAt: now, dataVersion: pinned.version, data: pinned.snapshot,
       mastery: room.members.map((m) => (m.ai ? {} : masteryTiers(mast?.[m.acc] ?? {}, pinned.snapshot))),  // 숙련도 단계(능력치 영향 없음)
       // 카드 프레임 = 현재 티어, 홀로 연출 = 계정 속성(LoL식 정리). AI는 표시 티어(랭킹 AI) 또는 브론즈, 홀로 없음
       frames: room.members.map((m) => (m.ai ? frameOf(pinned.snapshot, { cur: { tier_no: m.tier ?? room.members.find((x) => !x.ai)?.tier ?? 1 } }) : frameOf(pinned.snapshot, badges?.[m.acc]))),
+      names: room.members.map((m) => (m.ai ? (room.mode === "practice" ? `AI · ${DIFF_KO[m.ai.difficulty] ?? "보통"}` : "AI") : (nameOf[m.acc] || "플레이어"))),
       bans: [null, null], picks: [null, null], loadouts: [null, null],
       battle: null, deadline: [0, 0], timebank: [0, 0], away: [null, null], warned: [0, 0], log: []
     };
@@ -802,6 +807,7 @@ export class FriendRoom extends DurableObject {
       mastery: { mine: g.mastery?.[seat] ?? {}, opp: ["loadout", "battle"].includes(r.phase) && g.picks[1 - seat] ? { [g.picks[1 - seat]]: g.mastery?.[1 - seat]?.[g.picks[1 - seat]] ?? 1 } : {} },
       // 티어 프레임·홀로 연출: 내 것은 언제나, 상대 것은 픽 공개 뒤(밴·픽 단계 null)
       frame: { mine: g.frames?.[seat] ?? null, opp: ["loadout", "battle"].includes(r.phase) && g.picks[1 - seat] ? g.frames?.[1 - seat] ?? null : null },
+      names: { mine: g.names?.[seat] ?? null, opp: g.names?.[1 - seat] ?? null },
       myLoadout: g.loadouts[seat] ? { spells: g.loadouts[seat].spells, preset: g.loadouts[seat].preset } : null,
       oppLoadoutDone: Boolean(g.loadouts[1 - seat])
     };

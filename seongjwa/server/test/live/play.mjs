@@ -105,7 +105,7 @@ try {
       if (playable) {
         await page.locator(".hand .bc:not(.cant):not(.lock)").first().click();
         assert.equal(await page.$$eval(".slot.mine .bc", (x) => x.length), 1, "내 슬롯에 카드");
-        assert.equal(await page.$$eval(".slot.mine .fl.flb", (x) => x.length), 4, "나머지 슬롯은 카드 뒷면(시안)");
+        assert.equal(await page.$$eval(".slot.mine .fl.flb", (x) => x.length), 2, "나머지 슬롯은 카드 뒷면(빈 칸 3장 기본)");
       }
       if (t === 1 && !vp.touch) {  // 카드 상세(호버 0.2초)
         await page.mouse.move(0, 0);
@@ -122,6 +122,13 @@ try {
         await sleep(700); await page.screenshot({ path: `/tmp/play_skill_${vp.width}.png` });
         await page.click(".scut .sskip");
         assert.equal(await page.$(".scut"), null, "스킵하면 바로 닫힘");
+        const nSlot = await page.$$eval(".slot.mine", (x) => x.length);
+        assert.equal(nSlot, 3, "빈 슬롯은 3칸(낸 만큼 늘어남)");
+        await page.evaluate(() => { const id = Object.keys(S.st.battle.me.spells)[0]; S.sel.spell = id; render(); });
+        await page.waitForSelector(".slot.mine .spcard"); assert.equal(await page.$$eval(".slot.mine", (x) => x.length), 3);  // 스펠 = 카드 UI(시험용으로 쿨다운 무시하고 표시만) await page.evaluate(() => { S.sel.spell = null; render(); });
+        const sp = await page.$("button[data-spell]:not([disabled])");
+        if (sp) { await sp.click(); await page.waitForSelector(".slot.mine .spcard"); assert.equal(await page.$$eval(".slot.mine", (x) => x.length), (await page.$$eval(".slot.mine .bc", (x) => x.length)) > 2 ? 4 : 3);
+          await page.screenshot({ path: `/tmp/play_spell_${vp.width}.png` }); await page.click("button[data-spell].on"); }
         await page.evaluate(() => { float("opp", "-128", ""); float("me", "-245", "crit"); setTimeout(() => float("opp", "+60", "heal"), 120); });
         await sleep(450); await page.screenshot({ path: `/tmp/play_fx_${vp.width}.png` });
         await page.mouse.move(0, 0);
@@ -171,6 +178,21 @@ try {
     assert.ok(await page.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => Boolean(r))), "서비스 워커 등록");
     assert.deepEqual(errors, []);
     await ctx.close();
+  }
+  if (!process.env.PLAY_VP || process.env.PLAY_VP.includes("pvp")) {  // 유저 대전(랜덤 매칭) + 밴픽 닉네임(사용자 요청 2026-11-05)
+    const pages = [];
+    for (const [id, nick] of [[`pvpa${process.pid}`, `알파${process.pid % 1000}`], [`pvpb${process.pid}`, `베타${process.pid % 1000}`]]) {
+      const c = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
+      const pg = await c.newPage(); pg.on("pageerror", (e) => { throw e; });
+      await pg.goto(`${API}/play`); await pg.fill("#dev", id); await pg.fill("#nick", nick); await pg.click("#pvp");
+      pages.push([pg, nick]);
+    }
+    for (const [pg] of pages) await pg.waitForSelector("[data-pick],[data-ban]", { timeout: 30000 });
+    const labs = await Promise.all(pages.map(([pg]) => pg.$$eval(".lab2", (x) => x.map((e) => e.textContent))));
+    assert.ok(labs[0].join(" ").includes(pages[0][1]) && labs[0].join(" ").includes(pages[1][1]), `밴픽에 닉네임 ${labs[0]}`);
+    assert.ok(labs[1].join(" ").includes(pages[1][1]) && labs[1].join(" ").includes(pages[0][1]), `밴픽에 닉네임 ${labs[1]}`);
+    await pages[0][0].screenshot({ path: "/tmp/play_pvp_ban.png" });
+    step("유저 대전: 두 사람 랜덤 매칭 → 밴픽 화면에 서로의 닉네임");
   }
   console.log("play live OK");
 } catch (e) {
