@@ -1345,7 +1345,7 @@ function menuHtml(){return '<div class="menu"><button id="mSur">항복</button><
 function manualOk(){var m=S.st;return !!m&&(m.mode==='practice'||m.mode==='friend')}  // 랭킹전은 수동 진행 숨김(기획답변 36차 2, 지연 플레이 방지)
 /* 첫 턴 안내 3장(상세 01). AI 대전은 안내 중 선택 타이머 정지(서버 pause), 사람 상대 모드는 정지 없는 말풍선 */
 var GUIDE=[['처리 순서','카드는 종류에 따라 정해진 순서로 발동해요. 고른 순서와는 상관없어요.<br><b>0 스펠 · 1 보호(방어·반격·면역) · 2 방해(침묵·방해) · 3 스킬 · 4 공격 · 5 종료</b><br>내가 낸 칸 위 번호가 이 순서예요.','.meslots'],
- ['내기','에너지(E)만큼 한 턴에 최대 3장 낼 수 있어요. 고른 카드는 슬롯에서 앞면으로 뒤집히고, 슬롯을 다시 누르면 돌아와요.','.eng'],
+ ['내기','한 턴에 최대 5칸: 전투카드 3장(에너지 E만큼) + 스펠 1개 + 액티브 1개. 고른 것은 슬롯에서 앞면으로 뒤집히고, 슬롯을 다시 누르면 돌아와요.','.eng'],
  ['상세 보기','카드를 길게 누르면(마우스는 올리면) 효과를 볼 수 있어요.','.hand']];
 function guide(manual){var m=S.st;if(!m||m.phase!=='battle'||S.anim)return;var pause=m.mode==='practice',i=0;S.guideOn=true;if(pause)send({type:'pause',on:true});
  var close=function(){var g=$('guide');if(g)g.remove();document.querySelectorAll('.hl').forEach(function(x){x.classList.remove('hl')});S.guideOn=false;S.guideShow=null;S.forceGuide=false;if(pause)send({type:'pause',on:false});document.removeEventListener('keydown',key,true)};
@@ -1359,7 +1359,7 @@ function guide(manual){var m=S.st;if(!m||m.phase!=='battle'||S.anim)return;var p
 function pickCard(uid){var m=S.st,b=m.battle,me=b.me;if(me.mySubmission)return;var c=me.hand.find(function(x){return x.uid===uid});if(!c)return;
  var i=S.sel.cards.indexOf(uid);if(i>=0){S.sel.cards.splice(i,1);sfx('flip');return render()}
  if(c.sealed)return toast('봉인된 카드예요');
- if(S.sel.cards.length>=(b.rules.cards_per_turn_max||3))return toast('한 턴에 3장까지');
+ if(S.sel.cards.length>=(b.rules.cards_per_turn_max||3))return toast('전투카드는 한 턴에 3장까지(스펠·액티브는 따로 1개씩)');
  if(sumCost(me,S.sel.cards.concat([uid]))>me.energy){vib(30);return toast('에너지가 부족해요')}
  S.sel.cards.push(uid);sfx('place');render()}
 function submitTurn(force){var m=S.st;if(!m||m.phase!=='battle'||m.battle.me.mySubmission||S.anim||S.guideOn||document.querySelector('.dlg'))return;
