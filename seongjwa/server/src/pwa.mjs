@@ -26,7 +26,7 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;c
 // 페이지 공통 머리말(매니페스트·iOS 홈 화면 앱 설정)과 스크립트(서비스 워커 등록, 새 버전 띠, 설치 버튼 상태)
 const HEAD = `<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0d1020">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="성좌">`;
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Chrono Arcadia">`;
 // 새 버전 띠: 판 진행 중(PWA_BUSY)에는 숨기고, 누를 때만 새 워커로 바꿔 새로고침(강제 새로고침 없음)
 const CLIENT = `<div id="pwaUpd" hidden style="position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:150;background:#2b5fd0;color:#fff;border-radius:99px;padding:8px 18px;font:600 14px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);cursor:pointer">새 버전이 있어요 · 새로고침</div>
 <script>
@@ -56,7 +56,7 @@ export const PWA_PLAY = withPwa(PLAY_PAGE);
 export const PWA_DEV = withPwa(TEST_PAGE);
 export const SW_SOURCE = SW.replace("__V__", PWA_VERSION);
 export const MANIFEST = JSON.stringify({
-  name: "성좌 결투", short_name: "성좌", id: "/play", start_url: "/play", scope: "/",
+  name: "Chrono Arcadia: Astral Soul", short_name: "Chrono Arcadia", id: "/play", start_url: "/play", scope: "/",
   display: "fullscreen", display_override: ["fullscreen", "standalone"], orientation: "landscape",
   background_color: "#0d1020", theme_color: "#0d1020", lang: "ko",
   icons: [

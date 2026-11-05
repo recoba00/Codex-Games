@@ -2,7 +2,7 @@
 // 탭 2개를 열어 각각 다른 개발 ID로 로그인하면 친구방 한 판을 처음부터 끝까지 해볼 수 있다. 실제 클라이언트는 Godot.
 export const TEST_PAGE = String.raw`<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>성좌 결투 서버 테스트</title>
+<title>Chrono Arcadia 서버 테스트</title>
 <style>
 :root{--bg:#0f1220;--panel:#1a1f33;--line:#2c3350;--text:#e8eaf3;--dim:#9aa1bd;--acc:#7aa2ff;--bad:#ff7a7a;--ok:#6fdc9a}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,sans-serif;padding:16px}
@@ -14,7 +14,7 @@ button{cursor:pointer}button.on{background:var(--acc);color:#0b0e1a}button:disab
 .card{min-width:120px;text-align:left}.bar{height:8px;background:#232a45;border-radius:4px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--ok)}
 pre{white-space:pre-wrap;margin:0;font-size:12px;color:var(--dim);max-height:220px;overflow:auto}
 </style></head><body>
-<h1>성좌 결투 · 서버 테스트 <span class="dim" id="who" style="font-size:12px;font-weight:400"></span></h1>
+<h1>Chrono Arcadia · 서버 테스트 <span class="dim" id="who" style="font-size:12px;font-weight:400"></span></h1>
 <section id="login"><div class="row"><input id="devId" placeholder="개발 ID (예: alice)"><button id="btnLogin">로그인</button></div>
 <p class="dim">탭 2개에서 서로 다른 ID로 로그인 → 한쪽이 방을 만들고 다른 쪽이 코드로 참가합니다.</p></section>
 <section id="lobby" hidden><div class="row">

@@ -4,7 +4,7 @@
 // 빠진 것: 소리, 다듬은 효과, 컷인, 튜토리얼, 감정표현. 실제 클라이언트는 Godot(총괄 13장).
 export const PLAY_PAGE = String.raw`<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>성좌 결투 · 전투 프로토타입</title>
+<title>Chrono Arcadia</title>
 <style>
 :root{--bg:#0d1020;--pan:rgba(14,18,36,.78);--line:rgba(255,255,255,.12);--tx:#F2F0E8;--mu:#9aa0b8;--acc:#7fb4ff;--hp:#4fd17a;--sh:#5aa8ff;--bad:#ff6b6b;--gold:#ffd56b;--cw:110px;--sw:90px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -834,7 +834,7 @@ function netBar(){var bad=S.room&&sessionStorage.getItem('play_room')&&(!S.ws||S
  el.className=off?'off':'';el.innerHTML=off?'<b>연결이 필요해요</b><span class="small mu">다시 연결되면 지금 판으로 이어져요(재접속 유예 60초)</span>':'연결이 불안정해요 · 다시 연결 중…'}
 setInterval(netBar,1000);
 function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);var dev=localStorage.getItem('play_dev')||'',P=window.PWA||{};
- $('app').innerHTML='<div class="scr home"><h1>성좌 결투</h1><div class="mu">전투 프로토타입 · AI 대전</div>'
+ $('app').innerHTML='<div class="scr home"><h1>Chrono Arcadia</h1><div class="mu">Astral Soul · 전투 테스트</div>'
  +'<div class="row" style="justify-content:center">'+[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(function(d){return '<button data-d="'+d[0]+'" class="'+(S.diff===d[0]?'on':'')+'">'+d[1]+'</button>'}).join('')+'</div>'
  +'<div class="row" style="justify-content:center;gap:10px"><button class="pri" id="go" style="font-size:17px;padding:12px 28px">AI 대전</button><button class="pri" id="pvp" style="font-size:17px;padding:12px 28px;background:linear-gradient(180deg,#f5b93a,#d9962a);color:#070a1c;border-color:#ffd97a">유저 대전 (랜덤 매칭)</button></div>'
  +'<div id="qbox" class="small" style="min-height:18px"></div>'
