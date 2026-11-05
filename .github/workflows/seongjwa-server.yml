@@ -125,7 +125,10 @@ jobs:
       - name: Deploy worker
         env:
           DEV: ${{ inputs.dev_login && '1' || '0' }}
-        run: npx wrangler deploy --var "DEV_LOGIN:$DEV" --var "NO_DODGE_BLOCK:$DEV"  # 테스트 서버는 닷지 5분 매칭 제한 없음(사용자 요청 2026-11-05)
+        run: |
+          set -o pipefail
+          npx wrangler deploy --var "DEV_LOGIN:$DEV" --var "NO_DODGE_BLOCK:$DEV" | tee "$RUNNER_TEMP/deploy.log"  # 테스트 서버는 닷지 5분 매칭 제한 없음(사용자 요청 2026-11-05)
+          grep -o 'https://[a-z0-9.-]*workers\.dev' "$RUNNER_TEMP/deploy.log" | head -1 > "$RUNNER_TEMP/base.txt"; cat "$RUNNER_TEMP/base.txt"
       - name: Set worker secrets
         env:
           KEY: ${{ secrets.SEONGJWA_SUPABASE_SERVICE_KEY }}
@@ -153,10 +156,11 @@ jobs:
           '
       - name: Smoke test (deployed worker)
         env:
-          BASE: https://seongjwa.recoba00.workers.dev
           DEV: ${{ inputs.dev_login && '1' || '0' }}
         run: |
           set -e
+          BASE=$(cat "$RUNNER_TEMP/base.txt"); [ -n "$BASE" ] || BASE=https://cr.recoba00.workers.dev  # 배포 주소(워커 이름 cr, 2026-11-05 seongjwa에서 변경)
+          export BASE
           sleep 5
           echo "health:";  curl -fsS "$BASE/health"; echo
           echo "data:";    curl -fsS "$BASE/v1/data/live" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);const d=j.data;console.log({version:j.version,characters:Object.keys(d.characters).length,cards:Object.keys(d.cards).length,spells:Object.keys(d.spells).length,presets:Object.keys(d.presets).length})})'
@@ -181,5 +185,7 @@ jobs:
             echo "backoffice page:"; curl -fsS -o /dev/null -w "%{http_code}\n" "$BASE/bo"
             echo "backoffice api (no login → 401):"; test "$(curl -s -o /dev/null -w "%{http_code}" "$BASE/bo/v1/me")" = "401" && echo ok
           fi
+      - name: Remove old worker name (seongjwa → cr, 2026-11-05)
+        run: npx wrangler delete seongjwa --force || echo "이전 워커 seongjwa 없음(이미 삭제됨)"  # 이전 주소의 크론 중복 실행 방지. DB(Supabase)는 영향 없음
       - name: Show deployment
         run: npx wrangler deployments list | head -20   # 배포 주소(…workers.dev)는 위 Deploy worker 단계 로그에 표시

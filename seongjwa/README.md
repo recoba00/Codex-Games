@@ -98,7 +98,7 @@ Supabase 테스트 프로젝트 `seongjwa-dev`(서울, 무료)에 마이그레�
 
 xlsx(수치 원본) → 기획이 백오피스 '데이터 배포'에 직접 업로드 → 자동 검증·변경표 → 다른 계정이 검수·배포. **1인 운영 모드**(권한 관리, 관리자만 켜고 끔, 사유 필수)를 켜면 관리자 1계정으로 업로드·승인·배포까지 한다(상세 14). 팀이 생기면 끈다. 켜고 끈 기록과 이 모드로 한 본인 승인은 감사 로그에 남는다. 시뮬레이션 요청은 기획 답변 파일에 **백오피스 버전 번호**를 적어 개발방에 한다. 개발방에 xlsx를 보내는 단계는 없다.
 
-### 백오피스 (상세 14, 6단계) — `https://seongjwa.recoba00.workers.dev/bo`
+### 백오피스 (상세 14, 6단계) — `https://cr.recoba00.workers.dev/bo`
 
 - 직원 계정은 플레이어 계정과 별개(아이디·비밀번호, PBKDF2). 가입은 관리자가 만든 **초대 코드**로만(2일, 한 번만 표시). 5번 틀리면 15분 잠금, 토큰 8시간, 비활성화하면 즉시 세션 종료. 직원 토큰은 게임 API에 쓸 수 없다(서명 키 분리).
 - 역할: 기획자(xlsx 업로드·검수 요청) / 검수자(승인·반려) / 관리자(배포·예약·롤백, 직원 관리, 전부) / 운영·CS(상점·배너·공지·우편, 유저 조회·재화·제재·신고). **자기가 만든·요청한 초안은 승인 불가**(1인 운영 모드에서만 관리자 예외).
@@ -147,4 +147,4 @@ cd seongjwa/server && npm test
 
 GitHub Actions `Seongjwa Server` → Run workflow(main). 테스트가 통과하면 Cloudflare에 배포하고 비밀값을 넣는다.
 저장소 Settings → Secrets and variables → Actions 에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SEONGJWA_SUPABASE_SERVICE_KEY`, `SEONGJWA_TOKEN_SECRET`이 있어야 한다.
-배포 후 `https://seongjwa.<계정>.workers.dev/dev` 를 탭 2개로 열어 친구방 한 판을 해 볼 수 있다(`dev_login` 켜고 배포했을 때만).
+배포 후 `https://cr.<계정>.workers.dev/dev` 를 탭 2개로 열어 친구방 한 판을 해 볼 수 있다(`dev_login` 켜고 배포했을 때만).

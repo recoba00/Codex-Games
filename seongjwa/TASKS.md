@@ -18,7 +18,7 @@
 - [x] 개발용 브라우저 테스트 화면 `GET /dev`
 - [x] 기획 2차 답변 반영(충전 무효 순서, 시간 초과 기본값, ban_sec·pick_sec·loadout_sec 설정 키)
 - [x] Supabase 테스트 프로젝트 seongjwa-dev 생성·마이그레이션·데이터 v1 배포
-- [x] Cloudflare 첫 배포: https://seongjwa.recoba00.workers.dev (테스트 환경, 개발 로그인·/dev 켜짐). 배포 후 자동 점검(health·데이터·로그인·방 생성)
+- [x] Cloudflare 첫 배포: https://cr.recoba00.workers.dev (테스트 환경, 개발 로그인·/dev 켜짐). 배포 후 자동 점검(health·데이터·로그인·방 생성)
 ## 4단계 매칭·AI·랭크
 - [x] 공개 매칭 큐 DO(MMR 범위 확장, 30초 AI 전환·사람 우선, 다이아 이상 AI 없음, 사람만 기다리기, 120초 취소)
 - [x] AI 봇(상세 03): 행동·밴픽·스펠·덱, 난이도 3단계, 확정 3~12초 / AI 대전(연습)
