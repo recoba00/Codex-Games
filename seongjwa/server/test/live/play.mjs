@@ -119,6 +119,8 @@ try {
         await sleep(700); await page.screenshot({ path: `/tmp/play_skill_${vp.width}.png` });
         await page.click(".scut .sskip");
         assert.equal(await page.$(".scut"), null, "스킵하면 바로 닫힘");
+        await page.evaluate(() => { float("opp", "-128", ""); float("me", "-245", "crit"); setTimeout(() => float("opp", "+60", "heal"), 120); });
+        await sleep(450); await page.screenshot({ path: `/tmp/play_fx_${vp.width}.png` });
         await page.mouse.move(0, 0);
       }
       await page.click("#ok");
