@@ -706,6 +706,13 @@ body.rmo .scut .sart{animation:none}
 @keyframes dmg4c{0%{opacity:0;transform:translate(calc(-50% + var(--x)),0) scale(3.2) rotate(var(--r))}10%{opacity:1;transform:translate(calc(-50% + var(--x)),0) scale(.8) rotate(var(--r))}16%{transform:translate(calc(-50% + var(--x) - 6px),-4px) scale(1.25) rotate(calc(var(--r) - 6deg))}22%{transform:translate(calc(-50% + var(--x) + 6px),-5px) scale(1.15) rotate(calc(var(--r) + 6deg))}28%{transform:translate(calc(-50% + var(--x) - 3px),-6px) scale(1.1) rotate(var(--r))}75%{opacity:1;transform:translate(calc(-50% + var(--x)),-16px) scale(1.1) rotate(var(--r))}100%{opacity:0;transform:translate(calc(-50% + var(--x)),-46px) scale(1) rotate(var(--r))}}
 body.rmo .bt4 .vc::after,body.rmo .bt4 .b1::after,body.rmo .bt4 .kp.on,body.rmo .bt4 .cir.en.eng,body.rmo .bt4 .slots.opp .slot .cb{animation:none}
 body.rmo .bt4 .float.fx{animation:fl3 1.6s forwards}
+
+/* ----- 4차: 카드 모서리가 테두리 밖으로 삐져나오지 않게(테두리 이미지와 같은 둥글기), 기울인 숫자 오른쪽 잘림 방지 ----- */
+.bt4 .bc,.bt4 .slot .ff .bc,.bt4 .slot .cb,.bt4 .slot .ff,.bt4 .slot .ff .cell{border-radius:8%/5.7%}
+.bt4 .slot{border-radius:8%/5.7%}
+.bt4 .vc .pfill,.bt4 .vc .pcont.pbot{border-radius:9%/6.6%;overflow:hidden}
+.bt4 .vc::after{border-radius:9%/6.6%}
+.bt4 .float.fx{padding:.06em .22em .1em .12em}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
