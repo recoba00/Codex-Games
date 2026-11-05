@@ -125,7 +125,7 @@ jobs:
       - name: Deploy worker
         env:
           DEV: ${{ inputs.dev_login && '1' || '0' }}
-        run: npx wrangler deploy --var "DEV_LOGIN:$DEV"
+        run: npx wrangler deploy --var "DEV_LOGIN:$DEV" --var "NO_DODGE_BLOCK:$DEV"  # 테스트 서버는 닷지 5분 매칭 제한 없음(사용자 요청 2026-11-05)
       - name: Set worker secrets
         env:
           KEY: ${{ secrets.SEONGJWA_SUPABASE_SERVICE_KEY }}

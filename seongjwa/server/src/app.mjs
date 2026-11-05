@@ -250,7 +250,7 @@ export async function handle(request, env) {
       const rank = await loadRank(env, data, claims.sub, season.id);
       const now = Date.now();
       if (rank.leaver.lockedUntil) throw Object.assign(new Error("queue_locked"), { extra: { until: rank.leaver.lockedUntil, step: rank.leaver.step } });
-      if (rank.leaver.dodgeUntil) throw Object.assign(new Error("dodge_blocked"), { extra: { until: rank.leaver.dodgeUntil } });
+      if (rank.leaver.dodgeUntil && env.NO_DODGE_BLOCK !== "1") throw Object.assign(new Error("dodge_blocked"), { extra: { until: rank.leaver.dodgeUntil } });
       const sanction = await rpc(env, "sanction_status", { p_account: claims.sub });  // 제재: 랭킹전 제한(상세 13)
       if (sanction?.rankUntil) throw Object.assign(new Error("rank_restricted"), { extra: { until: sanction.rankUntil } });
       const entry = {
