@@ -713,6 +713,26 @@ body.rmo .bt4 .float.fx{animation:fl3 1.6s forwards}
 .bt4 .vc .pfill,.bt4 .vc .pcont.pbot{border-radius:9%/6.6%;overflow:hidden}
 .bt4 .vc::after{border-radius:9%/6.6%}
 .bt4 .float.fx{padding:.06em .22em .1em .12em}
+
+/* ----- 성능(발열·지연, 2026-11-05): 계속 도는 효과는 transform·opacity만(화면 다시 칠하기 없음) ----- */
+html,body{touch-action:manipulation}
+.bt3.bt4::after{left:-100%;right:auto;width:300%;background-size:100% 100%;animation:sweep4 8s ease-in-out infinite;will-change:transform}
+@keyframes sweep4{0%,100%{transform:translateX(-30%)}50%{transform:translateX(30%)}}
+.bt4 .vc::after{content:none;animation:none}
+.bt4 .vc .pfill::after{content:"";position:absolute;top:0;bottom:0;left:0;width:60%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.18),transparent);transform:translateX(-130%);animation:shine4 5s ease-in-out infinite;pointer-events:none;z-index:1;will-change:transform}
+.bt4 .oppc .vc .pfill::after{animation-delay:-2.5s}
+@keyframes shine4{0%,62%{transform:translateX(-130%)}100%{transform:translateX(260%)}}
+.bt4 .b1:not(:disabled)::after{left:0;width:30%;transform:translateX(-140%) skewX(-18deg);animation:bsh4 2.8s ease-in-out infinite;will-change:transform}
+@keyframes bsh4{0%,55%{transform:translateX(-140%) skewX(-18deg)}100%{transform:translateX(440%) skewX(-18deg)}}
+.bt4 .kp.on{animation:none}
+.bt4 .kp.on::before{content:"";position:absolute;inset:-3px;border-radius:999px;box-shadow:0 0 12px 2px var(--kc);opacity:.3;animation:kgl4 1.8s ease-in-out infinite;pointer-events:none}
+@keyframes kgl4{50%{opacity:1}}
+.bt4 .cir.en.eng,.bt4 .slots.opp .slot .cb,.bt4 .confirm.go{animation:none}
+.bt4 .cir.ac.ready,.bt4 .cir.ru.on{animation:cpl 1.4s ease-in-out infinite}
+@keyframes cpl{50%{transform:scale(1.06)}}
+.bt4 .redge{box-shadow:inset 0 0 60px 12px rgba(255,40,60,.65);animation:redg4 1.6s ease-in-out infinite;will-change:opacity}
+@keyframes redg4{0%,100%{opacity:.55}50%{opacity:1}}
+body.rmo .bt4 .vc .pfill::after,body.rmo .bt4 .kp.on::before,body.rmo .bt4 .cir.ac.ready,body.rmo .bt4 .cir.ru.on,body.rmo .bt3.bt4::after{animation:none}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -780,8 +800,9 @@ function boot(){applySafe();
   if(S.A.slots.BG_BATTLE)$('app').style.backgroundImage=slotU('BG_BATTLE');home()}).catch(function(e){offline(e)})}
 function offline(e){$('app').innerHTML='<div class="scr home"><h1>연결이 필요해요</h1><p class="mu">전투는 항상 온라인이에요. 인터넷에 연결되면 자동으로 다시 시도해요.</p><button class="pri" id="retry">다시 시도</button><p class="small mu">'+esc(e&&e.message||'')+'</p></div>';$('retry').onclick=boot}
 addEventListener('online',function(){if(!S.data)boot();netBar()});addEventListener('offline',netBar);
-function netBar(){var bad=S.room&&sessionStorage.getItem('play_room')&&(!S.ws||S.ws.readyState!==1),off=!navigator.onLine,el=$('net');
- if(bad){S.badAt=S.badAt||Date.now();bad=Date.now()-S.badAt>2000}else S.badAt=0;
+function netBar(){var bad=S.room&&sessionStorage.getItem('play_room')&&(!S.ws||S.ws.readyState!==1)&&document.visibilityState==='visible',off=!navigator.onLine,el=$('net');
+ if(S.replaced&&bad){if(!el){el=document.createElement('div');el.id='net';document.body.appendChild(el)}el.className='';el.innerHTML='다른 화면(탭·기기)에서 이 판에 접속해서 여기 연결이 끊겼어요 <button class="sm" id="netRe">여기서 다시 연결</button>';$('netRe').onclick=function(){S.replaced=false;connect(sessionStorage.getItem('play_room'))};return}
+ if(bad){S.badAt=S.badAt||Date.now();bad=Date.now()-S.badAt>3500}else S.badAt=0;
  if(!bad&&!(off&&S.data)){if(el)el.remove();return}if(!el){el=document.createElement('div');el.id='net';document.body.appendChild(el)}
  el.className=off?'off':'';el.innerHTML=off?'<b>연결이 필요해요</b><span class="small mu">다시 연결되면 지금 판으로 이어져요(재접속 유예 60초)</span>':'연결이 불안정해요 · 다시 연결 중…'}
 setInterval(netBar,1000);
@@ -804,17 +825,19 @@ function login(d){return api('/v1/auth/dev',{devId:d}).then(function(j){S.tok=j.
 function defs(){var l=lsGet('play_last'),ld=lastLoad(l);return {preferred:l?[l]:[],spells:ld.spells,preset:ld.preset}}
 function start(d){$('go').disabled=true;login(d).then(function(){return api('/v1/practice',{difficulty:S.diff,defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home('시작 실패: '+e.message)})}
 function connect(code){sessionStorage.setItem('play_room',code);if(S.room!==code){S.room=code;S.emo={};S.emLeft=null;S.emoOpen=false;S.hlog={};S.lastOpp=null;S.pickedSelf=null;S.loadSelf=false;S.load=null;S.menu=false}api('/v1/rooms/'+code+'/ticket',{}).then(function(j){
- var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/rooms/'+code+'/ws?ticket='+encodeURIComponent(j.ticket));S.ws=ws;
- ws.onmessage=function(e){var m=JSON.parse(e.data);if(m.type==='room')onRoom(m);else if(m.type==='error')toast(ERR[m.error]||('오류: '+m.error));else if(m.type==='emote')emoteShow(m);else if(m.type==='emote_muted')toast('이 판 동안 상대 감정표현을 껐어요');else if(m.type==='afk_warning')toast('⚠ 2턴째 행동 없음: 다음 턴도 없으면 패배 처리')};
- ws.onclose=function(e){clearInterval(ws.hb);if(S.ws!==ws)return;if(e.code===4001)return;setTimeout(function(){if(sessionStorage.getItem('play_room')===code)connect(code)},1500)};
- ws.hb=setInterval(function(){if(ws.readyState===1)ws.send('{"type":"ping"}')},20000);
+ var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/rooms/'+code+'/ws?ticket='+encodeURIComponent(j.ticket));S.ws=ws;S.replaced=false;ws.last=Date.now();
+ ws.onopen=function(){ws.last=Date.now();S.badAt=0;S.retry=0;flushQ()};
+ ws.onmessage=function(e){ws.last=Date.now();var m=JSON.parse(e.data);if(m.type==='pong')return;if(m.type==='room')onRoom(m);else if(m.type==='error')toast(ERR[m.error]||('오류: '+m.error));else if(m.type==='emote')emoteShow(m);else if(m.type==='emote_muted')toast('이 판 동안 상대 감정표현을 껐어요');else if(m.type==='afk_warning')toast('⚠ 2턴째 행동 없음: 다음 턴도 없으면 패배 처리')};
+ ws.onclose=function(e){clearInterval(ws.hb);if(S.ws!==ws)return;if(e.code===4001){S.replaced=true;return}S.retry=(S.retry||0)+1;setTimeout(function(){if(sessionStorage.getItem('play_room')===code&&S.ws===ws)connect(code)},Math.min(4000,400*S.retry))};
+ ws.hb=setInterval(function(){if(ws.readyState!==1)return;if(Date.now()-ws.last>25000){try{ws.close()}catch(e){}return}ws.send('{"type":"ping"}')},10000);  /* 10초 핑(서버 자동 퐁), 25초 무응답이면 끊고 재연결 */
 }).catch(function(e){if(e instanceof TypeError&&sessionStorage.getItem('play_room')===code){setTimeout(function(){if(sessionStorage.getItem('play_room')===code)connect(code)},2000);return}sessionStorage.removeItem('play_room');home('접속 실패: '+e.message)})}
-function send(o){S.ws&&S.ws.readyState===1&&S.ws.send(JSON.stringify(o))}
+function send(o){if(S.ws&&S.ws.readyState===1){S.ws.send(JSON.stringify(o));return true}if(o.type==='ping'||o.type==='leave')return false;S.outq=(S.outq||[]).filter(function(x){return x.o.type!==o.type}).concat([{o:o,at:Date.now()}]);return false}  /* 끊긴 동안은 종류별 마지막 1건만 대기(10초 지나면 버림) */
+function flushQ(){var q=S.outq||[];S.outq=[];q.forEach(function(x){if(Date.now()-x.at<10000)send(x.o)})}
 function quit(){sessionStorage.removeItem('play_room');var ws=S.ws;S.ws=null;if(ws){try{ws.send('{"type":"leave"}')}catch(e){}clearInterval(ws.hb);ws.onclose=null;setTimeout(function(){try{ws.close()}catch(e){}},300)}}
 
 /* ---------- 화면 꺼짐 방지(Wake Lock, 미지원이면 생략)·판 진행 중 표시(새 버전 띠 숨김) ---------- */
 function wake(on){S.wakeOn=on;try{if(on&&!S.wl&&navigator.wakeLock&&document.visibilityState==='visible')navigator.wakeLock.request('screen').then(function(l){S.wl=l;l.addEventListener('release',function(){S.wl=null})}).catch(function(){});if(!on&&S.wl){S.wl.release();S.wl=null}}catch(e){}}
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&S.wakeOn)wake(true)});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState!=='visible')return;if(S.wakeOn)wake(true);var code=sessionStorage.getItem('play_room');if(code&&(!S.ws||S.ws.readyState>1)&&!S.replaced){S.badAt=0;connect(code)}});  /* 앱으로 돌아오면 바로 재연결 */
 window.PWA_BUSY=function(){return !!(S.anim||(S.st&&['ban','pick','loadout','battle'].indexOf(S.st.phase)>=0))};
 document.addEventListener('contextmenu',function(e){e.preventDefault()});
 
@@ -875,7 +898,7 @@ function renderPick(m){var P=m.prep,ban=m.phase==='ban',z=pickLay(P.characters.l
  $('pok').onclick=confirmPick;$('qt').onclick=function(){quit();home()}}
 function confirmPick(){var m=S.st;if(!m||(m.phase!=='pick'&&m.phase!=='ban'))return;var P=m.prep;
  if(m.phase==='ban'){if(P.myBan||!S.banSel)return;send({type:'ban',characterId:S.banSel});return}
- var id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id})}
+ var id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id});var b=$('pok');if(b){b.disabled=true;b.removeAttribute('data-lab');b.classList.remove('red','beat');b.textContent='확정 중…'}}
 /* 스펠·덱(재배치 3): 왼쪽 상대(위)·나(아래) 같은 크기, 오른쪽 스펠 8종 한 줄(링+체크, 2개) + 설명 한 줄 + 덱 탭 + 덱 12장 한 줄(이름 없이, 길게 누르면 상세). 폭 44 미만이면 6×2 */
 /* 스펠·덱(사용자 요청 2026-11-01): 픽 화면과 같은 틀 — 왼쪽 아래 나, 오른쪽 위 상대(19% 열), 가운데 스펠 8종 + 설명 + 덱 탭 + 덱 12장 두 줄(6×2) */
 function loLay(){var W=VW(),H=VH(),p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
@@ -903,7 +926,7 @@ function renderLoadout(m){var P=m.prep,z=loLay();S.load=S.load||lastLoad(P.myPic
  document.querySelectorAll('[data-pre]').forEach(function(b){b.onclick=function(){S.load.preset=Number(b.dataset.pre);render()}});
  $('ok').onclick=confirmLoad;$('qt').onclick=function(){quit();home()}}
 function lastLoad(id){try{var x=JSON.parse(localStorage.getItem('play_load_'+id)||'null');if(x&&x.spells&&x.spells.length===2)return x}catch(e){}return {spells:['SP01','SP04'],preset:2}}
-function confirmLoad(){var P=S.st.prep;if(P.myLoadout||S.load.spells.length!==2)return;S.loadSelf=true;lsSet('play_load_'+P.myPick,JSON.stringify(S.load));send({type:'loadout',spells:S.load.spells,preset:S.load.preset})}
+function confirmLoad(){var P=S.st.prep;if(P.myLoadout||S.load.spells.length!==2)return;S.loadSelf=true;lsSet('play_load_'+P.myPick,JSON.stringify(S.load));send({type:'loadout',spells:S.load.spells,preset:S.load.preset});var b=$('ok');if(b){b.disabled=true;b.removeAttribute('data-lab');b.classList.remove('red','beat');b.textContent='확정 중…'}}
 
 /* ---------- 전투 ---------- */
 function effCosts(me,uids){var free=me.freeOneCost||0;return uids.map(function(u){var c=me.hand.find(function(x){return x.uid===u});if(!c)return 0;if(free>0&&c.cost===1){free--;return 0}return c.cost})}
@@ -1192,7 +1215,7 @@ function pickCard(uid){var m=S.st,b=m.battle,me=b.me;if(me.mySubmission)return;v
  S.sel.cards.push(uid);render()}
 function submitTurn(force){var m=S.st;if(!m||m.phase!=='battle'||m.battle.me.mySubmission||S.anim||S.guideOn||document.querySelector('.dlg'))return;
  if(!force&&!S.sel.cards.length&&m.battle.me.energy>0)return ask('아무것도 내지 않고 확정할까요?','확정',function(){submitTurn(true)});
- send({type:'act',turn:m.battle.turn,cards:S.sel.cards,spell:S.sel.spell,active:S.sel.active})}
+ send({type:'act',turn:m.battle.turn,cards:S.sel.cards,spell:S.sel.spell,active:S.sel.active});var ok=$('ok');if(ok){ok.disabled=true;ok.removeAttribute('data-lab');ok.classList.remove('red','beat','go');ok.textContent='확정 중…'}}
 
 /* ---------- 카드 상세(호버 0.2초 / 길게 누르기 0.35초, 상세 01) ---------- */
 function peekHide(){var o=$('peek');if(o)o.remove()}
@@ -1407,7 +1430,7 @@ setInterval(function(){var m=S.st;if(!m||S.anim)return;var t=m.phase==='battle'?
  var cb=document.querySelector('button[data-lab]');if(cb&&t){var tx=cb.dataset.lab+' ('+s+'초 남음)';if(cb.textContent!==tx)cb.textContent=tx;cb.classList.toggle('red',s<=10);cb.classList.toggle('beat',s<=5&&s>0);if(s<=10)cb.classList.remove('go')}
  if(m.phase==='battle'&&s<=5&&s>0&&!m.battle.me.mySubmission&&S.vibKey!==m.battle.turn+':'+s){S.vibKey=m.battle.turn+':'+s;vib(40)}  /* 확정 버튼 하나로(기획지시 타이머버튼): 10초 빨강, 5초 박동·진동 */
  var cp=$('cap');if(cp&&m.phase==='battle'&&!m.battle.me.mySubmission){var any=S.sel.cards.length||S.sel.spell||S.sel.active,msg=s<=10?'⏱ 확정 안 하면 이번 턴은 아무것도 안 나가요'+(any?'(고른 것 포함)':''):'';if(cp.textContent!==msg){cp.textContent=msg;cp.className='cap'+(msg?' show warn':'')}}},250);
-function holo(){if(S.hraf)return;var t0=performance.now(),step=function(n){var els=document.querySelectorAll('.pvc');if(!els.length){S.hraf=0;return}
+function holo(){if(S.hraf)return;var t0=performance.now(),step=function(n){var els=document.querySelectorAll('.pvc.h1,.pvc.h2,.pvc.h3,.pvc.h4');if(!els.length){S.hraf=0;return}  /* 홀로 카드만(일반 카드까지 매 프레임 갱신하면 발열) */
  var k=((n-t0)%4200)/4200,x=0.5-0.5*Math.cos(k*Math.PI*2),y=0.5+Math.sin(k*Math.PI*2)*0.15;
  els.forEach(function(c){if(c.hov)return;c.style.setProperty('--mx',0.1+x*0.8);c.style.setProperty('--my',y);c.style.setProperty('--px',(x-0.5)*1.2);c.style.setProperty('--py',(y-0.5)*1.2)});S.hraf=requestAnimationFrame(step)};S.hraf=requestAnimationFrame(step)}
 document.addEventListener('pointermove',function(e){var c=e.target.closest&&e.target.closest('.pvc');document.querySelectorAll('.pvc').forEach(function(x){if(x!==c)x.hov=false});if(!c)return;var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.hov=true;c.style.setProperty('--mx',x);c.style.setProperty('--my',y);c.style.setProperty('--px',(x-0.5)*2);c.style.setProperty('--py',(y-0.5)*2)});

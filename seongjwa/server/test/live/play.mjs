@@ -93,6 +93,9 @@ try {
     { const g = await page.evaluate(() => { const sf = window.__SAFE || { b: 0 }; let bot = 0; for (const e of document.querySelectorAll(".hand .bc,.ctl,.mec")) bot = Math.max(bot, e.getBoundingClientRect().bottom); return Math.round(innerHeight - sf.b - bot); });
       console.log(`  전투 하단 여백(안전 영역 제외) ${vp.name} ${g}px`); }
     step(`${vp.name}: 첫 턴 안내 3장 → 전투 화면(상대 프로필 우상단, 스크롤 없음)`);
+    { const cdp = await ctx.newCDPSession(page); await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });  // 휴대폰 수준(CPU 4배 느리게)에서 전투 화면 다시 그리기 시간
+      const ms = await page.evaluate(() => { const t = performance.now(); for (let i = 0; i < 5; i += 1) { render(); document.body.getBoundingClientRect(); } return (performance.now() - t) / 5; });
+      await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 }); console.log(`  전투 화면 다시 그리기(CPU 4배 느림) ${vp.name} ${Math.round(ms)}ms`); assert.ok(ms < 250, `다시 그리기 ${ms}ms`); }
     for (let t = 1; t <= 3; t += 1) {
       await page.waitForFunction(() => { const b = document.querySelector("#ok"); return b && !b.disabled; }, null, { timeout: 20000 });
       const before = await page.$$eval(".hand .bc", (x) => x.length);
