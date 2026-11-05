@@ -51,7 +51,7 @@ h1{margin:0;font-size:28px;letter-spacing:2px}
 .pvc.h4 .pvchar{transform:translate3d(calc(var(--px)*4%),calc(var(--py)*3%),0) scale(1.04)}
 .pvframe{position:absolute;left:-8%;top:-5.714%;width:116%;height:111.428%;pointer-events:none;background-size:100% 100%}
 .pvbadge{position:absolute;right:4%;top:2.8%;width:20%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat;pointer-events:none}
-.pvfac{position:absolute;left:5%;top:3%;width:15%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat;pointer-events:none;filter:drop-shadow(0 1px 2px #000)}
+.pvfac{position:absolute;left:5%;top:3%;width:15%;aspect-ratio:1;background-size:contain;background-repeat:no-repeat;pointer-events:none}
 .pick .pvc{cursor:pointer;transition:filter .15s}
 .pvc.ban{filter:grayscale(1) brightness(.45)}.pvc.ban::after{content:"밴됨";position:absolute;inset:40% 0 auto;text-align:center;font-weight:800;font-size:12cqw;color:#ff9a9a}
 .pvc.sel{outline:3px solid var(--acc);outline-offset:4px;border-radius:6%/4.3%}
@@ -492,7 +492,7 @@ button.sm{padding:5px 10px;font-size:12px}
 .bt4 .vc .pfr.nof{inset:3%;border:3px solid #9aa3c4;border-radius:6px}
 .bt4 .vc .pcont{position:absolute;inset:10% 5.36% 5.11% 5.36%;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
 .bt4 .ptop{display:flex;justify-content:space-between;align-items:center;padding:0 10px}.bt4 .oppc .ptop{padding:0 8px}
-.bt4 .pfac{width:16px;height:16px;background:center/contain no-repeat;filter:drop-shadow(0 1px 2px #000)}
+.bt4 .pfac{width:16px;height:16px;background:center/contain no-repeat}
 .bt4 .okb{background:rgba(255,47,154,.9);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:2px 4px;font-size:8px;font-weight:700;color:#fff;line-height:1.2;animation:okin .3s cubic-bezier(.3,1.8,.5,1)}
 @keyframes okin{from{transform:scale(.3);opacity:0}}
 .bt4 .pst{background:linear-gradient(180deg,rgba(0,0,0,0),#000);padding:8px 10px;display:flex;flex-direction:column;gap:2px}.bt4 .oppc .pst{padding:8px}
@@ -1257,6 +1257,10 @@ function sfx(n,at){var c=SND.ctx;if(!c||S.sndOff||c.state!=='running')return;var
   case 'lose':[67,63,60,55].forEach(function(m,k){sTone(o,'triangle',mtof(m),0,t+k*0.18,k===3?1.0:0.3,0.09,0.01,1800).connect(SND.rev)});break;
   case 'warn':sTone(o,'square',880,880,t,0.12,0.09,0.003,2600);sTone(o,'square',660,660,t+0.15,0.16,0.09,0.003,2600);break;
   case 'tick':sTone(o,'square',1500,1100,t,0.035,0.08,0.001,4000);break;
+  case 'cut_fire':sNoise(o,t,1.4,0.35,'lowpass',600,3200,0.6);sNoise(o,t+0.05,1.2,0.18,'bandpass',1800,900,2);for(var f1=0;f1<14;f1++)sNoise(o,t+0.15+Math.random()*1.3,0.025,0.25,'highpass',3500,3500,0.7);sTone(o,'sawtooth',70,140,t,1.2,0.12,0.25,700);sTone(o,'sine',95,32,t+0.45,0.9,0.75,0.004);break;
+  case 'cut_water':sNoise(o,t,0.9,0.3,'bandpass',300,2400,0.9);sNoise(o,t+0.5,1.0,0.22,'lowpass',2200,500,0.7);for(var w1=0;w1<10;w1++){var bf=500+Math.random()*900;sTone(o,'sine',bf,bf*2.2,t+0.2+Math.random()*1.2,0.07,0.1,0.004)}sTone(o,'sine',80,40,t+0.45,0.8,0.6,0.004);[72,79,84].forEach(function(m,k){sTone(o,'triangle',mtof(m),0,t+0.5+k*0.08,0.8,0.06,0.01).connect(SND.rev)});break;
+  case 'cut_wind':sNoise(o,t,1.5,0.4,'bandpass',500,2600,3);sNoise(o,t+0.25,1.2,0.25,'bandpass',2600,700,4);sNoise(o,t+0.1,0.5,0.15,'highpass',5000,9000,0.7);sTone(o,'sine',110,50,t+0.45,0.6,0.45,0.004);[79,83,86,91].forEach(function(m,k){sTone(o,'sine',mtof(m),0,t+0.55+k*0.06,0.6,0.05,0.01).connect(SND.rev)});break
+;
   case 'ko':sTone(o,'sine',80,25,t,1.2,0.9,0.003);sNoise(o,t,0.9,0.4,'lowpass',4000,120,0.7);sTone(o,'sawtooth',220,55,t,0.8,0.08,0.003,900);break}}
 /* 첫 터치·클릭 때 오디오 켜기(브라우저 자동 재생 규칙), 화면을 떠나면 멈춤 */
 document.addEventListener('pointerdown',function(e){var c=sndInit();if(!c)return;if(c.state==='suspended')c.resume().then(musicSync);musicSync();if(e.target.closest&&e.target.closest('button'))sfx('click')},true);
@@ -1409,7 +1413,7 @@ function skillCut(chr,sd,d){var c=ch(chr),col=SKC[c.faction]||'rgba(107,122,255,
  if(!S.rmo)pt=fxOf(c.faction);if(false)for(var q=0;q<14;q++)pt+='<s style="left:'+Math.round(10+Math.random()*80)+'%;top:'+Math.round(15+Math.random()*70)+'%;--dx:'+Math.round(-120+Math.random()*240)+'px;--dy:'+Math.round(-140+Math.random()*120)+'px;animation-delay:'+(Math.random()*0.6).toFixed(2)+'s"></s>';
  var e=document.createElement('div');e.className='scut'+(S.skm==='over'?' over':'')+(sd==='opp'?' opp':'')+' fx-'+({'불':'fire','물':'water','바람':'wind'}[c.faction]||'none');e.style.setProperty('--c1',col);e.style.setProperty('--d',ms+'ms');e.style.setProperty('--k',k.toFixed(4));
  e.innerHTML='<i class="sbg"></i>'+pt+'<div class="sbox">'+(a.full?'<i class="sart" style="background-image:url('+a.full.url+')"></i>':'')+'<div class="stx"><b>'+esc(c.active_name||'액티브')+'</b><p>'+esc(c.active_text||'')+'</p></div></div>'+(S.rmo?'':'<i class="sfl"></i>')+'<button class="sskip" type="button">스킵하기 ▶</button>';
- document.querySelectorAll('body > .scut').forEach(function(x){x.remove()});document.body.appendChild(e);if(!S.rmo)setTimeout(function(){shakeBt(2)},120);
+ document.querySelectorAll('body > .scut').forEach(function(x){x.remove()});document.body.appendChild(e);sfx({'불':'cut_fire','물':'cut_water','바람':'cut_wind'}[c.faction]||'ult');if(!S.rmo)setTimeout(function(){shakeBt(2)},120);
  var end=function(){if(e.parentNode)e.remove()};e.querySelector('.sskip').onclick=function(ev){ev.stopPropagation();end();if(S.anim&&S.anim.adv)S.anim.adv()};setTimeout(end,ms)}
 var SPD_LAB={slow:'느리게',normal:'보통',fast:'빠르게'},SPD_NEXT={slow:'normal',normal:'fast',fast:'slow'},SPD_K={slow:1.5,normal:1,fast:0.5};
 function menuHtml(){return '<div class="menu"><button id="mSur">항복</button><button id="mLeft">왼손 모드 '+(S.lefty?'끄기':'켜기')+'</button><button id="mHelp">도움말 다시 보기</button><button id="mSpd">연출 속도: '+SPD_LAB[S.rspd||'normal']+'</button>'+(manualOk()?'<button id="mMan">탭하면 다음 행동: '+(S.manual?'켜짐':'꺼짐')+'</button>':'')+'</div>'}
