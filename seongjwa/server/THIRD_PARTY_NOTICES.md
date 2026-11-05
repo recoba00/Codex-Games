@@ -27,5 +27,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE
 ```
 
-## 음악·효과음
+## 배경음악 (public/bgm)
+사용자 제공(2026-11-05), Pixabay 무료 음원(Pixabay 콘텐츠 라이선스: 상업적 사용 가능, 출처 표기 불필요).
+- lobby.mp3 — "Suspense Cyberpunk" (prettyjohn1, Pixabay #517449): 로비·밴픽·스펠덱
+- battle.mp3 — "Iron Horizon" (karumaru, Pixabay #574609): 전투(폭주 때 1.07배속)
+
+## 효과음
 외부 음원 없음. 브라우저 WebAudio로 직접 합성(src/playpage.mjs 소리 부분).

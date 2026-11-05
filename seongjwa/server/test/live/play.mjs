@@ -46,6 +46,7 @@ try {
   // PWA(기획지시 PWA테스트빌드): 매니페스트·워커·아이콘
   const mf = await (await fetch(`${API}/manifest.webmanifest`)).json();
   assert.deepEqual([mf.start_url, mf.display, mf.orientation, mf.icons.length], ["/play", "fullscreen", "landscape", 3]);
+  for (const f of ["lobby", "battle"]) { const r = await fetch(`${API}/bgm/${f}.mp3`); assert.equal(r.status, 200, `배경음악 ${f}`); assert.match(r.headers.get("content-type") ?? "", /audio\/mpeg/); }
   assert.match(await (await fetch(`${API}/sw.js`)).text(), /shell-/);
   assert.equal((await fetch(`${API}/icons/maskable-512.png`)).headers.get("content-type"), "image/png");
   step("PWA: 매니페스트(전체 화면·가로·시작 /play)·서비스 워커·아이콘");

@@ -2,6 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "seongjwa",
   "main": "src/index.mjs",
+  "assets": { "directory": "./public" },  // 정적 파일(배경음악 mp3 등). 무료 플랜, 워커 용량과 별도
   "compatibility_date": "2026-10-21",
   "workers_dev": true,
   "keep_vars": true,
