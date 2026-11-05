@@ -1146,7 +1146,7 @@ function hurt(sd,big){var v=$('side_'+sd),b=$('bt'),hb=v&&v.querySelector('.hpba
  if(big)shakeBt(2);else shakeBt(1);if(sd==='me'&&b){var vg=document.createElement('div');vg.className='vign';b.appendChild(vg);setTimeout(function(){vg.remove()},500)}}
 function koShow(hp){sfx('ko');var b=$('bt');if(!b)return;document.querySelectorAll('.zoom,.orb,#bub').forEach(function(x){x.remove()});var dead=['me','opp'].filter(function(k){return hp[k]<=0});
  dead.forEach(function(k){var v=$('side_'+k);if(v)v.classList.add('down')});var e=document.createElement('div');e.className='ko';e.innerHTML='<b>K.O.</b>';b.appendChild(e);shakeBt(2);vib([60,40,90])}
-function clash(){var ms=Math.round(900*spk()),c=document.createElement('div');c.className='rvl'+(S.rmo?' rmo':'');c.style.setProperty('--d',ms+'ms');c.innerHTML='<div class="rvx"><b data-t="공개!">공개!</b></div>';document.querySelectorAll('body > .rvl').forEach(function(x){x.remove()});document.body.appendChild(c);setTimeout(function(){c.remove()},ms)}  /* 공개: 가운데, 턴 시작 글자 + 뒤 흐림 + 글리치 */
+function clash(){var ms=Math.round(1100*spk()),sp='';if(!S.rmo)for(var q=0;q<14;q++)sp+='<s style="--a:'+Math.round(q*360/14+Math.random()*12)+'deg;--d:'+Math.round(90+Math.random()*140)+'px"></s>';var e=document.createElement('div');e.className='tban t4';e.style.setProperty('--td',ms+'ms');e.innerHTML=sp+'<div class="tbx"><b>공개!</b></div>';document.querySelectorAll('body > .tban,body > .rvl').forEach(function(x){x.remove()});document.body.appendChild(e);sfx('turn');setTimeout(function(){e.remove()},ms)}  /* 공개: 턴 시작과 같은 모양(사용자 요청 2026-11-05) */
 function vCard(p,who,m,z){var c=ch(p.char),fac=S.A.slots['FACTION_'+FAC[c.faction]],max=p.maxHp,hp=p.hp,sh=Math.min(p.shield,max),w=Math.max(0,100*hp/max),sw=Math.min(100-w,100*sh/max);
  return '<div class="vc side" id="side_'+who+'" style="width:'+z.cw+'px;height:'+z.ch+'px"><div class="vfa" id="face_'+who+'">'+pvCard(p.char,{w:z.cw,holo:0,cls:'rnd',full:true})+'</div>'
   +(who==='opp'&&p.submitted&&m.phase==='battle'?'<span class="chip on okc">확정</span>':'')
@@ -1547,7 +1547,7 @@ function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me'
  var cellOf=function(sd,g,mark){var arr=rv[sd],kd=g.k==='active'?'active':g.k==='spell'?'spell':null;for(var i=0;i<arr.length;i++){var x=arr[i];if((kd?x.k===kd:x.id===g.id)&&!(mark&&used[sd][i])){if(mark)used[sd][i]=1;return $('rv_'+sd+i)}}return null};
  var face=function(sd){return $('side_'+sd)};
  var firsts=(function(){try{return JSON.parse(lsGet(firstKey())||'{}')}catch(e){return {}}})();
- var steps=[{d:850,f:function(){clash()}}],lit=null,tm=null,done=false,i=0,koPh=null;
+ var steps=[{d:1000,f:function(){clash()}}],lit=null,tm=null,done=false,i=0,koPh=null;
  var applyEv=function(e){var t=side(e.seat);
   if(e.t==='dmg'){if(e.absorbed){sh[t]=Math.max(0,sh[t]-e.absorbed);float(t,'-'+e.absorbed,'abs')}if(e.guard)float(t,'수호 0','abs');else if(e.v||!e.absorbed){hp[t]=Math.max(0,hp[t]-e.v);float(t,'-'+e.v,e.crit?'crit':e.src==='burn'?'burn':'');if(e.v>0){hurt(t,!!e.crit||e.v>=mx[t]*0.1);sfx(e.crit?'crit':'hit')}}if(e.crit)vib(40)}
   else if(e.t==='heal'){hp[t]=Math.min(mx[t],hp[t]+e.v);float(t,'+'+e.v,'heal');sfx('heal')}else if(e.t==='shield'){sh[t]+=e.v;float(t,'실드 +'+e.v,'abs')}
