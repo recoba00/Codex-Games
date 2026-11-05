@@ -780,6 +780,7 @@ body.rmo .bt4 .emb .emi{animation:none}
 /* 카드 테두리(CARD_FRAME) 밖으로 배경·그림이 삐져나오지 않게: 프레임이 있는 카드는 안쪽 층을 테두리 두께만큼 들여서 자르고, 카드 자체 바탕·그림자는 없앰 */
 .bc:has(>.frm){background:transparent}
 .bc:has(>.frm)>.l:not(.frm){inset:2.8% 3.4%;border-radius:7%/5%;overflow:hidden}
+.bt4 .vc>.wait{left:50%;top:-4px;transform:translateX(-50%);z-index:6;font-size:10px;padding:1px 8px;box-shadow:0 2px 6px rgba(0,0,0,.5);white-space:nowrap}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1550,7 +1551,7 @@ function fly(from,to,col,d,breakMid,then){if(!to){then&&then();return}var b=$('b
  var end=breakMid?{x:a.x+(z.x-a.x)*0.5,y:a.y+(z.y-a.y)*0.5}:z,frames=[{transform:'translate(-50%,-50%) scale(.6)'}];if(mid&&!breakMid)frames.push(Object.assign(T(mid,0.85),{offset:0.5}));frames.push(T(end,1));
  o.animate(frames,{duration:ms,easing:'ease-in'}).onfinish=function(){if(breakMid){o.classList.add('brk');setTimeout(function(){o.remove()},250)}else o.remove();then&&then()}}
 function pulse(el,col){if(!el)return;el.style.setProperty('--kc',col);el.classList.remove('hit');void el.offsetWidth;el.classList.add('hit')}
-function markWait(sd){var f=$('face_'+sd);if(!f)return;var w=document.createElement('span');w.className='wait';w.textContent='반격 대기';f.parentElement.appendChild(w)}
+function markWait(sd){var v=$('side_'+sd),f=$('face_'+sd);if(!v&&!f)return;var w=document.createElement('span');w.className='wait';w.textContent='반격 대기';(v||f.parentElement).appendChild(w)}  /* 카드 테두리 위(가려지지 않게) */
 /* 효과 자막 = 해당 슬롯 옆 말풍선(사선구도 4-1): 내 칸은 위, 상대 칸은 아래 */
 function bubble(el,sd,html,col,bad){var b=$('bt');if(!b)return;var o=$('bub');if(!o){o=document.createElement('div');o.id='bub';b.appendChild(o)}o.className='bub '+(sd||'')+(bad?' bad':'');o.style.setProperty('--kc',col||'#8a90a8');o.innerHTML=html;
  if(!el){o.style.left='50%';o.style.top='50%';o.style.transform='translate(-50%,-50%)';return}var r=lr(el),bw=b.clientWidth,x=r.left+r.width/2,w=o.offsetWidth;x=Math.max(w/2+6,Math.min(bw-w/2-6,x));o.style.left=x+'px';
