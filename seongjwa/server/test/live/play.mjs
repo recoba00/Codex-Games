@@ -125,7 +125,8 @@ try {
         const nSlot = await page.$$eval(".slot.mine", (x) => x.length);
         assert.equal(nSlot, 3, "빈 슬롯은 3칸(낸 만큼 늘어남)");
         await page.evaluate(() => { const id = Object.keys(S.st.battle.me.spells)[0]; S.sel.spell = id; render(); });
-        await page.waitForSelector(".slot.mine .spcard"); assert.equal(await page.$$eval(".slot.mine", (x) => x.length), 3);  // 스펠 = 카드 UI(시험용으로 쿨다운 무시하고 표시만) await page.evaluate(() => { S.sel.spell = null; render(); });
+        await page.waitForSelector(".slot.mine .spcard"); assert.equal(await page.$$eval(".slot.mine", (x) => x.length), 3);
+        await page.evaluate(() => { S.sel.spell = null; render(); });  // 스펠 = 카드 UI(시험용으로 쿨다운 무시하고 표시만 → 되돌림)
         const sp = await page.$("button[data-spell]:not([disabled])");
         if (sp) { await sp.click(); await page.waitForSelector(".slot.mine .spcard"); assert.equal(await page.$$eval(".slot.mine", (x) => x.length), (await page.$$eval(".slot.mine .bc", (x) => x.length)) > 2 ? 4 : 3);
           await page.screenshot({ path: `/tmp/play_spell_${vp.width}.png` }); await page.click("button[data-spell].on"); }
@@ -135,7 +136,7 @@ try {
       }
       await page.click("#ok");
       if (!playable) await page.click("#dY");  // 빈 확정 확인
-      await page.waitForSelector(".skip", { timeout: 15000 });  // 공개 연출 시작(확정 버튼 자리에 건너뛰기)
+      await page.waitForSelector(".skip", { timeout: 15000 }).catch(async (e) => { console.log("DBG", await page.evaluate(() => JSON.stringify({ ok: document.querySelector("#ok")?.textContent, toast: [...document.querySelectorAll(".toast,.dlg")].map((x) => x.textContent), sel: S.sel, sub: S.st?.battle?.me?.mySubmission, ws: S.ws?.readyState, q: S.outq, phase: S.st?.phase, anim: !!S.anim }))); throw e; });  // 공개 연출 시작(확정 버튼 자리에 건너뛰기)
       assert.equal(await page.$("#ok"), null, "공개 중 확정 버튼 없음");
       await page.waitForSelector("#bub", { timeout: 8000 });  // 효과 자막(슬롯 옆 말풍선)
       if (t === 1 && playable) await page.waitForSelector("#bt .zoom", { timeout: 10000 });  // 슬롯에서 커지는 확대(전투UX2차 1)
