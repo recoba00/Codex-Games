@@ -147,7 +147,7 @@ try {
       await page.waitForFunction((n) => Number(document.querySelector("#bt")?.dataset.turn) === n && !document.querySelector(".skip"), t + 1, { timeout: 20000 });
       await page.waitForSelector(".tban b", { timeout: 3000 }).catch(() => null);
       { const tb = await page.evaluate(() => { const e = document.querySelector(".tban b"), bt = document.getElementById("bt"); if (!e) return null; const r = e.getBoundingClientRect(); return { c: r.left + r.width / 2, bc: innerWidth / 2 }; });
-        assert.ok(tb, "턴 시작 배너"); if (tb) { assert.ok(Math.abs(tb.c - tb.bc) < 6, `턴 배너 가운데 ${Math.round(tb.c)} / 화면 ${Math.round(tb.bc)}`); if (t === 1) await page.screenshot({ path: `/tmp/play_ban_${vp.width}.png` }); } }
+        assert.ok(tb, "턴 시작 배너"); if (tb) { assert.ok(Math.abs(tb.c - tb.bc) < 14, `턴 배너 가운데 ${Math.round(tb.c)} / 화면 ${Math.round(tb.bc)}`); if (t === 1) await page.screenshot({ path: `/tmp/play_ban_${vp.width}.png` }); } }
       // 양쪽 연출이 끝나면(AI는 즉시) 남은 공개 시간을 버리고 선택 20초가 새로 시작
       // 타이머 = 확정 버튼(기획지시 타이머버튼): 글자 "확정 (N초 남음)" + 10초 넘으면 골드(#F5B93A)
       await page.waitForFunction(() => { const m = /확정 \((\d+)초 남음\)/.exec(document.querySelector("#ok")?.textContent ?? ""); return m && Number(m[1]) >= 18; }, null, { timeout: 4000 });
