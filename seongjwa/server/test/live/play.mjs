@@ -192,6 +192,12 @@ try {
       await page.evaluate(() => { document.querySelectorAll(".ko,.koflash").forEach((x) => x.remove()); document.querySelectorAll(".down").forEach((x) => x.classList.remove("down")); $("bt").classList.remove("koing"); });
     }
     await page.click("#menu");
+    // 설정 "캐릭터 음성"(기본 켜짐, 상세 01 캐릭터 보이스): 끄고 켜기, 음성 파일 없는 슬롯은 무음(오류 없음)
+    assert.match(await page.textContent("#mVo"), /켜짐/);
+    await page.click("#mVo"); await page.waitForFunction(() => /꺼짐/.test(document.querySelector("#mVo")?.textContent ?? ""));
+    await page.click("#mVo"); await page.waitForFunction(() => /켜짐/.test(document.querySelector("#mVo")?.textContent ?? ""));
+    await page.evaluate(() => { voice(S.st.battle.me.char, "ACTIVE"); voice(S.st.battle.me.char, "WIN"); });
+    if (!(await page.$("#mSur"))) await page.click("#menu");
     await page.click("#mSur");
     await page.click("#dY");
     await page.waitForSelector(".rr h2", { timeout: 20000 });
