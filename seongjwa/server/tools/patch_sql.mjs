@@ -93,6 +93,11 @@ for (const r of rows) {
     changed.push(where);
   } else if (sheet === "설정값") {
     const key = (item.match(/[a-z][a-z0-9_]{2,}/) ?? [])[0];
+    if (key && !(key in base.settings) && /없음/.test(before)) {  // 새 설정 행(이전 '(없음)'), 예: v38 rush_siren_sec
+      const desc = item.replace(key, "").replace(/행\s*추가/, "").replace(/=.*$/, "").trim() || key;
+      updates.push(`insert into public.settings (version_id, key, value, unit, description) values (v, ${lit(key)}, ${lit(JSON.stringify(num(after, where)))}::jsonb, null, ${lit(desc)});`);
+      changed.push(where); continue;
+    }
     if (!key || !(key in base.settings)) { errors.push(`${where}: 설정 키를 항목에서 찾지 못함`); continue; }
     if (Number(base.settings[key]) !== num(before, where)) errors.push(`${where}: 이전 값 ${before} ≠ 기준 ${base.settings[key]}`);
     updates.push(`update public.settings set value = ${lit(JSON.stringify(num(after, where)))}::jsonb where version_id = v and key = ${lit(key)};`);
