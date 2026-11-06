@@ -172,6 +172,11 @@ try {
       const ko = await page.evaluate(() => { koShow({ me: 100, opp: 0 }); return !!document.querySelector("#side_opp.down") && !!document.querySelector("#bt .ko b"); });
       assert.ok(ko, "K.O. 쓰러진 프로필·표기");  // 화면 갱신(턴 시작)과 겹칠 수 있어 같은 틱에서 확인
       await sleep(500); await page.screenshot({ path: `/tmp/play_ko_${vp.width}.png` });
+      // 상태 아이콘 탭 = 카드 상세와 같은 틀(사용자 요청 2026-11-06)
+      await page.evaluate(() => { const i = document.createElement("i"); i.className = "bf"; i.id = "tstbf"; i.dataset.st = JSON.stringify([{ n: "작열 ×2", p: "2턴 남음", d: STDESC.burn, c: "#e5533d", u: "", c1: "작", w: "opp" }, { n: "표식", p: "이번 턴", d: STDESC.mark, c: "#c58bff", u: "", c1: "표", w: "opp" }]); document.body.appendChild(i); stModal(i); });
+      assert.ok(await page.$("#peek.stm .sti.big"), "상태 상세 창");
+      await sleep(450); await page.screenshot({ path: `/tmp/play_st_${vp.width}.png` });
+      await page.evaluate(() => { peekHide(); document.getElementById("tstbf")?.remove(); });
       await page.evaluate(() => { document.querySelectorAll(".ko,.koflash").forEach((x) => x.remove()); document.querySelectorAll(".down").forEach((x) => x.classList.remove("down")); $("bt").classList.remove("koing"); });
     }
     await page.click("#menu");

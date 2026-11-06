@@ -865,6 +865,14 @@ body.rmo .pview .paura{animation:none}
 @keyframes kofl{0%{opacity:.85}100%{opacity:0}}
 #bt.koing{pointer-events:none}
 .bt3 .vc.down{rotate:-5deg;translate:0 8px;transition:filter .4s,rotate .6s cubic-bezier(.5,0,.6,1.4),translate .6s}
+
+/* 상태 상세(카드 상세 .cdm과 같은 틀) */
+.stm .sti{display:grid;place-items:center;width:calc(40px*var(--k));height:calc(40px*var(--k));border-radius:calc(10px*var(--k));background:var(--bc) center/cover no-repeat;color:#0b0e1c;font-style:normal;font-weight:800;font-size:calc(18px*var(--k));flex:none}
+.stm .sti.big{width:calc(150px*var(--k));height:calc(150px*var(--k));border-radius:calc(28px*var(--k));font-size:calc(64px*var(--k));box-shadow:0 12px 40px rgba(0,0,0,.7);animation:cdin .3s cubic-bezier(.2,1.4,.4,1) both}
+.stm .cdr{max-height:80vh;overflow:auto}
+.stm .stb{display:flex;gap:calc(12px*var(--k));align-items:flex-start}
+.stm .stb>div{display:flex;flex-direction:column;gap:calc(6px*var(--k))}
+.stm .stb b{font-size:calc(28px*var(--k))}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1333,10 +1341,10 @@ function buffs4(p,who,turn){var st=[];S.bprev=S.bprev||{};if(p.shieldCarry>0)st.
  p.status.forEach(function(s){if(s.k==='tide'){if(s.flood)st.push({k:'flood',left:1});if(s.ebb)st.push({k:'ebb',left:1})}else st.push(s)});
  var it=st.map(function(s){var d=SDEF[s.k]||[(ST[s.k]||[s.k])[0],'초록','',''],u=d[3]?S.A.slots['STATUS_'+d[3]]:null,col=CN[d[1]]||'#8a90a8',per=perTxt(s,turn);
   var lab=d[0]+(s.k==='carry'?' '+s.v:s.k==='burn'?' ×'+s.n:s.k==='handSeal'&&s.n?' '+s.n+'장':''),key=who+':'+s.k,fl=S.bprev[key]&&S.bprev[key].indexOf('다음')===0&&per==='이번 턴';S.bprev[key]=per;
-  return {u:u,col:col,fl:fl,c1:Array.from(String(d[0]))[0]||'?',tip:lab+(per?' · '+per:'')+(d[2]?' — '+d[2]:'')}});
+  return {u:u,col:col,fl:fl,c1:Array.from(String(d[0]))[0]||'?',tip:lab+(per?' · '+per:'')+(d[2]?' — '+d[2]:''),sd:{n:lab,p:per,d:d[2]||'',c:col,u:u?u.url:'',c1:Array.from(String(d[0]))[0]||'?',w:who}}});
  var cut=it.length>3,more=it.length-2;
  return (cut?it.slice(0,3):it).map(function(x,i){var last=cut&&i===2,tip=last?it.slice(2).map(function(y){return y.tip}).join(' / '):x.tip;
-  return '<i class="bf'+(x.fl?' flash':'')+(last?' more':'')+'" style="--bc:'+x.col+(x.u?';background-image:url('+x.u.url+')':'')+'" data-tip="'+esc(tip)+'">'+(x.u||last?'':esc(x.c1))+(last?'<b>+'+more+'</b>':'')+'</i>'}).join('')}
+  return '<i class="bf'+(x.fl?' flash':'')+(last?' more':'')+'" style="--bc:'+x.col+(x.u?';background-image:url('+x.u.url+')':'')+'" data-tip="'+esc(tip)+'" data-st="'+esc(JSON.stringify(last?it.slice(2).map(function(y){return y.sd}):[x.sd]))+'">'+(x.u||last?'':esc(x.c1))+(last?'<b>+'+more+'</b>':'')+'</i>'}).join('')}
 /* 상단 전투 순서 알약: "N턴" + 7종(면역·방어·반격·침묵·방해·스킬·공격). 위 뱃지 = 상대(공개 후), 아래 뱃지 = 나(Figma 레이어 이름 기준). 0이면 뱃지 없음(사용자 요청 2026-11-05) */
 function pills4(b,cnt){var pv=S.kpPrev||{},h='<span class="kp tp">'+b.turn+'턴</span>';
  KP.forEach(function(k){var o=cnt.opp[k]||0,me=cnt.me[k]||0;h+='<span class="kp'+(me?' on':'')+'" data-k="'+k+'" style="--kc:'+KCOL[k]+'" data-tip="'+esc((KIND_KO[k]||KP_KO[k])+' — 나 '+me+'장'+(o?' · 상대 '+o+'장':''))+'">'+(KIND_KO[k]||KP_KO[k])+(o?'<em class="po">'+o+'</em>':'')+(me?'<em class="pm'+((pv[k]||0)<me?' pop':'')+'">'+me+'</em>':'')+'</span>'});return h}
@@ -1500,6 +1508,10 @@ function cardModal(id){var k=card(id),H=innerHeight,cw=Math.round(Math.min(H*0.7
  d.innerHTML='<div class="cdw"><div class="cdl">'+bcCard(id,{w:cw,mode:'hand',face:true,fig:true})+'</div><div class="cdr"><small>'+esc((KIND_KO[k.kind]||k.kind)+' · 비용 E'+k.cost+' · 처리 단계 '+phLab(id)+(k.owner_character?' · '+ch(k.owner_character).name+' 전용':''))+'</small><b>'+esc(k.name)+'</b><p>'+esc(k.effect_text||'')+'</p><div class="aff">'+(AFF[k.kind]||'')+'</div></div></div><div class="cdx">화면을 누르면 닫혀요</div>';
  d.onclick=function(){peekHide()};document.body.appendChild(d)}
 /* 카드 상세·한 줄 설명: 호버 0.2초 / 길게 누르기 0.35초. 다시 그려져도 같은 대상이면 닫지 않음(효과연출 5: 누르는 동안 계속 표시) */
+function stModal(el){var L;try{L=JSON.parse(el.dataset.st)}catch(e){return}if(!L||!L.length)return;peekHide();var H=innerHeight,d=document.createElement('div');d.id='peek';d.className='cdm bt4 stm';d.style.setProperty('--k',Math.min(innerWidth/788,H/360).toFixed(4));
+ var ic=function(x,c){return '<i class="sti'+(c||'')+'" style="--bc:'+x.c+(x.u?';background-image:url('+x.u+')':'')+'">'+(x.u?'':esc(x.c1))+'</i>'};
+ d.innerHTML='<div class="cdw"><div class="cdl">'+ic(L[0],' big')+'</div><div class="cdr">'+L.map(function(x,i){return '<div class="stb">'+(L.length>1?ic(x):'')+'<div><small>'+esc((x.w==='me'?'나':'상대')+' · 상태'+(x.p?' · '+x.p:''))+'</small><b>'+esc(x.n)+'</b><p>'+esc(x.d||'설명 준비 중')+'</p></div></div>'}).join('')+'</div></div><div class="cdx">화면을 누르면 닫혀요</div>';
+ d.onclick=function(){peekHide()};document.body.appendChild(d)}
 function tipHide(){var o=$('tip');if(o)o.remove()}
 function tipShow(el){tipHide();var t=document.createElement('div');t.id='tip';t.className='tip';t.textContent=el.dataset.tip;document.body.appendChild(t);
  var r=el.getBoundingClientRect(),w=t.offsetWidth,h=t.offsetHeight,m=12,x=Math.min(innerWidth-w-m,Math.max(m,r.left+r.width/2-w/2)),y=r.top-h-6;if(y<m)y=r.bottom+6;if(y+h>innerHeight-m)y=Math.max(m,innerHeight-h-m);t.style.left=x+'px';t.style.top=y+'px'}
@@ -1511,7 +1523,7 @@ document.addEventListener('pointerover',function(e){if(e.pointerType&&e.pointerT
 /* 터치: 길게 누르기 0.35초 = 상세. 손가락이 8pt 넘게 움직이면(스와이프) 상세를 띄우지 않는다.
    스펠·덱 화면의 덱 카드는 짧게 탭해도 상세(스와이프는 무시). 상세는 다음 탭에서 닫힘 */
 document.addEventListener('pointerdown',function(e){if(!e.pointerType)return;var el=infoEl(e);if(e.pointerType==='mouse'&&!(el&&el.dataset.cid&&battleOn()))return;PK.lp=false;PK.mv=false;PK.x=e.clientX;PK.y=e.clientY;PK.at=Date.now();PK.el2=el;clearTimeout(PK.t);if(!el)return;
- PK.t=setTimeout(function(){if(PK.mv)return;PK.lp=true;infoShow(el);vib(10)},350)});
+ PK.t=setTimeout(function(){if(PK.mv)return;PK.lp=true;if(el.dataset.st&&battleOn())stModal(el);else infoShow(el);vib(10)},350)});
 document.addEventListener('pointermove',function(e){if(!e.pointerType||e.pointerType==='mouse'||PK.mv)return;if(Math.abs(e.clientX-PK.x)>8||Math.abs(e.clientY-PK.y)>8){PK.mv=true;clearTimeout(PK.t);if(PK.lp){PK.lp=false;infoHide()}}},{passive:true});
 ['pointerup','pointercancel'].forEach(function(n){document.addEventListener(n,function(e){if(!e.pointerType)return;clearTimeout(PK.t);if(e.pointerType==='mouse')return;
  if(n==='pointerup'&&!PK.mv&&!PK.lp&&PK.el2&&PK.el2.closest('.deck2')&&Date.now()-PK.at<350){PK.tap=true;infoShow(PK.el2);return}  // 덱 카드: 탭 = 상세
@@ -1519,6 +1531,7 @@ document.addEventListener('pointermove',function(e){if(!e.pointerType||e.pointer
 document.addEventListener('click',function(e){if(PK.lp){PK.lp=false;e.stopPropagation();e.preventDefault();return}
  if(PK.tap){PK.tap=false;e.stopPropagation();return}  // 방금 탭으로 연 덱 카드 상세는 이 클릭으로 닫지 않음
  if(PK.mv){PK.mv=false}
+ var stb=e.target.closest&&e.target.closest('[data-st]');if(stb&&battleOn()){e.stopPropagation();tipHide();stModal(stb);return}  /* 상태 아이콘 탭 = 카드 상세와 같은 모양(사용자 요청 2026-11-06) */
  var cb=e.target.closest&&e.target.closest('[data-calc]');if(cb){e.stopPropagation();calcShow(cb.dataset.calc);return}
  if(!e.target.closest('[data-cid]')){infoHide();PK.key=null}
  if(S.anim&&e.target.closest('#bt')&&!e.target.closest('#spd,#logline,#menu,#logb,#emo,.emp4,.ib4,.vc.pf,[data-cid],[data-tip],.log,.menu,.pop')){if(S.anim.waiting)S.anim.next();else S.anim.skip()}},true);
