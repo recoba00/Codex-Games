@@ -225,7 +225,7 @@ export async function handle(request, env) {
       const etag = `"${live.sha256}"`;
       const cache = { etag, "cache-control": "public, max-age=60" };
       if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers: cache });
-      return new Response(JSON.stringify({ ok: true, version: live.version, sha256: live.sha256, data: live.snapshot }), {
+      return new Response(JSON.stringify({ ok: true, version: live.version, sha256: live.sha256, data: showN(live) }), {
         status: 200, headers: { "content-type": "application/json; charset=utf-8", ...cache }
       });
     }
@@ -713,4 +713,20 @@ function cupView(data, season, week) {
   return { rules: { minTier: CUP.minTier, wins: CUP.wins, losses: CUP.losses, widenAfterSec: CUP.widenAfterSec, waitSec: cupWaitSec(data), bonusMission: cupBonusMission(data) },
     special, specialMult: cfg.special_mult,
     rewards: cfg.tiers.map(({ frame, ...t }) => ({ ...t, gold: Math.round(t.gold * mult), emote: t.emote && Boolean(cfg.emote_item), title: Boolean(frame) })) };  // F열 '지급' = 칭호만(LoL식 정리)
+}
+
+// 시트 설명 문구의 "N" 자리(예: 스펠 "−N%", "+N", "N장")를 실제 수치로(기획지시 2026-11-06 결과텍스트·스킬보기 3). 값은 스펠 value 열.
+// N% 는 value×100 %, 나머지 N 은 value 그대로. 원본(데이터 버전)은 그대로 두고 게임에 내보낼 때만 바꾼다
+export function fillN(text, value) {
+  if (typeof text !== "string" || value == null || !/(^|[^A-Za-z])N(?![A-Za-z])/.test(text)) return text;
+  const pct = Math.round(Number(value) * 1000) / 10;
+  return text.replace(/(^|[^A-Za-z])N%/g, `$1${pct}%`).replace(/(^|[^A-Za-z])N(?![A-Za-z%])/g, `$1${Number(value)}`);
+}
+const shownCache = { sha: null, data: null };
+function showN(live) {
+  if (shownCache.sha === live.sha256) return shownCache.data;
+  const d = live.snapshot ?? {};
+  const spells = Object.fromEntries(Object.entries(d.spells ?? {}).map(([k, sp]) => [k, { ...sp, effect_text: fillN(sp.effect_text, sp.value) }]));
+  shownCache.sha = live.sha256; shownCache.data = { ...d, spells };
+  return shownCache.data;
 }

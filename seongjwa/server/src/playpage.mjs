@@ -940,6 +940,13 @@ body.rmo .ifl,body.rmo .tsw,body.rmo .ko .crk,body.rmo .ko s,body.rmo .tban.t4 .
 
 /* 스킬 애니메이션 영상(투명 WebM): 전신 PNG 자리 그대로 */
 video.sart.sv{object-fit:contain;object-position:center bottom;background:none}
+
+/* 설정 스킬 연출 보기: 1회 재생 후 정지(창은 닫을 때까지), 배경 이펙트만 반복, 동작 줄이기면 배경은 느린 페이드 */
+.scut.pv{animation:fi .2s ease-out both}
+.scut.pv .sfl{animation-iteration-count:1}
+body.rmo .scut.pv .sbg{animation:pvfade 3.2s ease-in-out infinite alternate}
+@keyframes pvfade{0%{opacity:1}100%{opacity:.7}}
+.skpb [data-r]{background:#2b5fd0;color:#fff}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1559,19 +1566,21 @@ var SKC={'불':'rgba(255,86,64,.64)','물':'rgba(79,195,255,.64)','바람':'rgba
 /* 투명 WebM(VP9 알파)은 크롬·엣지·파이어폭스·안드로이드만. 사파리(아이폰·맥)는 알파를 못 그려 전신 PNG로 */
 function webmAlpha(){if(S.wa==null){var v=document.createElement('video'),ua=navigator.userAgent;S.wa=!!(v.canPlayType&&v.canPlayType('video/webm; codecs="vp9"'))&&!(/Safari\//.test(ua)&&!/Chrome|Chromium|Edg|Android/.test(ua))&&!/iP(hone|ad|od)/.test(ua)}return S.wa}
 function animWarm(ids){(ids||[]).forEach(function(id){var a=((S.A.art||{})[id]||{})['000']||{},u=a.skillAnim&&a.skillAnim.url;S.warm=S.warm||{};if(u&&webmAlpha()&&!S.warm[u]){S.warm[u]=1;fetch(u,{mode:'cors'}).catch(function(){})}})}  /* 전투 시작 때 미리 받아 둠 */
-function skillCut(chr,sd,d){var c=ch(chr),col=SKC[c.faction]||'rgba(107,122,255,.64)',a=((S.A.art||{})[chr]||{})['000']||{},ms=Math.max(600,Math.round(d*spk())),k=Math.min(innerWidth/788,innerHeight/360),pt='';
+function skillCut(chr,sd,d,keep){var c=ch(chr),col=SKC[c.faction]||'rgba(107,122,255,.64)',a=((S.A.art||{})[chr]||{})['000']||{},ms=Math.max(600,Math.round(d*spk())),k=Math.min(innerWidth/788,innerHeight/360),pt='';
  if(!S.rmo)pt=fxOf(c.faction);if(false)for(var q=0;q<14;q++)pt+='<s style="left:'+Math.round(10+Math.random()*80)+'%;top:'+Math.round(15+Math.random()*70)+'%;--dx:'+Math.round(-120+Math.random()*240)+'px;--dy:'+Math.round(-140+Math.random()*120)+'px;animation-delay:'+(Math.random()*0.6).toFixed(2)+'s"></s>';
  var e=document.createElement('div');e.className='scut'+(S.skm==='over'?' over':'')+(sd==='opp'?' opp':'')+' fx-'+({'불':'fire','물':'water','바람':'wind'}[c.faction]||'none');e.style.setProperty('--c1',col);e.style.setProperty('--d',ms+'ms');e.style.setProperty('--k',k.toFixed(4));
  var va=a.skillAnim&&webmAlpha()?a.skillAnim.url:null;  /* 스킬 애니메이션(투명 WebM)이 있으면 전신 대신 재생, 배경·스킬명·설명은 그대로(캐릭터등록단순화) */
  e.innerHTML='<i class="sbg"></i>'+pt+'<div class="sbox">'+(va?'<video class="sart sv" src="'+va+'" autoplay muted playsinline preload="auto"></video>':a.full?'<i class="sart" style="background-image:url('+a.full.url+')"></i>':'')+'<div class="stx"><b>'+esc(c.active_name||'액티브')+'</b><p>'+esc(c.active_text||'')+'</p></div></div>'+(S.rmo?'':'<i class="sfl"></i>')+'<button class="sskip" type="button">스킵하기 ▶</button>';
  document.querySelectorAll('body > .scut').forEach(function(x){x.remove()});document.body.appendChild(e);sfx({'불':'cut_fire','물':'cut_water','바람':'cut_wind'}[c.faction]||'ult');if(!S.rmo)setTimeout(function(){shakeBt(2)},120);
- var end=function(){if(e.parentNode)e.remove()};e.querySelector('.sskip').onclick=function(ev){ev.stopPropagation();end();if(S.anim&&S.anim.adv)S.anim.adv()};setTimeout(end,ms)}
+ var end=function(){if(e.parentNode)e.remove()};e.querySelector('.sskip').onclick=function(ev){ev.stopPropagation();end();if(S.anim&&S.anim.adv)S.anim.adv()};if(keep){e.classList.add('pv');return}setTimeout(end,ms)}  /* keep = 설정 미리 보기: 1회 재생 후 마지막 장면에서 정지 */
 /* 설정의 스킬 연출 미리 보기: 닫기·바깥 탭까지 반복(끝나면 0.5초 쉬고 다시), 방식 전환은 바로 그 방식으로 이어서(기획지시 2026-11-06 스킬연출보기) */
 function skPreview(chr){skPrevStop();var pv=document.createElement('div');pv.id='skpv';pv.className='skpv';
- var lab=function(){return '<div class="skpb"><button data-m="full"'+(S.skm!=='over'?' class="on"':'')+'>풀화면</button><button data-m="over"'+(S.skm==='over'?' class="on"':'')+'>오버레이</button><button class="skx" data-x="1">닫기 ✕</button></div>'};
+ var lab=function(){return '<div class="skpb"><button data-m="full"'+(S.skm!=='over'?' class="on"':'')+'>풀화면</button><button data-m="over"'+(S.skm==='over'?' class="on"':'')+'>오버레이</button><button data-r="1">다시 보기 ↻</button><button class="skx" data-x="1">닫기 ✕</button></div>'};
  pv.innerHTML=lab();document.body.appendChild(pv);S.skPrev={chr:chr,t:0};
- var run=function(){if(!S.skPrev)return;clearTimeout(S.skPrev.t);skillCut(chr,'me',2000);S.skPrev.t=setTimeout(run,Math.max(600,Math.round(2000*spk()))+500)};
- pv.onclick=function(ev){var m=ev.target.closest&&ev.target.closest('[data-m]');ev.stopPropagation();
+ /* 1회만 재생하고 마지막 장면에서 정지(스킬명·설명 유지), 배경 이펙트만 창이 열려 있는 동안 반복. 다시 보기를 눌러야 다시 1회(상세 01 2026-11-06 변경) */
+ var run=function(){if(!S.skPrev)return;skillCut(chr,'me',2000,true)};
+ pv.onclick=function(ev){var m=ev.target.closest&&ev.target.closest('[data-m]'),r=ev.target.closest&&ev.target.closest('[data-r]');ev.stopPropagation();
+  if(r){run();return}
   if(m){if(S.skm!==m.dataset.m){S.skm=m.dataset.m;lsSet('play_skm',S.skm);pv.innerHTML=lab();if(battleOn())render()}run();return}
   skPrevStop()};
  run()}
@@ -1721,10 +1730,10 @@ function play(ob,log,next){skPrevStop();var you=next.you,side=function(s){return
  var firsts=(function(){try{return JSON.parse(lsGet(firstKey())||'{}')}catch(e){return {}}})();
  var steps=[{d:1000,f:function(){clash()}}],lit=null,tm=null,done=false,i=0,koPh=null;
  var applyEv=function(e){var t=side(e.seat);
-  if(e.t==='dmg'){if(e.absorbed){sh[t]=Math.max(0,sh[t]-e.absorbed);float(t,'-'+e.absorbed,'abs')}if(e.guard)float(t,'WARD 0','abs');else if(e.v||!e.absorbed){hp[t]=Math.max(0,hp[t]-e.v);float(t,e.src==='burn'?'BURN '+e.v:'-'+e.v,e.crit?'crit':e.src==='burn'?'burn':'');if(e.v>0){hurt(t,!!e.crit||e.v>=mx[t]*0.1);sfx(e.crit?'crit':'hit')}}if(e.crit)vib(40)}
+  if(e.t==='dmg'){if(e.absorbed){sh[t]=Math.max(0,sh[t]-e.absorbed);float(t,'-'+e.absorbed,'abs');if(!e.v&&!e.guard)float(t,'SHIELD BLOCK','abs')}if(e.guard)float(t,'WARD 0','abs');else if(e.v||!e.absorbed){hp[t]=Math.max(0,hp[t]-e.v);float(t,e.src==='burn'?'BURN '+e.v:'-'+e.v,e.crit?'crit':e.src==='burn'?'burn':'');if(e.v>0){hurt(t,!!e.crit||e.v>=mx[t]*0.1);sfx(e.crit?'crit':'hit')}}if(e.crit)vib(40)}
   else if(e.t==='heal'){hp[t]=Math.min(mx[t],hp[t]+e.v);float(t,'HEAL +'+e.v,'heal');sfx('heal')}else if(e.t==='shield'){sh[t]+=e.v;float(t,'SHIELD +'+e.v,'abs')}
   else if(e.t==='selfcost'){hp[t]=Math.max(0,hp[t]-e.v);float(t,'-'+e.v,'burn')}else if(e.t==='rewind'){hp[t]=e.to;float(t,'↺ '+e.to,'heal')}
-  else if(e.t==='debuff')float(t,(ST[e.debuff]||[])[1]||(ST[e.debuff]||[e.debuff])[0],'abs');else if(e.t==='blocked')float(t,'IMMUNE','abs');else if(e.t==='draw'){float(t,'DRAW +'+e.n,'heal');sfx('draw')}else if(e.t==='gauge')float(t,'GAUGE '+(e.v>0?'+':'')+e.v,'abs');
+  else if(e.t==='burnout')float(t,'HAND FULL','abs');else if(e.t==='debuff')float(t,(ST[e.debuff]||[])[1]||(ST[e.debuff]||[e.debuff])[0],'abs');else if(e.t==='blocked')float(t,'IMMUNE','abs');else if(e.t==='draw'){float(t,'DRAW +'+e.n,'heal');sfx('draw')}else if(e.t==='gauge')float(t,'GAUGE '+(e.v>0?'+':'')+e.v,'abs');
   bars(t,hp,sh,mx)};
  acts.forEach(function(g){var gi=G.indexOf(g),sd=g.seat==null?null:side(g.seat),kd=kindOf(g),col=KCOL[kd],D=per(g)*k;
   var tgt=(function(){var e=g.ev.find(function(x){return x.t==='dmg'||x.t==='debuff'||x.t==='blocked'});if(e)return side(e.seat);if(g.ev.length)return side(g.ev[0].seat);return kd==='attack'||kd==='silence'||kd==='disrupt'?(sd==='me'?'opp':'me'):sd})();
@@ -1742,7 +1751,7 @@ function play(ob,log,next){skPrevStop();var you=next.you,side=function(s){return
    else if(g.k==='void'){fly(lit||face(sd),face(tgt===sd?(sd==='me'?'opp':'me'):tgt),col,flyD,true);}
    else if(kd==='counter'&&g.k==='card'){fly(lit,face(sd),col,flyD);markWait(sd)}
    else if(g.k!=='rush'&&g.k!=='auto')fly(g.k==='tick'?null:lit,face(tgt),col,flyD,!!g.bad)}});
-  steps.push({d:arrD,f:function(){g.ev.forEach(applyEv);if(g.ev.length&&tgt)pulse(face(tgt),col);if(koPh==null&&(hp.me<=0||hp.opp<=0))koPh=g.ph}});
+  steps.push({d:arrD,f:function(){g.ev.forEach(applyEv);resExtra(g,sd,tgt);if(g.ev.length&&tgt)pulse(face(tgt),col);if(koPh==null&&(hp.me<=0||hp.opp<=0))koPh=g.ph}});
   steps.push({wait:1,d:0,f:function(){}})});
  steps.push({d:(acts.length?0:1500)*k,f:function(){document.querySelectorAll('.kp.now').forEach(function(x){x.classList.remove('now')});logPush('<span class="sumL">요약 · '+esc(sum)+'</span>');var bb=$('bub');if(bb)bb.remove();if(!acts.length){var cp=$('cap');if(cp){cp.innerHTML='<span class="sumL">'+esc(sum)+'</span>';cp.className='cap show';cp.style.color=''}}document.querySelectorAll('.obar i.now').forEach(function(x){x.classList.remove('now');x.classList.add('past')})}});
  var finish=function(){if(done)return;done=true;clearTimeout(tm);dimOff();var bk=$('bt');if(bk)bk.classList.remove('koing');document.querySelectorAll('.zoom,.orb,#bub').forEach(function(x){x.remove()});S.anim=null;S.lastOpp=rv.opp;S.lastTurn=ob.turn;var p=S.pending||S.st;S.pending=null;S.st=p;
@@ -1798,6 +1807,14 @@ function firstTip(t){var b=$('bt');if(!b)return;var e=document.createElement('di
 function bars(sd,hp,sh,mx){var w=Math.max(0,100*hp[sd]/mx[sd]),sw=Math.min(100-w,100*sh[sd]/mx[sd]);
  $('hp_'+sd).style.width=w+'%';$('gh_'+sd).style.width=w+'%';var s=$('sh_'+sd);s.style.left=w+'%';s.style.width=sw+'%';$('hpt_'+sd).textContent=hp[sd]+'/'+mx[sd];$('sht_'+sd).textContent=sh[sd]?'+'+sh[sd]:''}
 /* 프로필 위 효과 글자(사용자 요청 2026-11-02): 프로필(.vc, 잘림 영역) 안이 아니라 전투판 위에 띄워 긴 글자도 잘리지 않게. 크기는 카드 폭 기준 */
+/* 도착 결과 텍스트 보충(상세 01 카드 발동 결과 텍스트 정의표): 로그 이벤트가 없는 효과(버프·대기·실드 배율)는 카드별 라벨, 그래도 빈 결과면 시트 효과_짧게 */
+var RES_X={C10:function(c){return 'IMMUNE 2T'},C11:function(){return 'IMMUNE · CLEANSE'},C16:function(c){return 'ATK +'+Math.round((c.coef||0)*100)+'%'},
+ AU02:function(c){return 'SHIELD +'+Math.round((c.coef||0)*100)+'%'},SE01:function(c){return 'HEAL +'+Math.round((c.coef||0)*100)+'% · 2T'},
+ UM02:function(c){var m=/SPD \+(\d+)/.exec(c.effect_text||'');return 'SPD +'+(m?m[1]:'')}};
+var RES_VIS={dmg:1,heal:1,shield:1,selfcost:1,rewind:1,debuff:1,blocked:1,draw:1,gauge:1,burnout:1};
+function resExtra(g,sd,tgt){if(g.k!=='card'||!sd)return;var c=card(g.id),f=RES_X[g.id],shown=g.ev.some(function(e){return RES_VIS[e.t]});
+ if(f)float(sd,f(c),'abs');else if(c.kind==='counter'&&!g.ev.length)float(sd,'COUNTER READY','abs');
+ else if(!shown)float(tgt||sd,c.effect_short||c.effect_text||c.name,'abs')}
 function float(sd,txt,cls){var host=$('side_'+sd),b=$('bt');if(!host||!b)return;var r=lr(host),f=document.createElement('div');f.className='float fx '+(cls||'')+(/^([A-Z]+ )?[-+]?\d/.test(txt)?' num':'');f.textContent=txt;f.style.setProperty('--r',(Math.random()*14-7).toFixed(1)+'deg');f.style.setProperty('--x',Math.round(Math.random()*28-14)+'px');
  var n=b.querySelectorAll('.float.fx[data-sd="'+sd+'"]').length,fs=Math.max(22,Math.min(56,Math.round(r.width*(cls==='crit'?0.42:/^[-+]?\d/.test(txt)?0.32:0.24))));if(/[가-힣]/.test(txt))fs=Math.round(fs*0.72);
  f.dataset.sd=sd;f.style.left=(r.left+r.width/2)+'px';f.style.top=(r.top+r.height*0.3+n*fs*1.05)+'px';f.style.fontSize=fs+'px';b.appendChild(f);setTimeout(function(){f.remove()},1800)}

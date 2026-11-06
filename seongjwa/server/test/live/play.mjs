@@ -126,10 +126,11 @@ try {
         await sleep(700); await page.screenshot({ path: `/tmp/play_skill_${vp.width}.png` });
         await page.click(".scut .sskip");
         assert.equal(await page.$(".scut"), null, "스킵하면 바로 닫힘");
-        // 설정의 스킬 연출 미리 보기: 닫기·바깥 탭까지 반복, 방식 전환하면 바로 그 방식(기획지시 2026-11-06 스킬연출보기)
+        // 설정의 스킬 연출 보기: 1회 재생 후 정지·배경만 반복, 다시 보기, 방식 전환, 바깥 탭으로 닫기(기획지시 2026-11-06 결과텍스트·스킬보기 2)
         await page.evaluate(() => skPreview(S.st.battle.me.char));
         await page.waitForSelector(".skpv .skx"); await sleep(Math.round(2000 * 1) + 800);
-        assert.ok(await page.$(".scut"), "끝나고 0.5초 뒤 다시 재생");
+        assert.ok(await page.$(".scut.pv"), "1회 재생 후 마지막 장면에서 정지(창 유지)");
+        await page.click('.skpb [data-r]'); assert.ok(await page.$(".scut.pv"), "다시 보기");
         await page.click('.skpb [data-m="over"]'); await sleep(200);
         assert.ok(await page.$(".scut.over"), "오버레이로 바로 이어서");
         await page.mouse.click(vp.width / 2, vp.height / 2); await sleep(100);

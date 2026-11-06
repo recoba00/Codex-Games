@@ -164,3 +164,13 @@ test("없는 경로 404, 잘못된 JSON 400", async () => {
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, "json_invalid");
 });
+
+test("설명 문구의 N 자리를 실제 수치로(기획지시 2026-11-06 결과텍스트·스킬보기 3): N% = 값×100, 그 밖 N = 값", async () => {
+  const { fillN } = await import("../src/app.mjs");
+  assert.equal(fillN("상대 이번 턴 공격 피해 −N%", 0.3), "상대 이번 턴 공격 피해 −30%");
+  assert.equal(fillN("최대 HP N% 회복(폭주 중 절반)", 0.15), "최대 HP 15% 회복(폭주 중 절반)");
+  assert.equal(fillN("이번 턴 에너지 +N", 2), "이번 턴 에너지 +2");
+  assert.equal(fillN("즉시 N장 드로우", 2), "즉시 2장 드로우");
+  assert.equal(fillN("SPD +30 No change", 1), "SPD +30 No change", "영단어 속 N은 그대로");
+  assert.equal(fillN("값 없음 N%", null), "값 없음 N%");
+});
