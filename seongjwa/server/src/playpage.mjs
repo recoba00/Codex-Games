@@ -824,6 +824,21 @@ button.busy::before{content:"";display:inline-block;width:.85em;height:.85em;mar
 /* 픽·스펠덱: 닉네임 뱃지가 카드(등급 테두리) 위로 */
 .pk3 .lab2{position:relative;z-index:6}
 .bc.accard .art{background-size:cover;background-position:center}
+
+/* 패시브 보기 */
+.scut.pview{animation:fi .2s ease-out both;pointer-events:auto;cursor:pointer;z-index:61}
+.pview .paura{position:absolute;left:calc(40px*var(--k));top:calc(10px*var(--k));width:calc(360px*var(--k));height:calc(340px*var(--k));background:radial-gradient(ellipse at 50% 55%,var(--c1) 0,rgba(255,255,255,.08) 38%,transparent 66%);filter:blur(6px);animation:paur 2.6s ease-in-out infinite alternate;pointer-events:none}
+@keyframes paur{0%{opacity:.55;transform:scale(.96)}100%{opacity:1;transform:scale(1.05)}}
+.pview .pfx{position:absolute;left:calc(40px*var(--k));width:calc(360px*var(--k));top:0;bottom:0;overflow:hidden;pointer-events:none;-webkit-mask:radial-gradient(ellipse 60% 65% at 50% 55%,#000 55%,transparent 100%);mask:radial-gradient(ellipse 60% 65% at 50% 55%,#000 55%,transparent 100%)}
+.pview .pfx .em,.pview .pfx .bu{bottom:-12px}
+.pview .pfx .gs{left:-40%}
+.pview .sart.pfull{left:calc(60px*var(--k) + 72px*var(--k));top:calc(24px*var(--k));width:calc(175.5px*var(--k));height:calc(312px*var(--k));background-size:contain;background-position:center bottom}
+.pview .stx small{display:block;font-size:calc(12px*var(--k));opacity:.85;font-weight:700}
+.pview .stx .pact{margin-top:calc(6px*var(--k));font-size:calc(13px*var(--k));line-height:1.45;font-weight:500;opacity:.85;word-break:keep-all;padding-top:calc(8px*var(--k));border-top:1px solid rgba(255,255,255,.25)}
+.pview .stx .pact b{display:inline;font-size:inherit;line-height:inherit;font-weight:800}
+.pview .phint{position:absolute;right:max(calc(60px*var(--k)),env(safe-area-inset-right));bottom:max(calc(16px*var(--k)),env(safe-area-inset-bottom));font-size:calc(12px*var(--k));color:rgba(255,255,255,.7)}
+.bt4 .vc.pf{cursor:pointer}
+body.rmo .pview .paura{animation:none}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -966,7 +981,7 @@ function onRoom(m){if(m.now)S.off=m.now-Date.now();
  if(ob&&nb&&m.phase==='battle'&&nb.turn>ob.turn){return play(ob,nb.log,m)}
  if(ob&&old.phase==='battle'&&m.phase==='result'&&m.lastLog&&m.lastLog[0]&&m.lastLog[0].turn===ob.turn){return play(ob,m.lastLog,m)}
  render()}
-function render(){applyZoom();musicSync();var m=S.st;if(!m)return home();if(m.phase!=='battle')document.querySelectorAll('body > .tban,body > .scut,body > .rvl,#peek.cdm').forEach(function(x){x.remove()});S.showLog=S.showLog&&m.phase==='battle';wake(['pick','loadout','battle'].indexOf(m.phase)>=0);
+function render(){applyZoom();musicSync();var m=S.st;if(!m)return home();if(m.phase!=='battle')document.querySelectorAll('body > .tban,body > .scut,body > .pview,body > .rvl,#peek.cdm').forEach(function(x){x.remove()});S.showLog=S.showLog&&m.phase==='battle';wake(['pick','loadout','battle'].indexOf(m.phase)>=0);
  if(m.phase==='closed'){quit();return home('판이 닫혔어요('+(m.notice||'')+')')}
  if(m.phase==='pick'||m.phase==='ban')return renderPick(m);
  if(m.phase==='loadout')return renderLoadout(m);
@@ -1368,6 +1383,7 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
  $('emo').onclick=function(){var on=!S.emoOpen;popClose('emo');S.emoOpen=on;toggleEmo();this.classList.toggle('on',on)};
  document.querySelectorAll('[data-em]').forEach(function(el){el.onclick=function(){emoSend(el.dataset.em)}});
  if($('emMute'))$('emMute').onclick=function(){send({type:'mute_emotes'});S.emoOpen=false;toggleEmo()};
+ document.querySelectorAll('.vc.pf').forEach(function(el){el.onclick=function(ev){ev.stopPropagation();passiveView(el.id==='side_me'?'me':'opp')}});
  document.querySelectorAll('.pop,[data-tip].kp,.cir[data-tip],.bf').forEach(function(el){if(el.tagName!=='BUTTON')el.onclick=function(e){e.stopPropagation();var same=$('tip')&&S.tipEl===el;popClose('tip');if(same){tipHide();S.tipEl=null}else{tipShow(el);S.tipEl=el}}});
  if(reveal)return;
  if(m.reveal&&!m.reveal.done&&S.revSent!==b.turn){S.revSent=b.turn;send({type:'revealed',turn:b.turn})}
@@ -1403,6 +1419,13 @@ function turnBanner(b){var key=S.room+':'+b.turn;if(S.bannerKey===key)return;S.b
  setTimeout(function(){e.remove()},dur);
  var hd=bt.querySelector('.hand');if(hd&&!S.rmo){hd.classList.add('deal');setTimeout(function(){hd.classList.remove('deal')},1300)}}
 /* 액티브 스킬 연출(시안 캐릭터 스킬): 속성 색 세로 그라데이션 + 왼쪽 전신 + 오른쪽 스킬명·설명, 속도선·입자·섬광·흔들림 약 1.7초. 풀화면 / 전투 위 반투명 오버레이(설정 전환) */
+/* 패시브 보기(사용자 요청 2026-11-06): 전투 중 프로필을 누르면 액티브 연출과 같은 배치로 — 전신이 다 보이게 위아래 여백, 캐릭터 주변 속성 효과. 누르면 닫힘 */
+function passiveView(sd){var b=S.st&&S.st.battle;if(!b)return;var p=sd==='me'?b.me:b.opp,chr=p.char,c=ch(chr),col=SKC[c.faction]||'rgba(107,122,255,.64)',a=((S.A.art||{})[chr]||{})['000']||{},k=Math.min(innerWidth/788,innerHeight/360);
+ popClose();document.querySelectorAll('body > .pview').forEach(function(x){x.remove()});
+ var e=document.createElement('div');e.className='scut pview'+(S.skm==='over'?' over':'')+' fx-'+({'불':'fire','물':'water','바람':'wind'}[c.faction]||'none');e.style.setProperty('--c1',col);e.style.setProperty('--k',k.toFixed(4));
+ e.innerHTML='<i class="sbg"></i><div class="sbox"><i class="paura"></i><div class="pfx">'+(S.rmo?'':fxOf(c.faction))+'</div>'+(a.full?'<i class="sart pfull" style="background-image:url('+a.full.url+')"></i>':'')
+  +'<div class="stx"><small>'+(sd==='me'?esc(myName(S.st.prep))+' · ':esc(oppName(S.st.prep,S.st))+' · ')+esc(c.name)+' · 패시브</small><b>'+esc(c.passive_name||'패시브')+'</b><p>'+esc(c.passive_text||'')+'</p><div class="pact">액티브 <b>'+esc(c.active_name||'')+'</b> '+esc(c.active_text||'')+'</div></div></div><div class="phint">화면을 누르면 닫혀요</div>';
+ e.onclick=function(ev){ev.stopPropagation();e.remove()};document.body.appendChild(e);sfx('flip')}
 function fxOf(fac){var h='',R=Math.random,i;
  if(fac==='불'){for(i=0;i<34;i++){var z=(2+R()*5).toFixed(1);h+='<s class="em" style="left:'+(R()*100).toFixed(1)+'%;width:'+z+'px;height:'+z+'px;--dx:'+Math.round(R()*80-40)+'px;animation-duration:'+(1.2+R()*1.4).toFixed(2)+'s;animation-delay:'+(-R()*1.6).toFixed(2)+'s"></s>'}h+='<i class="fglow"></i>'}
  else if(fac==='물'){for(i=0;i<22;i++){var b=(6+R()*18).toFixed(0);h+='<s class="bu" style="left:'+(R()*100).toFixed(1)+'%;width:'+b+'px;height:'+b+'px;--dx:'+Math.round(R()*40-20)+'px;animation-duration:'+(1.8+R()*1.6).toFixed(2)+'s;animation-delay:'+(-R()*2).toFixed(2)+'s"></s>'}h+='<i class="caus"></i>'}
@@ -1471,7 +1494,7 @@ document.addEventListener('click',function(e){if(PK.lp){PK.lp=false;e.stopPropag
  if(PK.mv){PK.mv=false}
  var cb=e.target.closest&&e.target.closest('[data-calc]');if(cb){e.stopPropagation();calcShow(cb.dataset.calc);return}
  if(!e.target.closest('[data-cid]')){infoHide();PK.key=null}
- if(S.anim&&e.target.closest('#bt')&&!e.target.closest('#spd,#logline,#menu,#logb,#emo,.emp4,.ib4,[data-cid],[data-tip],.log,.menu,.pop')){if(S.anim.waiting)S.anim.next();else S.anim.skip()}},true);
+ if(S.anim&&e.target.closest('#bt')&&!e.target.closest('#spd,#logline,#menu,#logb,#emo,.emp4,.ib4,.vc.pf,[data-cid],[data-tip],.log,.menu,.pop')){if(S.anim.waiting)S.anim.next();else S.anim.skip()}},true);
 /* 피해 계산 내역(효과연출 9): 공격력×계수×배율×방어 경감×치명×폭주×받는 배율 − 실드 */
 function calcShow(js){var c;try{c=JSON.parse(js)}catch(e){return}var f=function(n){return Math.round(n*100)/100};
  var rows=[['공격력',c.atk],['계수','×'+c.coef],['버프·약화 배율','×'+f(c.mult)],['방어 경감','×'+f(c.def)+' (100/(100+DEF))'],['치명',c.crit>1?'×'+f(c.crit):'없음'],['폭주',c.rush>1?'×'+f(c.rush):'없음'],['받는 피해 배율',c.recv!==1?'×'+f(c.recv):'없음']].concat(c.g&&c.g!==1?[['전역 피해 배율','×'+f(c.g)]]:[]).concat([['계산 피해',c.pre],['실드 흡수',c.abs||0],['HP 피해',c.v]]);

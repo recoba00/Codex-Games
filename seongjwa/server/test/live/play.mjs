@@ -118,6 +118,9 @@ try {
         await page.screenshot({ path: `/tmp/play_card_${vp.width}.png` });
         await page.mouse.click(10, 10);
         await page.waitForFunction(() => !document.querySelector("#peek"), null, { timeout: 2000 });
+        await page.click("#side_opp");  // 프로필 누르면 패시브 보기(전신·속성 효과), 누르면 닫힘
+        await page.waitForSelector(".pview"); await sleep(500); await page.screenshot({ path: `/tmp/play_passive_${vp.width}.png` });
+        await page.click(".pview"); assert.equal(await page.$(".pview"), null, "패시브 보기 닫힘");
         // 액티브 스킬 연출(시안): 2초, 오른쪽 아래 스킵
         await page.evaluate(() => skillCut(S.st.battle.me.char, "me", 2000));
         await sleep(700); await page.screenshot({ path: `/tmp/play_skill_${vp.width}.png` });
