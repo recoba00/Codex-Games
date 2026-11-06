@@ -69,7 +69,7 @@ async function readJson(request) {
 }
 
 // 지표 로그(상세 12): 클라이언트가 보내는 이벤트. 판·매칭 이벤트는 서버가, 골드·결제·신고·보상은 원본 표가 기준이라 받지 않는다
-export const CLIENT_EVENTS = new Set(["session_start", "session_end", "tutorial_step", "card_detail_open", "shop_view", "item_preview",
+export const CLIENT_EVENTS = new Set(["session_start", "session_end", "tutorial_step", "help_open", "card_detail_open", "shop_view", "item_preview",
   "settings_change", "disconnect", "reconnect", "purchase_start", "purchase_fail", "asset_download"]);  // asset_download { bytes, files }: 저장소 전송량 추정(기획답변 18차)
 const PLATFORMS = new Set(["android", "ios", "steam"]), DEVICES = new Set(["phone", "tablet", "desktop"]);
 export function clientEvents(input, acc, now = Date.now()) {

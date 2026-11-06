@@ -51,7 +51,7 @@ try {
   assert.equal((await fetch(`${API}/icons/maskable-512.png`)).headers.get("content-type"), "image/png");
   step("PWA: 매니페스트(전체 화면·가로·시작 /play)·서비스 워커·아이콘");
   for (const vp of [{ width: 1280, height: 800, name: "데스크톱" }, { width: 2000, height: 1080, name: "4K(배율 2 화면)" }, { width: 932, height: 430, name: "큰 폰(아이폰 프로맥스)", touch: true, safe: { t: 0, r: 59, b: 21, l: 59 } }, { width: 1366, height: 1024, name: "태블릿(아이패드 프로)", touch: true, safe: { t: 0, r: 0, b: 20, l: 0 } }, { width: 830, height: 366, name: "휴대폰 가로", touch: true }, { width: 844, height: 390, name: "안전 영역 큰 휴대폰(좌우 47·아래 21)", touch: true, safe: { t: 0, r: 47, b: 21, l: 47 } }].filter((v) => !process.env.PLAY_VP || process.env.PLAY_VP.split(",").includes(String(v.width)))) {
-    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(vp.touch ? { isMobile: true, hasTouch: true } : {}) });
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, locale: vp.touch ? "ko-KR" : "en-US", ...(vp.touch ? { isMobile: true, hasTouch: true } : {}) });  // 휴대폰은 한국어, 데스크톱은 영어(다국어 1차)
     if (vp.safe) await ctx.addInitScript((sf) => { window.__SAFE = sf; }, vp.safe);
     const page = await ctx.newPage();
     const errors = [];
@@ -191,6 +191,26 @@ try {
       await sleep(450); await page.screenshot({ path: `/tmp/play_st_${vp.width}.png` });
       await page.evaluate(() => { peekHide(); document.getElementById("tstbf")?.remove(); });
       await page.evaluate(() => { document.querySelectorAll(".ko,.koflash").forEach((x) => x.remove()); document.querySelectorAll(".down").forEach((x) => x.classList.remove("down")); $("bt").classList.remove("koing"); });
+    }
+    { // 다국어 1차(기획지시 2026-11-07): 기기 언어로 시작, 연출 라벨 한/영 번역표, 폭주 배너 별 장식 없음
+      const lg = await page.evaluate(() => ({ lang: S.lang, chip: T("ph.1"), turn: T("bn.turn"), rush: T("bn.rush"), shield: T("lb.shield", { n: 12 }), html: document.documentElement.lang }));
+      if (vp.touch) assert.deepEqual([lg.lang, lg.chip, lg.turn, lg.rush, lg.shield], ["ko", "보호", "턴", "폭주 시작", "실드 +12"]);
+      else assert.deepEqual([lg.lang, lg.chip, lg.turn, lg.rush, lg.shield], ["en", "GUARD", "Turn", "RAMPAGE", "SHIELD +12"]);
+      assert.equal(lg.html, lg.lang);
+      assert.ok(!(await page.content()).includes("★"), "별 장식 없음");
+      // 설정 > 도움말: 목록 + 내용, 카드 도감(서버 데이터) → 카드 상세, 화면 짚어 보기(Coach)
+      await page.evaluate(() => helpOpen("cards"));
+      await page.waitForSelector("#help .hcard");
+      assert.equal(await page.locator("#help nav button").count(), 9);
+      assert.ok((await page.locator("#help .hcard").count()) >= 16, "카드 도감");
+      await page.screenshot({ path: `/tmp/play_help_${vp.width}.png` });
+      await page.click("#help .hcard"); await page.waitForSelector("#peek.cdm"); await page.evaluate(() => peekHide());
+      await page.click('#help [data-hk="spells"]'); assert.ok(!/N%|[+−-]N\b/.test(await page.textContent("#hSec")), "스펠 N 치환");
+      await page.click('#help [data-hk="view"]'); await page.click("#hTour");
+      await page.waitForSelector("#coach .cbox"); assert.ok(await page.$("#coach .cring"), "대상 링");
+      await page.click("#cNext"); await page.click("#cSkip"); assert.equal(await page.$("#coach"), null, "건너뛰기");
+      // 언어 전환은 바로 반영
+      await page.evaluate(() => { langNext(); render(); }); assert.notEqual(await page.evaluate(() => S.lang), lg.lang); await page.evaluate(() => { langNext(); render(); });
     }
     await page.click("#menu");
     // 설정 "캐릭터 음성"(기본 켜짐, 상세 01 캐릭터 보이스): 끄고 켜기, 음성 파일 없는 슬롯은 무음(오류 없음)
