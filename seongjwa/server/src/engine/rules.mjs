@@ -5,7 +5,7 @@ export const RULE_DEFAULTS = Object.freeze({
   timebank_sec: 15,
   max_turn: 10,
   rush_start_turn: 7,
-  rush_dmg_step: 0.25,
+  rush_dmg_step: 0.5,  // 시트 설정값 기준(43차, 라이브 v38 = 0.5). 데이터에 값이 있으면 그 값을 씀
   rush_heal_cut: 0.5,
   crit_mult: 1.5,
   dmg_global_mult: 1,        // 전역 피해 배율(시트 설정값, 기획답변 42차): 공격·반격·액티브 피해 최종값에 곱함. 작열 틱은 제외
