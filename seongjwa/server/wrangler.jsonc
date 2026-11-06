@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "cr",  // 주소 cr.<계정 하위 도메인>.workers.dev (사용자 요청 2026-11-05, 이전 seongjwa)
   "main": "src/index.mjs",
-  "assets": { "directory": "./public" },  // 정적 파일(배경음악 mp3 등). 무료 플랜, 워커 용량과 별도
+  "assets": { "directory": "./public" },  // 정적 파일(배경음악 mp3, 앱 아이콘 원본 화질 PNG 등). 무료 플랜, 워커 용량과 별도
   "compatibility_date": "2026-10-21",
   "workers_dev": true,
   "keep_vars": true,
