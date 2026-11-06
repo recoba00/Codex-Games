@@ -535,12 +535,11 @@ export async function handle(request, env) {
 
     case "GET /v1/assets": {  // 게임이 받는 이미지 목록(데이터 버전과 별개, 기획지시 에셋분리). 파일명이 내용 해시라 바뀐 것만 내려받으면 됨
       const a = await loadAssets(env, rpc);
-      const { version, snapshot: live } = await pinLive(env);  // 진영별 기본 배경 판단(데이터 버전도 ETag에 넣음)
-      const factions = Object.fromEntries(Object.entries(live?.characters ?? {}).map(([id, c]) => [id, c.faction]));
+      const { version } = await pinLive(env);  // 데이터 버전도 ETag에 넣음(이전 호환)
       const etag = `"a-${a.rev}-v${version}"`;
       const headers = { etag, "cache-control": "public, max-age=60" };
       if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
-      return json({ ok: true, rev: a.rev, ...assetManifest(a.shaped, env, factions) }, 200, headers);
+      return json({ ok: true, rev: a.rev, ...assetManifest(a.shaped, env) }, 200, headers);
     }
 
     // ---------- 지표 로그(상세 12) ----------

@@ -196,31 +196,8 @@ function compareBox(P){var cap=(P.kind==='full'||P.kind==='combined')?T.ad.spec.
  +'<div class="row"><canvas id="cmpA" width="240" height="240" style="border:1px solid var(--line);max-width:48%"></canvas><canvas id="cmpB" width="240" height="240" style="border:1px solid var(--line);max-width:48%"></canvas></div>'
  +'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aOk">승인·저장</button><button class="btn sm" id="aNo">취소</button></div></div>'}
 function drawCompare(P){var cr=P.crop||{x:0,y:0,w:P.origW,h:P.origH};loadImg(P.url).then(function(c){[[P.img,'cmpA',cr.w/P.w,cr.x,cr.y],[c,'cmpB',1,0,0]].forEach(function(x){var cv=$(x[1]);if(!cv)return;var g=cv.getContext('2d'),s=x[2],cx=P.w/2,cy=(P.kind==='full'?P.h*0.2:P.h/2);g.imageSmoothingEnabled=false;g.clearRect(0,0,240,240);g.drawImage(x[0],x[3]+(cx-60)*s,x[4]+(cy-60)*s,120*s,120*s,0,0,240,240)})})}
-function upload(blob,q){return fetch('/bo/v1/assets/upload?'+q,{method:'POST',headers:{authorization:'Bearer '+T.token,'content-type':'image/webp'},body:blob}).then(function(r){return r.json()}).then(function(j){if(!j.ok){var e=new Error((ERR[j.error]||j.error)+(j.detail?': '+j.detail:''));throw e}return j})}
-/* 영역 편집: 카드 영역(5:7, 카드 본체 전체 — 기획지시 2026-11-06 카드영역5대7)과 얼굴(1:1). 둘 다 그림을 끌어 옮기고 슬라이더로 크기 조절. 비율 좌표 0~1 */
-function regionEditor(img,W,H,R){var host=$('aReg');if(!host)return;var mode='card';
- var ratioH={card:(7/5)*W/H,face:W/H};  /* 너비(비율) → 높이(비율) */
- R.card=R.card?{x:R.card.x,y:R.card.y,w:R.card.w,h:R.card.w*ratioH.card}:{x:0,y:0,w:1,h:ratioH.card};
- R.face=R.face?{x:R.face.x,y:R.face.y,w:R.face.w,h:R.face.w*ratioH.face}:{x:0.3,y:0.05,w:0.4,h:0.4*ratioH.face};
- var maxW=function(k){return Math.min(1,1/ratioH[k])};
- host.innerHTML='<div class="row" style="margin-bottom:8px"><span class="small">그림을 끌어서 옮길 영역</span><button class="btn sm pri" data-rm="card">카드(5:7)</button><button class="btn sm" data-rm="face">얼굴(1:1)</button></div>'
- +'<div class="row" style="align-items:flex-start"><canvas id="rgFull" width="240" height="'+Math.round(240*H/W)+'" style="border:1px solid var(--line);touch-action:none;cursor:move"></canvas><div><div class="small muted">카드 영역(5:7)</div><canvas id="rgCard" width="150" height="210" style="border:1px solid var(--line)"></canvas><div class="small muted" style="margin-top:6px">얼굴(1:1)</div><canvas id="rgFace" width="100" height="100" style="border-radius:50%;border:1px solid var(--line)"></canvas></div></div>'
- +'<label class="small" style="display:block;margin-top:8px">카드 영역 크기 <input type="range" id="rgC" min="150" max="1000" value="'+Math.round(R.card.w/maxW('card')*1000)+'" style="width:100%"></label>'
- +'<label class="small" style="display:block">얼굴 영역 크기 <input type="range" id="rgS" min="50" max="1000" value="'+Math.round(R.face.w/maxW('face')*1000)+'" style="width:100%"></label><div class="small" id="rgWarn"></div><div class="small muted">파란 사각형 = 카드, 주황 사각형 = 얼굴. 위 버튼으로 끌어 옮길 영역을 고르세요.</div>';
- var full=$('rgFull'),sc=full.width/W;
- function clamp(k){var r=R[k];r.w=Math.min(maxW(k),Math.max(0.05,r.w));r.h=r.w*ratioH[k];r.x=Math.min(1-r.w,Math.max(0,r.x));r.y=Math.min(1-r.h,Math.max(0,r.y))}
- function draw(){var g=full.getContext('2d');g.clearRect(0,0,full.width,full.height);g.drawImage(img,0,0,full.width,full.height);
-  [['card','#4fa3ff'],['face','#ffb020']].forEach(function(x){var r=R[x[0]];g.lineWidth=x[0]===mode?3:1.5;g.strokeStyle=x[1];g.strokeRect(r.x*W*sc,r.y*H*sc,r.w*W*sc,r.h*H*sc)});
-  var c=$('rgCard').getContext('2d');c.clearRect(0,0,150,210);c.drawImage(img,R.card.x*img.naturalWidth,R.card.y*img.naturalHeight,R.card.w*img.naturalWidth,R.card.h*img.naturalHeight,0,0,150,210);
-  var f=$('rgFace').getContext('2d');f.clearRect(0,0,100,100);f.drawImage(img,R.face.x*img.naturalWidth,R.face.y*img.naturalHeight,R.face.w*img.naturalWidth,R.face.h*img.naturalHeight,0,0,100,100);
-  var px=Math.round(R.face.w*W);var cw=Math.round(R.card.w*W);$('rgWarn').innerHTML=(cw<800?'<span class="tag warn">카드 영역 '+cw+'×'+Math.round(R.card.h*H)+'px — 출력 800×1120px보다 작아 흐릴 수 있어요(상세 10)</span> ':'<span class="tag ok">카드 영역 '+cw+'×'+Math.round(R.card.h*H)+'px</span> ')+(px<512?'<span class="tag warn">얼굴 영역 '+px+'px — 출력 512px보다 작아 흐릴 수 있어요(상세 10)</span>':'<span class="tag ok">얼굴 영역 '+px+'px</span>')}
- function resize(k,v){var r=R[k],cx=r.x+r.w/2,cy=r.y+r.h/2;r.w=maxW(k)*v/1000;r.h=r.w*ratioH[k];r.x=cx-r.w/2;r.y=cy-r.h/2;clamp(k);draw()}
- $('rgC').oninput=function(e){resize('card',e.target.value)};$('rgS').oninput=function(e){resize('face',e.target.value)};
- host.querySelectorAll('[data-rm]').forEach(function(b){b.onclick=function(){mode=b.dataset.rm;host.querySelectorAll('[data-rm]').forEach(function(x){x.className='btn sm'+(x.dataset.rm===mode?' pri':'')});draw()}});
- var drag=false;function mv(e){if(!drag)return;var rc=full.getBoundingClientRect(),x=(e.clientX-rc.left)/rc.width,y=(e.clientY-rc.top)/rc.height,r=R[mode];r.x=x-r.w/2;r.y=y-r.h/2;clamp(mode);draw()}
- full.onpointerdown=function(e){drag=true;full.setPointerCapture(e.pointerId);mv(e)};full.onpointermove=mv;full.onpointerup=function(){drag=false};
- clamp('card');clamp('face');draw()}
-/* 합본 얼굴 영역(1:1): 얼굴 프로필을 합본에서 자를 때 쓰는 영역. 합본 그림 위에서 끌어 옮김 */
+function upload(blob,q,type){return fetch('/bo/v1/assets/upload?'+q,{method:'POST',headers:{authorization:'Bearer '+T.token,'content-type':type||'image/webp'},body:blob}).then(function(r){return r.json()}).then(function(j){if(!j.ok){var e=new Error((ERR[j.error]||j.error)+(j.detail?': '+j.detail:''));throw e}return j})}
+/* 합본 얼굴 영역(1:1) 편집: 그림을 끌어 옮기고 슬라이더로 크기. 비율 좌표 0~1(기획지시 2026-11-06 캐릭터등록단순화: 얼굴은 합본에서만) */
 function faceEditorC(img,W,H,R){var host=$('aRegC');if(!host)return;var rh=W/H,maxW=Math.min(1,1/rh);
  R.face=R.face?{x:R.face.x,y:R.face.y,w:R.face.w,h:R.face.w*rh}:{x:0.3,y:0.05,w:0.4,h:0.4*rh};
  host.innerHTML='<div class="row" style="align-items:flex-start"><canvas id="rcFull" width="240" height="'+Math.round(240*H/W)+'" style="border:1px solid var(--line);touch-action:none;cursor:move"></canvas><div><div class="small muted">합본 얼굴(1:1)</div><canvas id="rcFace" width="100" height="100" style="border-radius:50%;border:1px solid var(--line)"></canvas></div></div>'
@@ -255,8 +232,8 @@ function bindBack(){if($('aBack'))$('aBack').onclick=function(){go('assets')}}
 /* 목록 */
 V.assets=function(){return assetsLoad().then(function(d){var tab=T.atab||ssGet('bo_atab')||'chars',groups={};d.spec.slots.forEach(function(s){(groups[s.group]=groups[s.group]||[]).push(s)});
  var slots=d.assets.slots||{},filled=Object.keys(slots).length;
- var chars=d.characters.map(function(c){var skins=d.art[c.id]||{},base=skins['000']||{},n=Object.keys(skins).length,ok=base.full&&base.card&&base.faceRect;
-  return '<button class="card acard" data-ach="'+c.id+'"><div style="display:flex;justify-content:center">'+aImg(base.thumb||base.full,150)+'</div><div style="margin-top:8px"><b>'+esc(c.name)+'</b> <span class="small muted">'+c.id+'</span></div><div class="small" style="margin-top:4px">'+(base.full?(ok?'<span class="tag ok">기본 완료</span>':'<span class="tag warn">영역 미지정</span>'):'<span class="tag">이미지 없음</span>')+(n>1?' <span class="tag">스킨 '+(n-1)+'</span>':'')+'</div></button>'}).join('');
+ var chars=d.characters.map(function(c){var skins=d.art[c.id]||{},base=skins['000']||{},n=Object.keys(skins).length,ok=base.full&&base.combined&&base.faceRectC;
+  return '<button class="card acard" data-ach="'+c.id+'"><div style="display:flex;justify-content:center">'+aImg(base.thumb||base.full,150)+'</div><div style="margin-top:8px"><b>'+esc(c.name)+'</b> <span class="small muted">'+c.id+'</span></div><div class="small" style="margin-top:4px">'+(base.full?(ok?'<span class="tag ok">기본 완료</span>':!base.combined?'<span class="tag warn">합본 없음</span>':'<span class="tag warn">얼굴 영역 미지정</span>'):'<span class="tag">이미지 없음</span>')+(n>1?' <span class="tag">스킨 '+(n-1)+'</span>':'')+'</div></button>'}).join('');
  var slotHtml=Object.keys(groups).map(function(g){return '<h3 style="margin:14px 0 8px">'+g+' <span class="small muted">'+groups[g].filter(function(s){return slots[s.id]}).length+'/'+groups[g].length+'</span></h3><div class="agrid sm">'+groups[g].map(function(s){var f=slots[s.id];
   return '<button class="card acard" data-aslot="'+s.id+'"><div style="display:flex;justify-content:center">'+aImg(f,64)+'</div><div class="small" style="margin-top:6px"><b>'+esc(slotName(s))+'</b></div><div class="small muted">'+s.w+'×'+s.h+'</div>'+(f&&(f.w!==s.w||f.h!==s.h)?'<span class="tag warn">규격 불일치</span>':'')+'</button>'}).join('')+'</div>'}).join('');
  return '<h2>에셋 등록</h2><p class="sub">카드를 눌러 상세 화면에서 이미지를 올려요. 규격·투명 검사 → WebP 압축 → 사람이 압축 전후를 보고 승인하면 바로 반영돼요(상세 14).</p>'
@@ -280,77 +257,66 @@ function upQ(kind,extra){return 'kind='+kind+(extra||'')}
 /* 캐릭터 상세 */
 V.assetChar=function(){T.ach=T.ach||ssGet('bo_ach');T.askin=T.askin||ssGet('bo_askin')||'000';return assetsLoad().then(function(d){var c=d.characters.find(function(x){return x.id===T.ach});if(!c){go('assets');return ''}
  var ed=d.editable&&T.perms.data_edit,skins=d.art[c.id]||{},K=function(k){return 'art:'+c.id+':'+T.askin+':'+k},st=c.stats||{},ids=Object.keys(skins);Object.keys(((d.prev||{}).art||{})[c.id]||{}).forEach(function(k){if(ids.indexOf(k)<0)ids.push(k)});if(ids.indexOf('000')<0)ids.unshift('000');if(ids.indexOf(T.askin)<0)ids.push(T.askin);ids.sort();
- var cur=skins[T.askin]||{};
+ var cur=skins[T.askin]||{},CK='slot:ART_'+c.id+'_'+T.askin+'_COMBINED',lines=cur.lines||{},M=d.spec.media||{};
+ /* 등록 검사(기획지시 2026-11-06 캐릭터등록단순화): 전신 + 합본(필수) + 합본 얼굴 영역 */
+ var chk=[[!!cur.full,'전신'],[!!cur.combined,'합본(필수)'],[!!(cur.combined&&cur.faceRectC),'합본 얼굴 영역']],done=chk.every(function(x){return x[0]});
  return backBtn()+'<h2>'+esc(c.name)+' <span class="small muted">'+c.id+'</span></h2>'+verBar(d)
  +'<p class="small muted" style="margin:-6px 0 12px">라이브 v'+d.live+' 수치(읽기 전용, xlsx로 바꿈): HP '+st.hp+' · ATK '+st.atk+' · DEF '+st.def+' · SPD '+st.spd+' · CRIT '+st.crit+'%. 스킨은 외형만 바뀌고 수치는 캐릭터 값 그대로예요(총괄 4장).</p>'
- +'<div class="card" style="margin-bottom:14px"><div class="row"><b>스킨</b>'+ids.map(function(s){return '<button class="btn sm'+(s===T.askin?' pri':'')+'" data-askin="'+s+'">'+(s==='000'?'000 기본':s)+(skins[s]&&skins[s].full?'':' ·비어 있음')+'</button>'}).join('')+(ed?'<input id="aSkinNew" placeholder="새 스킨 ID(숫자 3자리)" size="12" maxlength="3"><button class="btn sm" id="aSkinAdd">추가</button>':'')+'</div></div>'
- +'<div class="card" style="margin-bottom:14px"><h3>스킨 '+T.askin+' 이미지</h3><div class="row" style="align-items:flex-end;gap:16px"><div><div class="small muted">전신(9:16)</div>'+aImg(cur.full,220)+'</div><div><div class="small muted">밴픽 축소본</div>'+aImg(cur.thumb,110)+'</div><div><div class="small muted">얼굴 파일(선택)</div>'+aImg(cur.face,80,true)+'</div></div>'
- +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes)+' '+metaLine(K('full')):'전신 없음')+' · 카드 영역 '+(cur.card?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+' · 얼굴 영역 '+(cur.faceRect?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+(cur.combined?' · 얼굴 프로필 '+(cur.faceFrom==='combined'?'<span class="tag ok">합본 기준</span>':'캐릭터 PNG 기준'):'')+'</div>'
- +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label><label class="btn sm">얼굴 파일 올리기<input type="file" id="aFace" accept="image/png,image/webp" hidden></label>'+(cur.face?'<button class="btn sm" id="aFaceDel">얼굴 파일 빼기</button>':'')+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+revBtn('aFullRev',K('full'),'전신 이전 파일로')+revBtn('aFaceRev',K('face'),'얼굴 파일 이전으로')+'</div>':'')
- +'<p class="small muted" style="margin:6px 0 0">전신 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경 권장(투명이 아니어도 올릴 수 있어요, 상세 10). 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 전신 '+d.spec.fullMaxKb+'KB·얼굴 '+d.spec.faceMaxKb+'KB.</p><div id="aPrep"></div></div>'
- +bgCard(d,c,cur,ed,K)
- +'<div class="card"><h3>카드·얼굴 영역</h3>'+(cur.full?'<div id="aReg"></div>'
-  +(cur.combined?'<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><div class="row" style="margin-bottom:8px"><b class="small">얼굴 프로필 기준</b><button class="btn sm'+(cur.faceFrom!=='combined'?' pri':'')+'" data-ff="full">캐릭터 PNG</button><button class="btn sm'+(cur.faceFrom==='combined'?' pri':'')+'" data-ff="combined">합본</button><span class="small muted">합본을 고르면 인게임 얼굴 프로필을 아래 합본 영역으로 잘라요(합본이 빠지면 캐릭터 PNG 영역으로 대체).</span></div><div id="aRegC"></div></div>':'')+(ed?'<div class="row" id="aRegBtns" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">영역 저장</button>'+revBtn('aRegRev',K('regions'),'이전 영역으로')+' '+metaLine(K('regions'))+'</div>':'<p class="small muted">보기만 할 수 있어요.</p>'):'<p class="small muted">전신을 먼저 올리세요.</p>')+'</div>'})};
+ +'<div class="card" style="margin-bottom:14px"><div class="row"><b>스킨</b>'+ids.map(function(s){return '<button class="btn sm'+(s===T.askin?' pri':'')+'" data-askin="'+s+'">'+(s==='000'?'000 기본':s)+(skins[s]&&skins[s].full?'':' ·비어 있음')+'</button>'}).join('')+(ed?'<input id="aSkinNew" placeholder="새 스킨 ID(숫자 3자리)" size="12" maxlength="3"><button class="btn sm" id="aSkinAdd">추가</button>':'')+'</div>'
+ +'<div class="row" style="margin-top:8px;gap:6px"><b class="small">등록 검사</b>'+chk.map(function(x){return '<span class="tag '+(x[0]?'ok':'warn')+'">'+(x[0]?'✓ ':'✗ ')+x[1]+'</span>'}).join('')+(done?' <span class="small muted">게임에 그대로 나가요</span>':'')+'</div>'
+ +(cur.full&&!cur.combined?'<div class="note" style="margin-top:8px">합본을 올려 주세요. 올리기 전까지 게임은 전신 PNG를 임시 카드 그림으로 써요.'+(cur.combinedOld?' (예전 9:16 합본 '+cur.combinedOld.w+'×'+cur.combinedOld.h+'은 더 이상 쓰지 않아요)':'')+'</div>':'')+'</div>'
+ /* 1) 전신 */
+ +'<div class="card" style="margin-bottom:14px"><h3>전신 PNG (9:16)</h3><div class="row" style="align-items:flex-end;gap:16px"><div>'+aImg(cur.full,220)+'</div><div><div class="small muted">밴픽 축소본</div>'+aImg(cur.thumb,110)+'</div></div>'
+ +'<div class="small" style="margin-top:8px">'+(cur.full?cur.full.w+'×'+cur.full.h+' · '+kb(cur.full.bytes)+' '+metaLine(K('full')):'전신 없음')+'</div>'
+ +(ed?'<div class="row" style="margin-top:10px"><label class="btn pri sm">전신 올리기<input type="file" id="aFull" accept="image/png,image/webp" hidden></label>'+(cur.full&&T.askin!=='000'?'<button class="btn sm" id="aSkinDel">이 스킨 이미지 빼기</button>':'')+revBtn('aFullRev',K('full'),'전신 이전 파일로')+'</div>':'')
+ +'<p class="small muted" style="margin:6px 0 0">결과 화면·스킬 연출(스킬 애니메이션이 없을 때)에 써요. 권장 1440×2560, 최소 1080×1920, 가로·세로 4의 배수, 투명 배경 권장. 큰 이미지는 1440×2560으로 줄여 저장. 목표 용량 '+d.spec.fullMaxKb+'KB.</p><div id="aPrep"></div></div>'
+ /* 2) 합본(필수) + 얼굴 영역 */
+ +'<div class="card" style="margin-bottom:14px"><h3>합본 — 카드 그림 (필수, 5:7)</h3><div class="row" style="align-items:flex-start;gap:18px"><div><div class="small muted">미리보기(카드 틀 포함)</div><div style="padding:10px 12px">'+pvCard(d,c,T.askin,{tier:'GOLD',holo:0,badge:1,w:150})+'</div></div>'
+ +'<div style="flex:1;min-width:200px"><div class="small">'+(cur.combined?cur.combined.w+'×'+cur.combined.h+' · '+kb(cur.combined.bytes)+' '+metaLine(CK):'아직 없음')+'</div>'
+ +'<p class="small muted">800×1120(5:7) 권장. 비율이 조금 달라도 가운데 기준으로 5:7에 맞춰 자동으로 잘라요. 배경과 캐릭터가 한 장에 그려진 그림으로 모든 카드 그림(밴픽·전투 프로필·전용 카드·액티브 카드)에 써요.</p>'
+ +(ed?'<div class="row"><label class="btn pri sm">합본 올리기<input type="file" id="aComb" accept="image/png,image/webp,image/jpeg" hidden></label>'+revBtn('aCombRev',CK,'합본 이전 파일로')+'</div>':'')+'<div id="aPrepBg"></div></div></div>'
+ +(cur.combined?'<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)"><b class="small">얼굴 영역(합본 기준, 1:1)</b> <span class="small muted">프로필 원형·HUD 초상·친구 목록·스킬 아이콘을 여기서 잘라요.</span> '+(cur.faceRectC?'<span class="tag ok">지정됨</span>':'<span class="tag warn">미지정</span>')+'<div id="aRegC" style="margin-top:8px"></div>'
+   +(ed?'<div class="row" style="margin-top:8px"><button class="btn pri sm" id="aRegSave">얼굴 영역 저장</button>'+revBtn('aRegRev',K('regions'),'이전 영역으로')+' '+metaLine(K('regions'))+'</div>':'')+'</div>':'')+'</div>'
+ /* 3) 대사·음성 */
+ +'<div class="card" style="margin-bottom:14px"><h3>대사·음성</h3><p class="small muted" style="margin-top:0">영문 대사(화면 표시 없음, 대사표 보이스_대사표_v0.1_EN). 음성은 슬롯마다 ogg 또는 mp3 · 모노 · 2초 이하 · 300KB 이하 권장(넘으면 경고만). 음성이 없으면 무음.</p>'
+ +(d.spec.lineSlots||[]).map(function(sl){var L=lines[sl]||{},v=L.voice;return '<div class="row" style="gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><b class="small" style="width:84px">'+sl+'</b>'
+   +'<input id="lt_'+sl+'" value="'+esc(L.text||'')+'" placeholder="영문 대사" style="flex:1;min-width:180px"'+(ed?'':' disabled')+'>'+(ed?'<button class="btn sm" data-lsave="'+sl+'">저장</button>':'')
+   +(v&&v.path?'<audio controls preload="none" src="'+esc(d.base+v.path)+'" style="height:32px;max-width:220px"></audio><span class="small muted">'+kb(v.bytes)+(v.sec?' · '+v.sec+'초':'')+'</span>':'<span class="small muted">음성 없음</span>')
+   +(ed?'<label class="btn sm">음성 올리기<input type="file" data-lvoice="'+sl+'" accept="audio/ogg,audio/mpeg,.ogg,.mp3" hidden></label>'+(v&&v.path?'<button class="btn sm" data-ldel="'+sl+'">빼기</button>':'')+revBtn('lv_'+sl,K('voice_'+sl),'이전 음성'):'')+'</div>'}).join('')+'</div>'
+ /* 4) 스킬 애니메이션(선택) */
+ +'<div class="card"><h3>스킬 애니메이션 (선택)</h3><p class="small muted" style="margin-top:0">액티브 스킬 연출에서 전신 대신 재생하는 투명 영상. <b>투명 WebM(VP9 알파)</b>, 약 1.7초 · 30fps · 720×1280(9:16) 권장, 3MB 이하 권장(최대 8MB). 없으면 전신 PNG 연출. 사파리(아이폰)는 투명 WebM을 못 틀어 전신 PNG로 보여요.</p>'
+ +(cur.anim&&cur.anim.path?'<video src="'+esc(d.base+cur.anim.path)+'" autoplay loop muted playsinline style="height:220px;background:repeating-conic-gradient(#333 0 25%,#222 0 50%) 0 0/16px 16px;border-radius:8px"></video><div class="small">'+kb(cur.anim.bytes)+(cur.anim.sec?' · '+cur.anim.sec+'초':'')+' '+metaLine(K('anim'))+'</div>':'<div class="small muted">등록 안 됨 — 전신 PNG로 연출</div>')
+ +(ed?'<div class="row" style="margin-top:8px"><label class="btn pri sm">영상 올리기<input type="file" id="aAnim" accept="video/webm,.webm" hidden></label>'+(cur.anim&&cur.anim.path?'<button class="btn sm" id="aAnimDel">빼기</button>':'')+revBtn('aAnimRev',K('anim'),'이전 영상으로')+'</div>':'')+'</div>'})};
+/* 음성·영상: 그대로 올림(압축 없음). 길이는 브라우저가 재생해서 재 서버에 참고값으로 */
+function mediaSec(file,video){return new Promise(function(res){var e=document.createElement(video?'video':'audio'),u=URL.createObjectURL(file),t=setTimeout(function(){res(0)},4000);e.preload='metadata';e.onloadedmetadata=function(){clearTimeout(t);res(isFinite(e.duration)?e.duration:0);URL.revokeObjectURL(u)};e.onerror=function(){clearTimeout(t);res(0)};e.src=u})}
+function mediaUp(file,q,video){var type=video?'video/webm':(/\.mp3$/i.test(file.name)||file.type==='audio/mpeg'?'audio/mpeg':'audio/ogg');return mediaSec(file,video).then(function(sec){return upload(file,q+'&sec='+sec.toFixed(2),type)}).then(function(j){toast(j.warnings&&j.warnings.length?'저장 · '+j.warnings.join(' · '):'저장했어요');render()}).catch(fail)}
 V.assetChar.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bindVer();var cur=((d.art[T.ach]||{})[T.askin])||{},ch='&char='+T.ach+'&skin='+T.askin;
- $('view').onclick=function(e){var s=e.target.closest('[data-askin]');if(s){T.askin=s.dataset.askin;ssSet('bo_askin',T.askin);render()}};
+ $('view').onclick=function(e){var s=e.target.closest('[data-askin]');if(s){T.askin=s.dataset.askin;ssSet('bo_askin',T.askin);render();return}
+  var ls=e.target.closest('[data-lsave]');if(ls){var sl=ls.dataset.lsave;api('/assets/line',{char:T.ach,skin:T.askin,slot:sl,text:val('lt_'+sl)}).then(function(){toast(sl+' 대사 저장');render()}).catch(fail);return}
+  var ld=e.target.closest('[data-ldel]');if(ld){var s2=ld.dataset.ldel;ask(s2+' 음성을 뺄까요? (무음)').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'voice_'+s2})}).then(function(){toast('뺐어요');render()}).catch(fail)}};
+ document.querySelectorAll('[data-lvoice]').forEach(function(inp){inp.onchange=function(e){var f=e.target.files[0];if(f)mediaUp(f,upQ('voice',ch+'&line='+inp.dataset.lvoice),false)}});
  if($('aSkinAdd'))$('aSkinAdd').onclick=function(){var s=val('aSkinNew');if(!/^\d{3}$/.test(s))return toast('스킨 ID는 숫자 3자리');T.askin=s;ssSet('bo_askin',s);render()};
  if($('aFull'))$('aFull').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'full',null,function(P){return upload(P.blob,upQ('full',ch)).then(function(j){if(j.warnings&&j.warnings.length)toast(j.warnings[0]);return upload(P.thumb,upQ('thumb',ch))})})};
- if($('aFace'))$('aFace').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'face',null,function(P){return upload(P.blob,upQ('face',ch))})};
- if($('aFaceDel'))$('aFaceDel').onclick=function(){ask('얼굴 파일을 빼면 얼굴 영역으로 잘라 써요. 뺄까요?').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'face'})}).then(function(){toast('뺐어요');render()}).catch(fail)};
- if($('aSkinDel'))$('aSkinDel').onclick=function(){ask('스킨 '+T.askin+' 이미지와 영역을 모두 뺄까요?').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'skin'})}).then(function(){T.askin='000';ssSet('bo_askin','000');toast('뺐어요');render()}).catch(fail)};
- bindBg(d,cur,ch);
- var rv=function(kind,msg){return function(){ask(msg).then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:kind})}).then(function(){toast('되돌렸어요');render()}).catch(fail)}};
+ if($('aComb'))$('aComb').onchange=function(e){var f=e.target.files[0];if(f)askUpload(f,'combined',null,function(P){return upload(P.blob,upQ('combined',ch))},'aPrepBg')};
+ if($('aAnim'))$('aAnim').onchange=function(e){var f=e.target.files[0];if(f)mediaUp(f,upQ('anim',ch),true)};
+ if($('aAnimDel'))$('aAnimDel').onclick=function(){ask('스킬 애니메이션을 뺄까요? (전신 PNG 연출)').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'anim'})}).then(function(){toast('뺐어요');render()}).catch(fail)};
+ if($('aSkinDel'))$('aSkinDel').onclick=function(){ask('스킨 '+T.askin+' 이미지·합본·영상을 모두 뺄까요?').then(function(){return api('/assets/remove',{char:T.ach,skin:T.askin,kind:'skin'})}).then(function(){T.askin='000';ssSet('bo_askin','000');toast('뺐어요');render()}).catch(fail)};
+ function rv(kind,msg){return function(){ask(msg).then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:kind})}).then(function(){toast('되돌렸어요');render()}).catch(fail)}}
+ (d.spec.lineSlots||[]).forEach(function(sl){if($('lv_'+sl))$('lv_'+sl).onclick=rv('voice_'+sl,sl+' 음성을 직전 파일로 되돌릴까요?')});
  if($('aFullRev'))$('aFullRev').onclick=rv('full','전신(과 밴픽 축소본)을 직전 파일로 되돌릴까요? 한 번 더 누르면 다시 지금 파일로 돌아와요.');
- if($('aFaceRev'))$('aFaceRev').onclick=rv('face','얼굴 파일을 직전 파일로 되돌릴까요?');
- if($('aRegRev'))$('aRegRev').onclick=rv('regions','카드·얼굴 영역을 직전 값으로 되돌릴까요?');
- if(cur.full&&$('aReg'))loadImg(d.base+cur.full.path).then(function(img){var R={card:cur.card,face:cur.faceRect};regionEditor(img,cur.full.w,cur.full.h,R);
-  var RC=null,ff=cur.faceFrom==='combined'?'combined':'full';
-  document.querySelectorAll('[data-ff]').forEach(function(b){b.onclick=function(){ff=b.dataset.ff;document.querySelectorAll('[data-ff]').forEach(function(x){x.className='btn sm'+(x.dataset.ff===ff?' pri':'')})}});
-  if(cur.combined&&cur.combined.path&&$('aRegC'))loadImg(d.base+cur.combined.path).then(function(ci){RC={face:cur.faceRectC||cur.faceRect||null};faceEditorC(ci,cur.combined.w||ci.naturalWidth,cur.combined.h||ci.naturalHeight,RC)}).catch(fail);
-  if($('aRegSave'))$('aRegSave').onclick=function(){if(ff==='combined'&&!RC)return toast('합본 그림을 불러오는 중이에요');api('/assets/regions',{char:T.ach,skin:T.askin,card:R.card,face:R.face,faceC:RC?RC.face:undefined,faceFrom:ff}).then(function(j){toast('영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
-
-/* 카드 배경 3가지(기획지시 2026-10-30 배경방식): 기본(진영 슬롯) / 컬러(12색, 세로 그라데이션) / 합본(배경+캐릭터 한 장). 방식을 바꿔도 다른 방식의 파일·색은 그대로 */
-var BG_OF={'불':'CARD_BG_FIRE','물':'CARD_BG_WATER','바람':'CARD_BG_WIND'};
-var BG_PAL=['#C8452E','#2E6FC8','#2EA06A','#D9A32B','#8E44AD','#E06A9A','#1FA3A3','#6B7A8F','#3B3F8C','#8A5A2B','#B83A3A','#2B2B33'];  /* 가안: 불·물·바람 + 9색, 디자인 시안 후 확정 */
-function darken(hex,p){var n=parseInt(hex.slice(1),16),f=function(x){return Math.round(x*(1-p))};return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
-function bgModeOf(cur){var o=cur.bgOpt||{};return {mode:o.mode||(cur.combined?'combined':'faction'),color:o.color||null}}
-function bgCard(d,c,cur,ed,K){var slot=BG_OF[c.faction]||'CARD_BG_NEUTRAL',bg=(d.assets.slots||{})[slot],m=bgModeOf(cur);if(T.bgPick&&T.bgPick.key===c.id+':'+T.askin)m={mode:T.bgPick.mode,color:T.bgPick.color||m.color};
- var radio=function(v,l){return '<label class="row" style="gap:6px"><input type="radio" name="aBgMode" value="'+v+'"'+(m.mode===v?' checked':'')+(ed?'':' disabled')+'> '+l+'</label>'};
- var warn=m.mode==='combined'&&!cur.combined?'<div class="note" style="margin-top:6px">'+(cur.combinedOld?'예전 9:16 합본('+cur.combinedOld.w+'×'+cur.combinedOld.h+')은 더 이상 쓰지 않아요. 800×1120(5:7)로 다시 올려 주세요. 그 전까지 게임에는 진영 기본 배경으로 보여요.':'합본이 아직 없어 게임에는 진영 기본 배경으로 보여요.')+'</div>':m.mode==='color'&&!m.color?'<div class="note" style="margin-top:6px">색을 골라 주세요.</div>':'';
- return '<div class="card" style="margin-bottom:14px"><h3>카드 배경</h3><div class="row" style="gap:14px">'+radio('faction','기본(진영: '+esc(c.faction||'-')+')')+radio('color','컬러 선택')+radio('combined','합본')+'</div>'
- +'<div class="row" style="margin-top:10px;align-items:flex-start;gap:16px"><div><div class="small muted">미리보기(카드 틀 포함)</div><div style="padding:10px 12px">'+pvCard(d,c,T.askin,{tier:'GOLD',holo:0,badge:1,bg:m.mode,color:m.color,w:150})+'</div></div><div style="flex:1;min-width:200px">'
- +(m.mode==='faction'?'<div class="small muted">진영 기본 배경 '+slot+' 위에 전신(투명)을 카드 영역대로 얹어요. 배경 파일은 슬롯 목록의 \'카드\' 묶음에서 바꿔요.</div>':'')
- +(m.mode==='color'?'<div class="small muted" style="margin-bottom:6px">위에서 아래로 고른 색 → 같은 색 35% 어둡게(가안).</div><div class="row" style="gap:6px;flex-wrap:wrap">'+BG_PAL.map(function(h){return '<button class="btn sm" data-bgc="'+h+'" title="'+h+'" style="width:34px;height:34px;padding:0;background:'+h+';border:'+(m.color===h?'3px solid var(--ink)':'1px solid var(--line)')+'"'+(ed?'':' disabled')+'></button>'}).join('')+'</div>':'')
- +(m.mode==='combined'?'<div class="small muted" style="margin-bottom:6px">합본은 800×1120(5:7) 권장. 비율이 조금 달라도 가운데 기준으로 5:7에 맞춰 자동으로 잘라요. 배경과 캐릭터가 한 장에 그려진 그림으로 카드 본체 전체에 깔고, 카드에는 전신을 따로 그리지 않아요. 전신(캐릭터만, 9:16)은 위에서 계속 올려 결과 화면·액티브 연출·밴픽·얼굴에 써요.</div>'
-   +'<div class="row" style="align-items:flex-end;gap:12px"><div>'+aImg(cur.combined,160)+'</div><div class="small">'+(cur.combined?cur.combined.w+'×'+cur.combined.h+' · '+kb(cur.combined.bytes)+' '+metaLine(K('combined')):'아직 없음')+'</div></div>'
-   +(ed?'<div class="row" style="margin-top:8px"><label class="btn pri sm">합본 올리기<input type="file" id="aComb" accept="image/png,image/webp,image/jpeg" hidden></label>'+revBtn('aCombRev','slot:ART_'+c.id+'_'+T.askin+'_COMBINED','합본 이전 파일로')+'</div>':''):'')
- +warn+(ed?'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aBgSave">배경 방식 저장</button>'+revBtn('aBgRev','slot:ART_'+c.id+'_'+T.askin+'_BG','이전 방식으로')+' '+metaLine('slot:ART_'+c.id+'_'+T.askin+'_BG')+'</div>':'')
- +'</div></div><div id="aPrepBg"></div></div>'}
-function bindBg(d,cur,ch){var key=T.ach+':'+T.askin,m=bgModeOf(cur);
- var pick=function(mode,color){T.bgPick={key:key,mode:mode,color:color||(T.bgPick&&T.bgPick.key===key?T.bgPick.color:null)||m.color};render()};
- document.querySelectorAll('input[name="aBgMode"]').forEach(function(r){r.onchange=function(){pick(r.value)}});
- document.querySelectorAll('[data-bgc]').forEach(function(b){b.onclick=function(){pick('color',b.dataset.bgc)}});
- if($('aBgSave'))$('aBgSave').onclick=function(){var p=T.bgPick&&T.bgPick.key===key?T.bgPick:m;api('/assets/bg',{char:T.ach,skin:T.askin,mode:p.mode,color:p.mode==='color'?p.color:undefined}).then(function(){T.bgPick=null;toast('배경 방식 저장');render()}).catch(fail)};
- if($('aBgRev'))$('aBgRev').onclick=function(){ask('배경 방식을 직전 값으로 되돌릴까요?').then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:'bg'})}).then(function(){T.bgPick=null;toast('되돌렸어요');render()}).catch(fail)};
- if($('aComb'))$('aComb').onchange=function(e){var f=e.target.files[0];if(!f)return;askUpload(f,'combined',null,function(P){return upload(P.blob,upQ('combined',ch))},'aPrepBg')};
- if($('aCombRev'))$('aCombRev').onclick=function(){ask('합본을 직전 파일로 되돌릴까요?').then(function(){return api('/assets/revert',{char:T.ach,skin:T.askin,kind:'combined'})}).then(function(){toast('되돌렸어요');render()}).catch(fail)}}
-
+ if($('aCombRev'))$('aCombRev').onclick=rv('combined','합본을 직전 파일로 되돌릴까요?');
+ if($('aAnimRev'))$('aAnimRev').onclick=rv('anim','스킬 애니메이션을 직전 파일로 되돌릴까요?');
+ if($('aRegRev'))$('aRegRev').onclick=rv('regions','얼굴 영역을 직전 값으로 되돌릴까요?');
+ if(cur.combined&&cur.combined.path&&$('aRegC'))loadImg(d.base+cur.combined.path).then(function(ci){var RC={face:cur.faceRectC||null};faceEditorC(ci,cur.combined.w||ci.naturalWidth,cur.combined.h||ci.naturalHeight,RC);
+  if($('aRegSave'))$('aRegSave').onclick=function(){api('/assets/regions',{char:T.ach,skin:T.askin,faceC:RC.face}).then(function(j){toast('얼굴 영역 저장'+(j.warnings.length?' · '+j.warnings[0]:''));render()}).catch(fail)}}).catch(fail)};
 
 /* ---------- 카드 미리보기: 등록한 에셋으로 캐릭터 카드를 홀로 연출 0~4·티어 프레임 7종별로(총괄 13장 카드 연출 등급, 상세 10 카드 구조·FRAME 여백) ----------
    실제 게임은 Godot 셰이더로 그린다. 여기는 등록한 그림이 어울리는지 보는 근사치(CSS). 카드 800×1120(5:7 카드 영역이 본체 전체), 프레임 928×1248(바깥 64px) */
 var HOLO=[['0','없음'],['1','메탈 테두리'],['2','리버스 홀로(배경만)'],['3','풀 홀로 + 스파클'],['4','풀 홀로 + 스파클 + 입체 시차']];
 var TIERS=[['BRONZE','브론즈'],['SILVER','실버'],['GOLD','골드'],['PLATINUM','플래티넘'],['DIAMOND','다이아'],['MASTER','마스터'],['LEGEND','레전드']];
-/* 캐릭터 카드 그림 배치(사용자 요청 2026-11-02): BO에서 지정한 카드 영역(cr)이 창 안에 전부 보이게, 영역 위쪽에 맞추고 아래는 그림이 카드 끝까지 이어짐(하단 잘림 방지).
-   full = 전투 프로필처럼 테두리 여백 없이 카드 전체를 창으로 쓰고, 폭을 꽉 채움(영역 위쪽 기준, 남는 아래는 그림 그대로). 단위는 카드 폭 1 기준 */
-function artBg(src,cr,url,full){var ww=full?1:0.9,wh=full?1.4:1.35,rw=cr.w*src.w,rh=cr.h*src.h,s=full?ww/rw:Math.min(ww/rw,wh/rh),bw=src.w*s,bh=src.h*s;
- var ox=(ww-rw*s)/2-cr.x*src.w*s,oy=-cr.y*src.h*s,px=Math.abs(ww-bw)<1e-6?0:ox/(ww-bw)*100,py=Math.abs(wh-bh)<1e-6?0:oy/(wh-bh)*100;
- return 'background-image:'+url+';background-size:'+(bw/ww*100).toFixed(2)+'% '+(bh/wh*100).toFixed(2)+'%;background-position:'+px.toFixed(2)+'% '+py.toFixed(2)+'%'}
 function pvCard(d,c,skin,o){var a=((d.art||{})[c.id]||{})[skin]||{},sl=d.assets.slots||{},u=function(f){return f&&f.path?'url('+d.base+f.path+')':''};
- var m=bgModeOf(a);if(o.bg!=='saved')m={mode:o.bg,color:o.bg==='color'?(o.color||m.color||'#8E44AD'):m.color};
- var slotBg=sl[BG_OF[c.faction]||'CARD_BG_NEUTRAL'],bgCss=m.mode==='color'&&m.color?'background:linear-gradient(180deg,'+m.color+','+darken(m.color,0.35)+')':slotBg?'background-image:'+u(slotBg):'background:#334';
- var comb=m.mode==='combined'&&a.combined,src=a.full,cr=a.card||{x:0.125,y:0,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*7/5},ch='';
- if(comb)bgCss='background:'+u(a.combined)+' center/100% 100% no-repeat';  /* 합본: 카드 본체 전체, 전신 안 그림(기획지시 합본규격변경 2) */
- else if(src)ch=artBg(src,cr,u(src),true);  /* 5:7 카드 영역 = 카드 본체 전체(기획지시 카드영역5대7 2) */
+ /* 카드 그림 = 합본(기획지시 2026-11-06 캐릭터등록단순화). 합본이 없으면 전신을 임시로(폭 맞춤·위 맞춤) */
+ var bgCss=a.combined?'background:'+u(a.combined)+' center/100% 100% no-repeat':a.full?'background:'+u(a.full)+' center top/100% auto no-repeat,linear-gradient(180deg,#2a3150,#10131f)':'background:#334',ch='';
  var fr=sl['FRAME_'+o.tier],bd=o.badge>1?sl['MASTERY_'+o.badge]:null;
  return '<div class="pvc h'+o.holo+'" style="--w:'+o.w+'px"><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
   +'<div class="pvwin"><div class="pvl pvchar" style="'+ch+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'
@@ -367,7 +333,6 @@ V.cardPreview=function(){var P=T.pv=T.pv||{ch:ssGet('bo_pvch')||'',skin:'000',ti
  return '<h2>카드 미리보기</h2>'+tabs+'<p class="sub">등록한 에셋으로 캐릭터 카드를 홀로 연출 단계·티어 프레임별로 그려요. 카드 위를 누르거나 끌면 기울기·빛이 따라와요(가만히 두면 자동으로 빛이 지나가요). 실제 게임은 Godot 셰이더라 느낌만 맞추는 근사치예요(총괄 13장).</p>'
  +'<div class="card" style="margin-bottom:14px;display:grid;gap:10px"><div><b class="small">캐릭터</b>'+seg('ch',d.characters.map(function(x){return [x.id,x.name]}))+'</div>'
  +(skins.length>1?'<div><b class="small">스킨</b>'+seg('skin',skins.map(function(x){return [x,x==='000'?'기본':x]}))+'</div>':'')
- +'<div><b class="small">카드 배경</b>'+seg('bg',[['saved','저장된 방식'],['faction','기본(진영)'],['color','컬러'],['combined','합본']])+'</div>'
  +'<div><b class="small">숙련도 뱃지</b>'+seg('badge',[['1','없음(1단계)'],['2','2단계'],['3','3단계'],['4','4단계']])+'</div>'
  +(miss.length?'<div class="note">아직 없는 티어 프레임: '+miss.join(', ')+'</div>':'')+'</div>'
  +'<div class="card" style="margin-bottom:14px"><h3>홀로 연출 0~4단계</h3><div class="row" style="gap:8px;align-items:center"><span class="small muted">프레임</span>'+seg('tier',TIERS)+'</div>'
@@ -386,7 +351,7 @@ V.cardPreview.bind=function(){$('view').onclick=function(e){var b=e.target.close
 var BCOL_K={attack:'#ff5a5a',defense:'#4f8dff',counter:'#ff9a3c',silence:'#a86bff',immune:'#f2c94c',disrupt:'#3fc77a',skill:'#2ec4c4'};
 var PHASE={0:['0 스펠','#5a4a8a'],1:['1 보호','#2f6db5'],2:['2 방해','#8a3fa0'],3:['3 스킬','#2f8f74'],4:['4 공격','#b5452f']};
 function bcCard(d,id,k,o){var sl=d.assets.slots||{},u=function(f){return f&&f.path?'url('+d.base+f.path+')':''},art=sl['CARD_ART_'+id],bgN=sl.CARD_BG_NEUTRAL,lay='';
- if(k.owner){var ch=d.characters.find(function(x){return x.id===k.owner})||{},a=((d.art||{})[k.owner]||{})['000']||{},f=a.full,cr=a.card,fb=sl[BG_OF[ch.faction]||'CARD_BG_NEUTRAL'];
+ if(k.owner){var a=((d.art||{})[k.owner]||{})['000']||{},f=a.full,cr=null,fb=null;if(a.combined){f=a.combined;cr={x:0,y:0,w:1,h:1}}  /* 합본 우선, 없으면 전신 임시 */
   lay='<div class="l art" style="'+(fb?'background-image:'+u(fb):'background:#334')+'"></div>';
   if(f){if(cr){var iw=o.w/cr.w,ih=iw*f.h/f.w;lay+='<div class="l" style="background-image:'+u(f)+';background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'px '+ih.toFixed(1)+'px;background-position:'+(-cr.x*iw).toFixed(1)+'px '+(-cr.y*ih).toFixed(1)+'px"></div>'}else lay+='<div class="l" style="background:'+u(f)+' center 10%/cover no-repeat"></div>'}}
  else if(art)lay='<div class="l art" style="background-image:'+u(art)+'"></div>';

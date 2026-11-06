@@ -62,24 +62,23 @@ try {
   await err(put("kind=slot&slot=CARD_BACK", "tier_vp8.webp"), "asset_spec");
   await err(put("kind=full&char=AU&skin=000", "full_bad.webp"), "asset_spec");
   await err(put("kind=full&char=ZZ&skin=000", "full_1080.webp"), "asset_char_invalid");
-  await err(call(`/bo/v1/assets/upload?kind=face&char=AU&skin=000`, Buffer.from("not a webp file at all ............"), admin, true, "image/webp"), "asset_not_webp");
+  await err(call(`/bo/v1/assets/upload?kind=full&char=AU&skin=000`, Buffer.from("not a webp file at all ............"), admin, true, "image/webp"), "asset_not_webp");
+  await err(put("kind=face&char=AU&skin=000", "face.webp"), "asset_kind_invalid");  // 얼굴 파일 폐지(기획지시 2026-11-06 캐릭터등록단순화)
   await ok(put("kind=full&char=AU&skin=000", "full_1080.webp"));
   await ok(put("kind=thumb&char=AU&skin=000", "thumb.webp"));
-  await ok(put("kind=face&char=AU&skin=000", "face.webp"));
-  await err(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.5, w: 1, h: 0.7875 }, face: { x: 0, y: 0, w: 0.5, h: 0.28125 } }, admin), "asset_region");
-  const reg = await ok(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.7875 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } }, admin));
-  assert.match(reg.warnings[0], /432px/);
+  await err(call("/bo/v1/assets/regions", { char: "AU", skin: "000", faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.35714 } }, admin), "asset_combined_missing");  // 얼굴은 합본에서만
   const view = await ok(call("/bo/v1/assets", undefined, admin));
   assert.equal(view.editable, true);
-  assert.deepEqual(Object.keys(view.art.AU["000"]).sort(), ["card", "face", "faceRect", "full", "thumb"]);
+  assert.deepEqual(Object.keys(view.art.AU["000"]).sort(), ["full", "thumb"]);
+  assert.deepEqual(view.spec.lineSlots, ["ACTIVE_01", "ACTIVE_02", "PICK", "WIN", "LOSE"]);
   assert.equal(typeof view.characters.find((c) => c.id === "AU").stats.hp, "number", "라이브 수치 읽기 전용");
-  step("슬롯·전신·축소본·얼굴 업로드(크기·비율·WebP 검사, 해시 이름), 영역 저장(카드 5:7·얼굴 1:1, 512px 미만 경고) — 초안 없이 바로 반영");
+  step("슬롯·전신·축소본 업로드(크기·비율·WebP 검사, 해시 이름), 얼굴 파일 폐지, 얼굴 영역은 합본이 있어야 — 초안 없이 바로 반영");
 
   // 2) 게임 목록(/v1/assets) 바로 반영·ETag, 데이터 버전 배포·롤백·xlsx 업로드와 무관, 이전 파일로 되돌리기, 감사 로그
   const man = await ok(call("/v1/assets"));
   assert.match(man.rev, /^[0-9a-f]{16}$/);
   assert.ok(man.slots.TIER_GOLD.url.endsWith(tier.path));
-  assert.deepEqual(man.art.AU["000"].card, { x: 0, y: 0.1, w: 1, h: 0.7875 });
+  assert.deepEqual([man.art.AU["000"].combined, man.art.AU["000"].faceRectC, man.art.AU["000"].skillAnim, man.art.AU["000"].lines.length], [null, null, null, 5]);
   const file = await fetch(man.art.AU["000"].full.url);
   assert.equal(file.status, 200);
   assert.equal((await file.arrayBuffer()).byteLength, readFileSync(fx("full_1080.webp")).length);
@@ -99,42 +98,43 @@ try {
   const back = (await ok(call("/bo/v1/assets", undefined, admin)));
   assert.equal(back.assets.slots.TIER_GOLD.path, tier.path, "직전 파일로 되돌림");
   assert.equal(back.prev.slots.TIER_GOLD.path, tier2.path, "되돌린 파일이 직전으로");
-  await ok(call("/bo/v1/assets/remove", { char: "AU", skin: "000", kind: "face" }, admin));
-  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].face, null, "빼기 바로 반영");
-  await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "face" }, admin));
-  assert.ok((await ok(call("/v1/assets"))).art.AU["000"].face, "빼기도 되돌림");
-  // 합본(기본 배경 사용 안 함): 5:7·800×1120(2026-11-06), 게임 목록 bg = combined, 빼면 진영 기본 배경, 되돌리기
-  await err(put("kind=combined&char=AU&skin=000", "full_1080.webp"), "asset_spec");  // 9:16 합본은 이제 안 받음(기획지시 2026-11-06 합본규격변경)
+  // 합본(필수, 5:7·800×1120): 올리면 게임 목록 combined, 빼면 null(게임은 전신 임시), 되돌리기
+  await err(put("kind=combined&char=AU&skin=000", "full_1080.webp"), "asset_spec");  // 9:16 합본은 안 받음(백오피스가 5:7로 잘라 올림)
   await ok(put("kind=combined&char=AU&skin=000", "comb_800.webp"));
   let mm = await ok(call("/v1/assets"));
-  assert.deepEqual([mm.art.AU["000"].bg, Boolean(mm.art.AU["000"].combined)], ["combined", true]);
+  assert.equal(mm.art.AU["000"].combined.w, 800);
   await err(put("kind=combined&char=AU&skin=000", "thumb.webp"), "asset_spec");
   await ok(call("/bo/v1/assets/remove", { char: "AU", skin: "000", kind: "combined" }, admin));
-  mm = await ok(call("/v1/assets"));
-  assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].combined], ["CARD_BG_FIRE", null], "아우렐(불) 기본 배경");
+  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].combined, null, "빼기 바로 반영");
   await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "combined" }, admin));
-  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].bg, "combined");
-  // 배경 방식(기획지시 배경방식): 컬러로 바꿔도 합본 파일은 그대로, 다시 합본으로 돌아오면 합본
-  await err(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color" }, admin), "value_invalid");
-  await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color", color: "#1fa3a3" }, admin));
+  assert.ok((await ok(call("/v1/assets"))).art.AU["000"].combined, "빼기도 되돌림");
+  // 얼굴 영역 = 합본 기준 1:1(faceRectC). 옛 값(card·faceRect)은 표에 남김
+  await sql("update public.asset_files set cur = $1 where key = 'art:AU:000:regions'", [{ card: { x: 0, y: 0, w: 1, h: 0.7875 }, faceRect: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } }]).catch(() => null);
+  await err(call("/bo/v1/assets/regions", { char: "AU", skin: "000", faceC: { x: 0, y: 0, w: 0.5, h: 0.5 } }, admin), "asset_region");
+  await ok(call("/bo/v1/assets/regions", { char: "AU", skin: "000", faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.35714 } }, admin));
   mm = await ok(call("/v1/assets"));
-  assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].bgColor, Boolean(mm.art.AU["000"].combined)], ["color", "#1FA3A3", true]);
-  await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "combined" }, admin));
+  assert.equal(mm.art.AU["000"].faceRectC.x, 0.25);
+  assert.equal(mm.art.AU["000"].card, undefined, "옛 카드 영역은 안 내보냄");
+  // 대사(텍스트)·음성(ogg·mp3)·스킬 애니메이션(투명 WebM)
+  await ok(call("/bo/v1/assets/line", { char: "AU", skin: "000", slot: "PICK", text: "Let the stars decide." }, admin));
+  await err(call("/bo/v1/assets/line", { char: "AU", skin: "000", slot: "TAUNT", text: "x" }, admin), "value_invalid");
+  const media = (q, file, type) => call(`/bo/v1/assets/upload?${q}`, readFileSync(fx(file)), admin, true, type);
+  const vo = await ok(media("kind=voice&char=AU&skin=000&line=PICK&sec=1.4", "voice.ogg", "audio/ogg"));
+  assert.match(vo.path, /^voice\/AU_000_PICK\.[0-9a-f]{16}\.ogg$/);
+  assert.equal(storage.get(vo.path).type, "audio/ogg");
+  await err(media("kind=voice&char=AU&skin=000&line=PICK", "anim.webm", "video/webm"), "asset_spec");
+  await err(media("kind=voice&char=AU&skin=000&line=NOPE", "voice.ogg", "audio/ogg"), "value_invalid");
+  const an = await ok(media("kind=anim&char=AU&skin=000&sec=2.4", "anim.webm", "video/webm"));
+  assert.match(an.warnings[0], /2\.4초/, "길이 권장 넘으면 경고만");
   mm = await ok(call("/v1/assets"));
-  assert.deepEqual([mm.art.AU["000"].bg, mm.art.AU["000"].bgMode], ["combined", "combined"]);
-  await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color" }, admin));  // 색을 안 보내면 전에 고른 색 유지
-  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].bgColor, "#1FA3A3");
-  // 얼굴 프로필을 합본에서 자르기: 합본 기준 1:1 영역 + 기준 "combined" → 게임 목록 faceFrom/faceRectC, 기준 "full"로 저장하면 전신으로 돌아옴
-  const RG = { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.7875 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } };
-  await err(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0, y: 0, w: 0.5, h: 0.5 }, faceFrom: "combined" }, admin), "asset_region");
-  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.35714 }, faceFrom: "combined" }, admin));
-  mm = await ok(call("/v1/assets"));
-  assert.deepEqual([mm.art.AU["000"].faceFrom, mm.art.AU["000"].faceRectC.x], ["combined", 0.25]);
-  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.35714 }, faceFrom: "full" }, admin));
-  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].faceFrom, "full");
+  assert.deepEqual(mm.art.AU["000"].lines.find((l) => l.slot === "PICK"), { slot: "PICK", text: "Let the stars decide.", voice: mm.base + vo.path });
+  assert.equal(mm.art.AU["000"].skillAnim.url, mm.base + an.path);
+  await ok(call("/bo/v1/assets/remove", { char: "AU", skin: "000", kind: "voice_PICK" }, admin));
+  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].lines.find((l) => l.slot === "PICK").voice, null);
+  await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "voice_PICK" }, admin));
   const audit = await sql("select action from public.audit_log where target like '에셋 %' order by id desc limit 20");
   assert.ok(audit.some((a) => a.action === "이전 파일로 되돌리기") && audit.some((a) => a.action === "슬롯 파일 교체"));
-  step("게임 목록 바로 반영(ETag 304), xlsx 배포와 무관, 직전 파일 되돌리기(한 번 더 = 원복), 빼기 되돌리기, 합본(기본 배경 안 씀)·진영 기본 배경, 감사 로그");
+  step("게임 목록 바로 반영(ETag 304), xlsx 배포와 무관, 직전 파일 되돌리기, 합본(필수) 빼기·되돌리기, 합본 얼굴 영역, 대사·음성·스킬 애니메이션 업로드, 감사 로그");
 
   // 3) 실제 브라우저(휴대폰 크기)로 백오피스 화면: 초안 만들기 → PNG 슬롯 올리기(압축 확인 → 승인) → 전신 PNG(큰 것 → 1440×2560 축소) → 영역 지정 저장 → 불투명 배경 검사
   const { chromium } = await import("playwright").catch(() => createRequire("/usr/lib/node_modules/")("playwright"));  // CI는 npm i --no-save playwright
@@ -192,17 +192,27 @@ try {
   await page.waitForSelector('[data-ach="SE"]');
   await page.locator('[data-ach="AU"]').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_assets_list.png` });
-  // 합본이 있는 아우렐: 얼굴 프로필 기준 "합본" → 합본 위 얼굴 영역 끌기 → 저장 → 게임 목록 faceFrom combined
+  // 합본이 있는 아우렐: 합본 위 얼굴 영역 끌기 → 저장 → 게임 목록 faceRectC. 대사 저장·음성 재생 칸·스킬 영상
   await page.click('[data-ach="AU"]');
   await page.waitForSelector("#rcFull");
-  await page.click('[data-ff="combined"]');
+  assert.match(await page.textContent("#view"), /등록 검사.*✓ 전신.*✓ 합본\(필수\).*✓ 합본 얼굴 영역/s);
+  await page.locator("#rcFull").scrollIntoViewIfNeeded();
   const cb = await page.locator("#rcFull").boundingBox();
   await page.mouse.click(cb.x + cb.width / 2, cb.y + cb.height * 0.2);
   await page.click("#aRegSave");
-  for (let i = 0; i < 20 && (await ok(call("/v1/assets"))).art.AU["000"].faceFrom !== "combined"; i += 1) await sleep(200);
+  for (let i = 0; i < 20 && Math.abs(((await ok(call("/v1/assets"))).art.AU["000"].faceRectC?.y ?? 0) - 0.1) < 0.001; i += 1) await sleep(200);
   const auF = (await ok(call("/v1/assets"))).art.AU["000"];
-  assert.equal(auF.faceFrom, "combined");
   assert.ok(Math.abs(auF.faceRectC.y + auF.faceRectC.h / 2 - 0.2) < 0.04, JSON.stringify(auF.faceRectC));
+  await page.waitForSelector("#lt_WIN");
+  await page.fill("#lt_WIN", "The stars were with me."); await page.click('[data-lsave="WIN"]');
+  for (let i = 0; i < 20 && (await ok(call("/v1/assets"))).art.AU["000"].lines.find((l) => l.slot === "WIN").text === ""; i += 1) await sleep(200);
+  assert.equal((await ok(call("/v1/assets"))).art.AU["000"].lines.find((l) => l.slot === "WIN").text, "The stars were with me.");
+  await page.waitForSelector("#lt_WIN");
+  await page.setInputFiles('[data-lvoice="WIN"]', fx("voice.ogg"));
+  for (let i = 0; i < 30 && !(await ok(call("/v1/assets"))).art.AU["000"].lines.find((l) => l.slot === "WIN").voice; i += 1) await sleep(200);
+  assert.ok((await ok(call("/v1/assets"))).art.AU["000"].lines.find((l) => l.slot === "WIN").voice, "음성 올리기(압축 없이 그대로)");
+  await page.waitForSelector('audio[src*="voice/AU_000_WIN"]');
+  assert.ok(await page.$('video[src*="anim/AU_000"]'), "스킬 애니메이션 미리보기");
   await page.waitForSelector("#rcFull"); await page.locator("#aRegC").scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_face_combined.png` });
   await page.click("#aBack"); await page.waitForSelector('[data-ach="SE"]');
@@ -213,37 +223,24 @@ try {
   await page.waitForSelector("#aOk");
   assert.match(await page.textContent("#aPrep"), /1620×2880 .* → WebP 1440×2560/);
   await page.click("#aOk");
-  await page.waitForSelector("#rgFull", { timeout: 15000 });
-  await page.fill("#rgC", "600"); await page.dispatchEvent("#rgC", "input");  // 카드 영역을 너비 60%로 줄이고
-  const box = await page.locator("#rgFull").boundingBox();
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.4);   // 가운데로 끌기
-  await page.click('[data-rm="face"]');
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.18);
-  await page.click("#aRegSave");
-  await page.waitForFunction(() => document.body.textContent.includes("카드 영역 지정됨"));
-  await page.waitForSelector("#rgFull"); await page.locator("#aReg").scrollIntoViewIfNeeded();
-  await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_regions.png` });
-  // 카드 배경 3가지(기획지시 배경방식): 합본 → 업로드 칸, 컬러 → 칩 고르기 → 저장
-  await page.check('input[name="aBgMode"][value="combined"]');
-  await page.waitForSelector("#aComb", { state: "attached" });
-  await page.check('input[name="aBgMode"][value="color"]');
-  await page.click('[data-bgc="#8E44AD"]');
-  await page.click("#aBgSave");
-  for (let i = 0; i < 20 && (await ok(call("/v1/assets"))).art.SE?.["000"]?.bg !== "color"; i += 1) await sleep(200);
-  await page.waitForSelector('[data-bgc="#8E44AD"]'); await page.locator("#aBgSave").scrollIntoViewIfNeeded();
-  await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_card_bg.png` });
-  const seBg = (await ok(call("/v1/assets"))).art.SE["000"];
-  assert.deepEqual([seBg.bg, seBg.bgMode, seBg.bgColor, seBg.bgSlot], ["color", "color", "#8E44AD", "CARD_BG_WATER"], JSON.stringify(seBg));
+  await page.waitForFunction(() => document.body.textContent.includes("합본을 올려 주세요"), null, { timeout: 15000 });  // 합본 없는 스킨 안내(게임은 전신 임시)
+  // 합본 업로드 제약 완화(사용자 요청 2026-11-06): 9:16 PNG도 가운데 기준 5:7로 잘라 800×1120
+  await sleep(1000); await page.setInputFiles("#aComb", fx("full_1620.png"));
+  await page.waitForFunction(() => /→ WebP 800×1120/.test(document.querySelector("#aPrepBg")?.textContent ?? ""), null, { timeout: 15000 }).catch(async (e) => { console.error("PREP", await page.evaluate(() => document.querySelector("#aPrepBg")?.innerText)); throw e; });
+  assert.match(await page.textContent("#aPrepBg"), /1620×2880 .* → WebP 800×1120/);
+  assert.match(await page.textContent("#aPrepBg"), /5:7로 잘라냄: 위아래 612px/);
+  await page.click("#aPrepBg #aOk");
+  for (let i = 0; i < 30 && !(await ok(call("/v1/assets"))).art.SE?.["000"]?.combined; i += 1) await sleep(200);
+  assert.deepEqual([(await ok(call("/v1/assets"))).art.SE["000"].combined.w, (await ok(call("/v1/assets"))).art.SE["000"].combined.h], [800, 1120]);
+  await page.waitForSelector("#rcFull"); await page.locator("#aComb").scrollIntoViewIfNeeded().catch(() => null);
+  await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_char_simple.png`, fullPage: true });
   await page.click('[data-askin="000"]');
   await page.fill("#aSkinNew", "001"); await page.click("#aSkinAdd");
-  await page.waitForFunction(() => document.body.textContent.includes("스킨 001 이미지"));
+  await page.waitForSelector('[data-askin="001"].pri');
   const art = (await ok(call("/bo/v1/assets", undefined, admin))).art;
   assert.equal(art.SE["000"].full.w, 1440);
   assert.equal(art.SE["000"].thumb.h, 1024);
-  const cd = art.SE["000"].card;
-  assert.ok(Math.abs(cd.w - 0.6) < 0.01 && Math.abs(cd.x + cd.w / 2 - 0.5) < 0.02 && Math.abs(cd.y + cd.h / 2 - 0.4) < 0.04, JSON.stringify(cd));
-  assert.ok(Math.abs(cd.h * 2560 - (cd.w * 1440 * 7) / 5) < 3, "카드 5:7 유지");
-  assert.ok(Math.abs(art.SE["000"].faceRect.x + art.SE["000"].faceRect.w / 2 - 0.5) < 0.02);
+  assert.equal(art.SE["000"].combined.w, 800);
   // 데이터 배포 버튼(사용자 보고 2026-10-29: 앱 안 브라우저에서 안 먹힘 → 페이지 안 확인 창): 승인된 초안 → 배포 → 확인 → 라이브
   const up2 = await ok(call("/bo/v1/data/import?note=browser", XLSX, admin, true));
   await ok(call("/bo/v1/data/review", { version: up2.version, action: "request" }, admin));
@@ -266,7 +263,7 @@ try {
   await page.click('[data-pv="tab"][data-v="char"]'); await page.waitForSelector(".pvc");
   assert.deepEqual(perr, []);
   assert.ok(reqs.includes("/bo/vendor/webp_enc.wasm"), "libwebp 인코더 사용");
-  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로(브라우저 WebP 없을 때 libwebp 인코더) → 영역 편집기(카드 위아래·얼굴 끌기) 저장, 카드 배경 토글, 확인 창(빼기·되돌리기·데이터 배포)");
+  step("브라우저(400px 폭): 목록 → 슬롯 상세(압축 확인·승인, 같은 묶음 다음 슬롯 이동) → 캐릭터 상세: PNG 슬롯 압축 확인·승인 → 비율 틀린 파일 거부 → 큰 전신 PNG를 1440×2560 WebP로(브라우저 WebP 없을 때 libwebp 인코더) → 합본 9:16 PNG 자동 5:7 자르기, 합본 얼굴 영역 끌기 저장, 대사 저장·음성 올리기·영상 미리보기, 확인 창(빼기·되돌리기·데이터 배포)");
 
   console.log(`\n에셋 통합 테스트 ${steps.length}단계 통과`);
 } catch (error) {

@@ -9,7 +9,7 @@ import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
 import { offerRule } from "../shop-rules.mjs";
 import { cupRewardCfg, cupWindow } from "../cup.mjs";
-import { ART, SLOTS, artKey, checkBg, assetPath, checkFaceOn, checkRegions, checkUpload, dropAssetCache, publicBase, shapeAssets, slotKey, slotOf, storageDelete, storagePut, webpInfo } from "../assets.mjs";
+import { ART, LINE_SLOTS, MEDIA, SLOTS, artKey, assetPath, checkFaceOn, checkMedia, checkUpload, dropAssetCache, mediaInfo, publicBase, shapeAssets, slotKey, slotOf, storageDelete, storagePut, webpInfo } from "../assets.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
 const PBKDF2_ITER = 100000;  // Workers WebCrypto 상한
@@ -303,7 +303,7 @@ export async function handleBo(request, env, url) {
       const rows = await rpc(env, "asset_list", {});
       const stat = (c) => ({ hp: c.hp, atk: c.atk, def: c.def, spd: c.spd, crit: c.crit });
       return json({ ok: true, live: version, editable: (PERMS.data_edit ?? []).includes(st.role), base: publicBase(env),
-        spec: { art: ART, slots: SLOTS, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), faceMaxKb: Number(live?.settings?.asset_face_max_kb ?? 100), cardMaxKb: Number(live?.settings?.asset_card_max_kb ?? 300) },
+        spec: { art: ART, slots: SLOTS, lineSlots: LINE_SLOTS, media: MEDIA, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), faceMaxKb: Number(live?.settings?.asset_face_max_kb ?? 100), cardMaxKb: Number(live?.settings?.asset_card_max_kb ?? 300) },
         characters: Object.entries(live?.characters ?? {}).map(([id, c]) => ({ id, name: c.name, faction: c.faction, stats: stat(c) })),
         cards: Object.fromEntries(Object.entries(live?.cards ?? {}).map(([id, c]) => [id, { name: c.name, kind: c.kind, cost: c.cost, phase: c.phase, owner: c.owner_character ?? null, text: c.effect_text ?? "" }])),  // 카드 일러스트 슬롯 표시(기획지시 카드명표시)
         assets: { slots: shapeAssets(rows).slots }, art: shapeAssets(rows).art, prev: shapeAssets(rows, "prev"), meta: Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, { at: r.at, by: r.by, hasPrev: Boolean(r.prev) }])),
@@ -318,9 +318,25 @@ export async function handleBo(request, env, url) {
       const ch = url.searchParams.get("char"), skin = url.searchParams.get("skin") ?? "000";
       const { snapshot: live } = await pinLive(env);
       if (kind !== "slot") {
-        if (!["full", "thumb", "face", "combined"].includes(kind)) throw new Error("asset_kind_invalid");
+        if (!["full", "thumb", "combined", "voice", "anim"].includes(kind)) throw new Error("asset_kind_invalid");  // 얼굴 파일(face)은 폐지(기획지시 2026-11-06 캐릭터등록단순화)
         if (!/^\d{3}$/.test(skin)) throw new Error("asset_skin_invalid");
         if (!live?.characters?.[ch]) throw new Error("asset_char_invalid");
+      }
+      if (kind === "voice" || kind === "anim") {  // 대사 음성(슬롯별)·스킬 애니메이션(투명 WebM)
+        const line = url.searchParams.get("line");
+        if (kind === "voice" && !LINE_SLOTS.includes(line)) throw new Error("value_invalid");
+        const mi = mediaInfo(bytes);
+        const warnings = checkMedia(kind, mi, bytes.length);
+        const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map((x) => x.toString(16).padStart(2, "0")).join("");
+        const path = assetPath(kind === "voice" ? `voice/${ch}_${skin}_${line}` : `anim/${ch}_${skin}`, hex, mi.format);
+        await storagePut(env, path, bytes, fetch, mi.mime);
+        const dur = Number(url.searchParams.get("sec"));  // 백오피스가 재생해서 잰 길이(검사 참고용)
+        const value = { path, bytes: bytes.length, format: mi.format, ...(Number.isFinite(dur) && dur > 0 ? { sec: Math.round(dur * 100) / 100 } : {}), at: new Date().toISOString() };
+        if (value.sec > MEDIA[kind].warnSec) warnings.push(`길이 ${value.sec}초 — 권장 ${MEDIA[kind].warnSec}초 이하(경고만)`);
+        await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(ch, skin, kind === "voice" ? `voice_${line}` : "anim"), p_value: value,
+          p_action: kind === "voice" ? `대사 음성 교체(${line})` : "스킬 애니메이션 교체", p_detail: { path, bytes: bytes.length } });
+        dropAssetCache();
+        return json({ ok: true, url: publicBase(env) + path, ...value, warnings });
       }
       const info = webpInfo(bytes);
       checkUpload(kind, info, bytes.length, slot);
@@ -329,35 +345,35 @@ export async function handleBo(request, env, url) {
       await storagePut(env, path, bytes);
       const value = { path, w: info.w, h: info.h, bytes: bytes.length, alpha: info.alpha, at: new Date().toISOString() };
       await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: kind === "slot" ? slotKey(slot.id) : artKey(ch, skin, kind), p_value: value,
-        p_action: kind === "slot" ? "슬롯 파일 교체" : kind === "combined" ? "합본 이미지 교체(배경+캐릭터, 기본 배경 안 씀)" : `캐릭터 이미지 교체(${kind})`, p_detail: { path, bytes: bytes.length, w: info.w, h: info.h } });
+        p_action: kind === "slot" ? "슬롯 파일 교체" : kind === "combined" ? "합본 이미지 교체(카드 그림)" : `캐릭터 이미지 교체(${kind})`, p_detail: { path, bytes: bytes.length, w: info.w, h: info.h } });
       dropAssetCache();
-      const capKb = kind === "face" ? Number(live?.settings?.asset_face_max_kb ?? 100) : ["full", "combined"].includes(kind) ? Number(live?.settings?.asset_full_max_kb ?? 1024)
+      const capKb = ["full", "combined"].includes(kind) ? Number(live?.settings?.asset_full_max_kb ?? 1024)
         : slot?.id.startsWith("CARD_ART_") ? Number(live?.settings?.asset_card_max_kb ?? 300) : null;  // 카드 일러스트 800×1120은 전신보다 작아 별도 키(기본 300KB, 경고만)
       const warnings = capKb && bytes.length > capKb * 1024 ? [`${kind} ${Math.round(bytes.length / 1024)}KB — 목표 ${capKb}KB 초과(상세 14)`] : [];
       return json({ ok: true, path, url: publicBase(env) + path, ...value, warnings });
     }
-    case "POST /assets/regions": {  // { char, skin, card:{x,y,w,h}, face:{x,y,w,h} } 비율 좌표
+    case "POST /assets/regions": {  // { char, skin, faceC:{x,y,w,h} } 합본 기준 얼굴 영역(1:1)만(기획지시 2026-11-06 캐릭터등록단순화). 옛 카드 영역·faceRect는 표에 그대로 둠
       const st = await staffOf(request, env); allow(st, "data_edit");
       const b = await body(request);
       const skin = String(b.skin ?? "000");
       if (!/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(skin)) throw new Error("value_invalid");
-      const a = shapeAssets(await rpc(env, "asset_list", {})).art?.[b.char]?.[skin] ?? {};
-      const full = a.full;
-      if (!full) throw new Error("asset_full_missing");
-      const r = checkRegions(full, b.card, b.face);
-      // 합본 얼굴 영역(선택): faceC = 합본 기준 1:1 영역, faceFrom = "full" | "combined"(얼굴 프로필을 어느 그림에서 자를지)
-      const faceFrom = b.faceFrom === "combined" ? "combined" : "full";
-      let faceC = null;
-      if (b.faceC) {
-        if (!a.combined?.w) throw new Error("asset_combined_missing");
-        const c = checkFaceOn(a.combined, b.faceC);
-        faceC = c.face; r.warnings.push(...c.warnings);
-      }
-      if (faceFrom === "combined" && !faceC) throw new Error("asset_combined_missing");
-      const value = { card: r.card, faceRect: r.face, ...(faceC ? { faceRectC: faceC } : {}), ...(faceFrom === "combined" ? { faceFrom } : {}) };
-      await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(b.char, skin, "regions"), p_value: value, p_action: "카드·얼굴 영역 지정", p_detail: { card: r.card, face: r.face, faceC, faceFrom } });
+      const rows = await rpc(env, "asset_list", {});
+      const a = shapeAssets(rows).art?.[b.char]?.[skin] ?? {};
+      if (!a.combined?.w) throw new Error("asset_combined_missing");
+      const c = checkFaceOn(a.combined, b.faceC);
+      const old = rows[artKey(b.char, skin, "regions")]?.cur ?? {};
+      await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(b.char, skin, "regions"), p_value: { ...old, faceRectC: c.face }, p_action: "합본 얼굴 영역 지정", p_detail: { faceC: c.face } });
       dropAssetCache();
-      return json({ ok: true, ...r });
+      return json({ ok: true, faceC: c.face, warnings: c.warnings });
+    }
+    case "POST /assets/line": {  // { char, skin, slot, text } 대사 텍스트(영문, 화면 표시 없음). 음성은 upload?kind=voice&line=
+      const st = await staffOf(request, env); allow(st, "data_edit");
+      const b = await body(request);
+      const skin = String(b.skin ?? "000"), text = String(b.text ?? "").trim();
+      if (!/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(skin) || !LINE_SLOTS.includes(b.slot) || text.length > 300) throw new Error("value_invalid");
+      await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(b.char, skin, `line_${b.slot}`), p_value: text ? { text } : null, p_action: `대사 텍스트(${b.slot})`, p_detail: { text } });
+      dropAssetCache();
+      return json({ ok: true });
     }
     case "POST /assets/remove": {  // { slot } 슬롯 파일 빼기(게임 내장 기본 이미지로) 또는 { char, skin, kind: "face"|"combined"|"skin" }. 직전 파일로 남아 되돌릴 수 있음
       const st = await staffOf(request, env); allow(st, "data_edit");
@@ -367,24 +383,15 @@ export async function handleBo(request, env, url) {
         if (!slotOf(b.slot)) throw new Error("asset_slot_invalid");
         await put(slotKey(b.slot), "슬롯 파일 빼기(내장 기본 이미지)");
       } else {
-        if (!["face", "combined", "skin"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
-        if (b.kind === "face") await put(artKey(b.char, b.skin, "face"), "얼굴 파일 빼기(영역으로 잘라 씀)");
-        else if (b.kind === "combined") await put(artKey(b.char, b.skin, "combined"), "합본 빼기(진영 기본 배경 사용)");
-        else for (const k of ["full", "thumb", "face", "regions", "combined"]) await put(artKey(b.char, b.skin, k), "스킨 이미지 빼기");
+        const vk = /^voice_(ACTIVE_01|ACTIVE_02|PICK|WIN|LOSE)$/.test(String(b.kind));
+        if ((!vk && !["combined", "anim", "skin"].includes(b.kind)) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
+        if (b.kind === "combined") await put(artKey(b.char, b.skin, "combined"), "합본 빼기(게임은 전신을 임시 카드 그림으로)");
+        else if (b.kind === "anim") await put(artKey(b.char, b.skin, "anim"), "스킬 애니메이션 빼기(전신 PNG 연출)");
+        else if (vk) await put(artKey(b.char, b.skin, b.kind), "대사 음성 빼기(무음)");
+        else for (const k of ["full", "thumb", "regions", "combined", "anim"]) await put(artKey(b.char, b.skin, k), "스킨 이미지 빼기");
       }
       dropAssetCache();
       return json({ ok: true });
-    }
-    case "POST /assets/bg": {  // { char, skin, mode: faction|color|combined, color: "#RRGGBB" } 카드 배경 방식(기획지시 배경방식). 다른 방식의 파일·색은 그대로 둠
-      const st = await staffOf(request, env); allow(st, "data_edit");
-      const b = await body(request);
-      if (!/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? "000"))) throw new Error("value_invalid");
-      const cur = shapeAssets(await rpc(env, "asset_list", {})).art?.[b.char]?.[String(b.skin ?? "000")]?.bgOpt ?? {};
-      const v = checkBg(String(b.mode ?? ""), b.color || cur.color || null);  // 색을 안 보내면 전에 고른 색 유지
-      await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: artKey(b.char, String(b.skin ?? "000"), "bg"), p_value: v,
-        p_action: `카드 배경 방식: ${{ faction: "기본(진영)", color: "컬러", combined: "합본" }[v.mode]}${v.color ? " " + v.color : ""}`, p_detail: v });
-      dropAssetCache();
-      return json({ ok: true, ...v });
     }
     case "POST /assets/revert": {  // { slot } 또는 { char, skin, kind: "full"|"face"|"regions" } 이전 파일로 되돌리기(전신은 밴픽 축소본도 함께)
       const st = await staffOf(request, env); allow(st, "data_edit");
@@ -392,7 +399,7 @@ export async function handleBo(request, env, url) {
       let keys;
       if (b.slot) { if (!slotOf(b.slot)) throw new Error("asset_slot_invalid"); keys = [slotKey(b.slot)]; }
       else {
-        if (!["full", "face", "regions", "combined", "bg"].includes(b.kind) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
+        if ((!["full", "regions", "combined", "anim"].includes(b.kind) && !/^(voice|line)_(ACTIVE_01|ACTIVE_02|PICK|WIN|LOSE)$/.test(String(b.kind))) || !/^[A-Z]{2,3}$/.test(String(b.char ?? "")) || !/^\d{3}$/.test(String(b.skin ?? ""))) throw new Error("value_invalid");
         keys = b.kind === "full" ? [artKey(b.char, b.skin, "full"), artKey(b.char, b.skin, "thumb")] : [artKey(b.char, b.skin, b.kind)];
       }
       await rpc(env, "bo_asset_revert", { p_staff: st.id, p_key: keys[0] });

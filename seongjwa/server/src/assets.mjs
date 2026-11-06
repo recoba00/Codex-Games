@@ -4,7 +4,7 @@
 // 파일마다 직전 1개 보관·되돌리기(기획지시 2026-10-25 에셋분리).
 
 export const BUCKET = "assets";
-export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;  // 서버 하드 상한(버킷 상한과 같음). 권장 상한은 설정값 asset_full_max_kb·asset_face_max_kb(경고)
+export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;  // 이미지 서버 하드 상한(버킷 상한은 영상 때문에 8MB, 기획지시 2026-11-06 캐릭터등록단순화). 권장 상한은 설정값 asset_full_max_kb·asset_face_max_kb(경고)
 
 // 전신(9:16, 권장 1440×2560·최소 1080×1920, 가로·세로 4의 배수), 밴픽용 축소본(긴 변 1024), 얼굴 파일(선택, 512×512)
 export const ART = Object.freeze({
@@ -27,7 +27,8 @@ export const SLOTS = Object.freeze([
   ...[["BRONZE", "브론즈"], ["SILVER", "실버"], ["GOLD", "골드"], ["PLATINUM", "플래티넘"], ["DIAMOND", "다이아"], ["MASTER", "마스터"], ["LEGEND", "레전드"]]
     .map(([k, n]) => S(`FRAME_${k}`, "카드", `티어 프레임 ${n}`, 928, 1248, true)),  // 카드 프레임 = 현재 티어(LoL식 정리). 본체보다 상하좌우 64px 큼(기획지시 프레임여백)
   // 카드 종류 아이콘 KIND_* 7종은 폐지(기획지시 2026-11-01 유형에너지텍스트): 유형·비용은 게임이 텍스트 뱃지로 그린다
-  ...[["FIRE", "불"], ["WATER", "물"], ["WIND", "바람"], ["NEUTRAL", "중립"]].map(([k, n]) => S(`CARD_BG_${k}`, "카드", `카드 배경 ${n}`, ...CARD, "corners")),
+  // 진영 카드 배경 불·물·바람은 폐지(기획지시 2026-11-06 캐릭터등록단순화: 캐릭터 카드는 합본만). 중립은 공용 전투카드 대체 배경으로 유지
+  S("CARD_BG_NEUTRAL", "카드", "카드 배경 중립", ...CARD, "corners"),
   S("CARD_FRAME", "카드", "전투카드 틀", ...CARD, true), S("CARD_BACK", "카드", "카드 뒷면", ...CARD, "corners"),
   // 공용 전투카드 일러스트(기획지시 2026-10-29 전투카드일러): 카드 ID와 같은 번호, 불투명, 글자 없음. 없으면 게임이 CARD_BG_NEUTRAL + 유형 글자로 대체
   ...Array.from({ length: 16 }, (_, i) => `C${String(i + 1).padStart(2, "0")}`).map((id) => S(`CARD_ART_${id}`, "카드 일러스트", `카드 일러스트 ${id}`, ...CARD, false)),  // 별도 묶음(기획답변 28차)
@@ -119,7 +120,7 @@ export function checkRegions(full, card, face) {
   return { card: round(card), face: round(face), warnings };
 }
 
-export const assetPath = (prefix, hashHex) => `${prefix}.${hashHex.slice(0, 16)}.webp`;
+export const assetPath = (prefix, hashHex, ext = "webp") => `${prefix}.${hashHex.slice(0, 16)}.${ext}`;
 export const publicBase = (env) => `${String(env.SUPABASE_URL ?? "").replace(/\/$/, "")}/storage/v1/object/public/${BUCKET}/`;
 
 // Supabase Storage 업로드(서비스 키, 서버 전용). 같은 이름이면 덮어씀(이름이 내용 해시라 내용도 같음)
@@ -134,29 +135,45 @@ export async function storageDelete(env, names, fetcher = fetch) {
   return names.length;
 }
 
-export async function storagePut(env, path, bytes, fetcher = fetch) {
+export async function storagePut(env, path, bytes, fetcher = fetch, type = "image/webp") {
   const key = String(env.SUPABASE_SERVICE_KEY ?? "");
-  const headers = { apikey: key, "content-type": "image/webp", "x-upsert": "true", "cache-control": "max-age=31536000" };
+  const headers = { apikey: key, "content-type": type, "x-upsert": "true", "cache-control": "max-age=31536000" };
   if (key.startsWith("eyJ")) headers.authorization = `Bearer ${key}`;  // 새 비밀 키(sb_secret_)는 apikey 헤더만(db.mjs와 같음)
   const res = await fetcher(`${String(env.SUPABASE_URL).replace(/\/$/, "")}/storage/v1/object/${BUCKET}/${path}`, { method: "POST", headers, body: bytes });
   if (!res.ok) throw Object.assign(new Error("storage_failed"), { extra: { status: res.status, detail: (await res.text().catch(() => "")).slice(0, 200) } });
+}
+
+// 대사 음성·스킬 애니메이션(기획지시 2026-11-06 캐릭터등록단순화). 대사 슬롯 5개, 텍스트는 영문(화면 표시 없음)
+export const LINE_SLOTS = Object.freeze(["ACTIVE_01", "ACTIVE_02", "PICK", "WIN", "LOSE"]);
+export const MEDIA = Object.freeze({
+  voice: { maxBytes: 1024 * 1024, warnBytes: 300 * 1024, warnSec: 2, formats: { ogg: "audio/ogg", mp3: "audio/mpeg" } },  // 가안 ogg·모노·2초·300KB(초과 경고만), 하드 상한 1MB
+  anim: { maxBytes: 8 * 1024 * 1024, warnBytes: 3 * 1024 * 1024, warnSec: 2, formats: { webm: "video/webm" } }      // 투명 WebM(VP9 알파), 하드 8MB·권장 3MB 이하
+});
+// 소리·영상 파일 머리 확인: ogg("OggS"), mp3(ID3 또는 프레임 동기 0xFFE), webm(EBML 1A45DFA3 + doctype webm). 아니면 null
+export function mediaInfo(buf) {
+  const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  if (b.length < 16) return null;
+  const s4 = String.fromCharCode(...b.subarray(0, 4));
+  if (s4 === "OggS") return { format: "ogg", mime: "audio/ogg" };
+  if (String.fromCharCode(...b.subarray(0, 3)) === "ID3" || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)) return { format: "mp3", mime: "audio/mpeg" };
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) {
+    const head = String.fromCharCode(...b.subarray(0, Math.min(64, b.length)));
+    return head.includes("webm") ? { format: "webm", mime: "video/webm" } : null;
+  }
+  return null;
+}
+export function checkMedia(kind, info, bytes) {
+  const m = MEDIA[kind];
+  if (!m) throw new Error("asset_kind_invalid");
+  if (!info || !m.formats[info.format]) throw Object.assign(new Error("asset_spec"), { extra: { detail: kind === "voice" ? "음성은 ogg 또는 mp3" : "스킬 애니메이션은 투명 WebM(VP9 알파)" } });
+  if (bytes > m.maxBytes) throw new Error("asset_too_large");
+  return bytes > m.warnBytes ? [`${kind === "voice" ? "음성" : "스킬 애니메이션"} ${Math.round(bytes / 1024)}KB — 권장 ${Math.round(m.warnBytes / 1024)}KB 이하(경고만)`] : [];
 }
 
 export const slotKey = (id) => `slot:${id}`;
 // 표 키 규칙상 slot 이름공간에 두는 스킨별 값: 합본 이미지 slot:ART_<캐릭터>_<스킨>_COMBINED, 배경 방식 slot:ART_<캐릭터>_<스킨>_BG({mode, color})
 export const artKey = (ch, skin, kind) => (kind === "combined" ? `slot:ART_${ch}_${skin}_COMBINED` : kind === "bg" ? `slot:ART_${ch}_${skin}_BG` : `art:${ch}:${skin}:${kind}`);
 const ART_SLOT_RE = /^ART_([A-Z]{2,3})_(\d{3})_(COMBINED|BG)$/;
-// 캐릭터 카드 배경 3가지(기획지시 2026-10-30 배경방식): faction(진영 슬롯, 기본) / color(#RRGGBB 세로 그라데이션) / combined(합본)
-export const BG_MODES = ["faction", "color", "combined"];
-export function checkBg(mode, color) {
-  if (!BG_MODES.includes(mode)) throw new Error("value_invalid");
-  if (color != null && color !== "" && !/^#[0-9A-Fa-f]{6}$/.test(String(color))) throw new Error("value_invalid");
-  if (mode === "color" && !color) throw new Error("value_invalid");
-  return { mode, color: color ? String(color).toUpperCase() : null };
-}
-// 캐릭터 카드 기본 배경: 진영별 슬롯(불·물·바람). 합본이 있으면 합본을 쓴다
-export const FACTION_BG = { "불": "CARD_BG_FIRE", "물": "CARD_BG_WATER", "바람": "CARD_BG_WIND" };
-
 // 옛 3:4 카드 영역 → 5:7(기획지시 2026-11-06 카드영역5대7): 같은 중심·가로폭, 이미지 밖이면 안쪽으로 밀어 넣음(넘치면 폭을 줄임)
 export function cardTo57(card, W, H) {
   if (!card || !W || !H) return card ?? null;
@@ -182,7 +199,10 @@ export function shapeAssets(rows = {}, pick = "cur") {
     else if (p[0] === "slot") slots[p[1]] = v;
     else if (p[0] === "art") {
       const s = ((art[p[1]] ??= {})[p[2]] ??= {});
-      if (p[3] === "regions") { if (v.card) s.card = v.card; if (v.faceRect) s.faceRect = v.faceRect; if (v.faceRectC) s.faceRectC = v.faceRectC; if (v.faceFrom) s.faceFrom = v.faceFrom; } else s[p[3]] = v;
+      if (p[3] === "regions") { if (v.card) s.card = v.card; if (v.faceRect) s.faceRect = v.faceRect; if (v.faceRectC) s.faceRectC = v.faceRectC; if (v.faceFrom) s.faceFrom = v.faceFrom; }
+      else if (p[3].startsWith("line_")) (s.lines ??= {})[p[3].slice(5)] = { ...(s.lines?.[p[3].slice(5)] ?? {}), text: String(v.text ?? "") };
+      else if (p[3].startsWith("voice_")) (s.lines ??= {})[p[3].slice(6)] = { ...(s.lines?.[p[3].slice(6)] ?? {}), voice: v };
+      else s[p[3]] = v;
     }
   }
   for (const skins of Object.values(art)) for (const s of Object.values(skins)) {
@@ -207,29 +227,20 @@ export async function loadAssets(env, rpcFn, { fresh = false } = {}) {
 export const dropAssetCache = () => { cache = null; };
 
 // 게임 클라이언트용 목록(전체 주소 + 해시 이름). 없는 슬롯은 게임 내장 기본 이미지를 쓴다. rev = 목록 내용 해시
-export function assetManifest(shaped, env, factions = {}) {
+export function assetManifest(shaped, env) {
   const base = publicBase(env);
   const file = (f) => (f?.path ? { url: base + f.path, path: f.path, w: f.w, h: f.h, bytes: f.bytes } : null);
-  const slots = Object.fromEntries(Object.entries(shaped?.slots ?? {}).map(([k, f]) => [k, file(f)]).filter(([, f]) => f));
+  const slots = Object.fromEntries(Object.entries(shaped?.slots ?? {}).filter(([k]) => slotOf(k)).map(([k, f]) => [k, file(f)]).filter(([, f]) => f));  // 폐지한 슬롯(진영 카드 배경 등)은 표에 남아도 내보내지 않음
   const art = {};
   for (const [ch, skins] of Object.entries(shaped?.art ?? {})) {
     for (const [skin, a] of Object.entries(skins)) {
       if (!a.full) continue;  // 전신이 없는 스킨은 내보내지 않음
-      (art[ch] ??= {})[skin] = { full: file(a.full), thumb: file(a.thumb), face: file(a.face), combined: file(a.combined), card: a.card ?? null, faceRect: a.faceRect ?? null,
-        // 얼굴 프로필 기준: "combined"이면 합본 + faceRectC로 자른다(합본이 없으면 전신 + faceRect로 대체)
-        faceRectC: a.faceRectC ?? null, faceFrom: a.faceFrom === "combined" && a.combined && a.faceRectC ? "combined" : "full",
-        ...bgOf(a, FACTION_BG[factions[ch]] ?? "CARD_BG_NEUTRAL") };
+      // 기획지시 2026-11-06 캐릭터등록단순화: 카드 그림 = 합본(없으면 게임이 전신을 임시로), 얼굴 = 합본 faceRectC만.
+      // 옛 값(배경 방식·컬러·카드 영역·faceRect·faceFrom·얼굴 파일)은 표에 남겨 두고(되돌리기용) 내보내지 않는다
+      (art[ch] ??= {})[skin] = { full: file(a.full), thumb: file(a.thumb), combined: file(a.combined), faceRectC: a.combined ? a.faceRectC ?? null : null,
+        lines: LINE_SLOTS.map((slot) => ({ slot, text: a.lines?.[slot]?.text ?? "", voice: file(a.lines?.[slot]?.voice)?.url ?? null })),
+        skillAnim: a.anim?.path ? { url: base + a.anim.path, bytes: a.anim.bytes, format: a.anim.format ?? "webm" } : null };
     }
   }
   return { base, slots, art };
-}
-
-// 카드 배경(기획지시 배경방식): bgMode = 고른 방식, bg = 실제로 그릴 것("combined" | "color" | 진영 슬롯 ID, 27차 bg와 같은 자리·호환),
-// bgColor = color일 때 #RRGGBB, bgSlot = 진영 슬롯(언제나, 대체용). 고른 방식의 파일·색이 없으면 진영 배경으로 대체.
-// 방식 값이 없던 옛 스킨: 합본이 있으면 combined(27차 동작 그대로), 없으면 faction
-export function bgOf(a, slot) {
-  const mode = a?.bgOpt?.mode ?? (a?.combined ? "combined" : "faction");
-  const color = a?.bgOpt?.color ?? null;
-  const bg = mode === "combined" && a?.combined ? "combined" : mode === "color" && color ? "color" : slot;
-  return { bg, bgMode: mode, bgColor: bg === "color" ? color : null, bgSlot: slot };
 }

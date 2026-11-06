@@ -937,6 +937,9 @@ body.rmo .tban.t4 .tbx,body.rmo .banner.ib b{animation:imprm var(--td,1.1s) ease
 body.rmo .ko b{animation:imprm var(--td,1.5s) ease-out both}
 @keyframes imprm{0%{opacity:0;transform:rotate(-6deg) scale(1.4)}16%,84%{opacity:1;transform:rotate(-6deg) scale(1)}100%{opacity:0;transform:rotate(-6deg)}}
 body.rmo .ifl,body.rmo .tsw,body.rmo .ko .crk,body.rmo .ko s,body.rmo .tban.t4 .tbx::after,body.rmo .koflash{display:none}
+
+/* 스킬 애니메이션 영상(투명 WebM): 전신 PNG 자리 그대로 */
+video.sart.sv{object-fit:contain;object-position:center bottom;background:none}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -967,15 +970,15 @@ function left(t){return t?Math.max(0,Math.ceil((t-now())/1000)):0}
 function regPart(src,cr,bA){var iw=100/cr.w,ih=iw*(src.h/src.w)*bA,py=ih<=100.01?0:Math.min(100,Math.max(0,cr.y/(1-100/ih)*100));
  return {size:iw.toFixed(2)+'% '+ih.toFixed(2)+'%',pos:(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(2)+'% '+py.toFixed(2)+'%'}}
 function regBg(src,cr,bA){var r=regPart(src,cr,bA);return 'background-image:url('+src.url+');background-repeat:no-repeat;background-size:'+r.size+';background-position:'+r.pos}
-function crOf(a){var f=a.full;return a.card||{x:0.125,y:0,w:0.75,h:0.75*(f?f.w/f.h:0.5625)*7/5}}
+var TMP_BG='linear-gradient(180deg,#2a3150,#10131f)';  /* 합본 없는 스킨: 전신 PNG 임시 카드 그림(폭 맞춤·위 맞춤) 바탕 */
 /* 캐릭터 카드 그림층(.l): 합본이면 합본만 본체 전체(전신 안 그림, 합본규격변경 2), 아니면 배경(진영·컬러) + 전신 5:7 영역 */
-function charLay(chr,bA){var c=ch(chr),a=((S.A.art||{})[chr]||{})['000']||{},fb=slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL')));
- if(a.bg==='combined'&&a.combined)return '<div class="l art" style="background:url('+a.combined.url+') center/100% 100% no-repeat"></div>';
- var h='<div class="l art" style="'+(a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':fb?'background-image:'+fb:'background:#334')+'"></div>';
- if(a.full)h+='<div class="l" style="'+regBg(a.full,crOf(a),bA||5/7)+'"></div>';return h}
+/* 캐릭터 카드 그림층(.l): 합본(기획지시 2026-11-06 캐릭터등록단순화 — 모든 카드 그림은 합본), 합본이 없으면 전신 PNG를 임시로 */
+function charLay(chr){var a=((S.A.art||{})[chr]||{})['000']||{};
+ if(a.combined)return '<div class="l art" style="background:url('+a.combined.url+') center/100% 100% no-repeat"></div>';
+ return '<div class="l art" style="background:'+(a.full?'url('+a.full.url+') center top/100% auto no-repeat,':'')+TMP_BG+'"></div>'}
 function pvCard(id,o){var c=ch(id),a=((S.A.art||{})[id]||{})['000']||{},sl=S.A.slots;
- var bgCss=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':(sl[a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))]?'background-image:'+slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))):'background:#334');
- var chs='';if(a.bg==='combined'&&a.combined)bgCss='background:url('+a.combined.url+') center/100% 100% no-repeat';else if(a.full)chs=regBg(a.full,crOf(a),5/7);
+ var bgCss=a.combined?'background:url('+a.combined.url+') center/100% 100% no-repeat':'background:'+(a.full?'url('+a.full.url+') center top/100% auto no-repeat,':'')+TMP_BG;
+ var chs='';
  var fr=o.tier?sl['FRAME_'+o.tier]:null,bd=o.badge>1?sl['MASTERY_'+o.badge]:null,fc=sl['FACTION_'+FAC[c.faction]];
  return '<div class="pvc h'+(o.holo||0)+(o.full?' full':'')+(o.cls?' '+o.cls:'')+'" style="--w:'+o.w+'px"'+(o.attr||'')+'><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
   +'<div class="pvwin"><div class="pvl pvchar" style="'+chs+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'
@@ -993,7 +996,7 @@ function bcCard(id,o){var k=card(id),sl=S.A.slots,art=sl['CARD_ART_'+id],lay='',
   +(own?'<div class="own">전용</div>':'')+'<div class="txt"><div class="nm">'+esc(k.name)+'</div>'+(o.mode==='hand'?(o.face?'<div class="sht">'+esc(shortOf(id))+'</div>':''):'<div class="tx">'+esc(k.effect_text)+'</div>')+'</div>'+(o.extra||'')+'</div>'}
 function shortOf(id){var k=card(id),t=k.effect_short||String(k.effect_text||'');return k.effect_short?t:(Array.from(t).length>15?Array.from(t).slice(0,15).join('')+'…':t)}  // 시트 효과_짧게, 없으면 효과 문구 앞 15자(임시)
 function backCard(w,extra){return '<div class="bc back" style="--w:'+w+'px;width:'+w+'px;'+(S.A.slots.CARD_BACK?'background-image:'+slotU('CARD_BACK'):'background:linear-gradient(160deg,#2a3a7a,#141a3a)')+'">'+(extra||'')+'</div>'}
-function faceCss(id){var a=((S.A.art||{})[id]||{})['000']||{},f=a.full,r=a.faceRect;if(a.faceFrom==='combined'&&a.combined&&a.faceRectC){f=a.combined;r=a.faceRectC}
+function faceCss(id){var a=((S.A.art||{})[id]||{})['000']||{},f=a.combined,r=a.faceRectC;if(!f||!r){f=a.full;r=null}  /* 얼굴은 합본 faceRectC에서만(캐릭터등록단순화), 없으면 전신 위쪽 임시 */
  if(f&&r){var s=100/r.w;return 'background-image:url('+f.url+');background-size:'+s.toFixed(1)+'% auto;background-position:'+(r.w>=1?0:r.x/(1-r.w)*100).toFixed(1)+'% '+(r.h>=1?0:r.y/(1-r.h)*100).toFixed(1)+'%'}
  if(a.thumb||f)return 'background-image:url('+(a.thumb||f).url+');background-size:220% auto;background-position:50% 8%';return ''}
 
@@ -1397,8 +1400,8 @@ function lay4(){var W=VW(),H=VH(),f=safe(),sl=Math.max(60,f.l),sr=Math.max(60,f.
 /* 프로필(시안 캐릭터 카드): 등급 프레임 + 카드 영역 5:7(상자에 폭 맞춤·위 맞춤) + 위 속성·확정 뱃지 + 아래 이름·HP */
 function profCard(p,who,w,h,tier){var c=ch(p.char),a=((S.A.art||{})[p.char]||{})['000']||{},sl=S.A.slots,fac=sl['FACTION_'+FAC[c.faction]],fr=tier?sl['FRAME_'+tier]:null;
  var max=p.maxHp,hp=p.hp,sh=Math.min(p.shield,max),pw=Math.max(0,100*hp/max),sw=Math.min(100-pw,100*sh/max);
- var comb=a.bg==='combined'&&a.combined,art=comb?regBg(a.combined,{x:0,y:0,w:1,h:1},w/h):a.full?regBg(a.full,crOf(a),w/h):'';
- var bgs=a.bgSlot&&sl[a.bgSlot],bgL=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':comb?'background:#223':bgs?'background:url('+bgs.url+') center/cover no-repeat':'background:#c13701';
+ var comb=!!a.combined,art=comb?regBg(a.combined,{x:0,y:0,w:1,h:1},w/h):a.full?'background:url('+a.full.url+') center top/100% auto no-repeat':'';
+ var bgL='background:'+TMP_BG;
  var ok=who==='me'?!!p.mySubmission:!!p.submitted;
  return '<div class="vc side pf" id="side_'+who+'" style="width:'+w+'px;height:'+h+'px"><div class="pfill"><div class="pbg" style="'+bgL+'"></div><div class="vfa" id="face_'+who+'"><div class="part" style="'+art+'"></div></div></div>'
   +'<div class="pcont pbot">'
@@ -1438,7 +1441,7 @@ function emoteShow(m,local){var st=S.st;if(!st||st.phase!=='battle')return;var s
 function menu4(){return '<div class="menu m4" id="m4">'+'<button id="mSur">항복</button><button id="mLeft">왼손 모드 '+(S.lefty?'끄기':'켜기')+'</button><button id="mHelp">도움말 다시보기</button><button id="mSpd">연출속도: '+SPD_LAB[S.rspd||'normal']+'</button>'
  +(manualOk()?'<button id="mMan">탭으로 행동: '+(S.manual?'켜짐':'꺼짐')+'</button>':'')+'<button id="mMus">음악: '+(S.musOff?'꺼짐':'켜짐')+'</button><button id="mSnd">효과음: '+(S.sndOff?'꺼짐':'켜짐')+'</button><button id="mVib">진동: '+(S.vibOff?'꺼짐':'켜짐')+'</button>'
  +'<button id="mRmo">동작 줄이기: '+(S.rmo?'켜짐':'꺼짐')+'</button><button id="mSkm">스킬 연출: '+(S.skm==='over'?'오버레이':'풀화면')+'</button><button class="mcl" id="mClose">닫기</button></div>'}
-function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmission,L=lay4(),k=L.k;S.L4=L;S.wide=false;
+function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmission,L=lay4(),k=L.k;S.L4=L;S.wide=false;animWarm([me.char,op.char]);
  if(S.selTurn!==b.turn){S.sel={cards:[],spell:null,active:false};S.selTurn=b.turn;S.kpPrev={}}
  var hand=me.hand.slice().sort(function(x,y){var a=card(x.id),c=card(y.id);return x.cost-y.cost||(KIND_ORD[a.kind]-KIND_ORD[c.kind])||x.uid-y.uid});
  var chosen=sub?sub.cards:S.sel.cards,used=sumCost(me,chosen),blockSkill=me.status.some(function(s){return s.k==='skillBlock'});
@@ -1538,10 +1541,14 @@ function fxOf(fac){var h='',R=Math.random,i;
  else if(fac==='바람'){for(i=0;i<16;i++)h+='<s class="gs" style="top:'+(8+R()*84).toFixed(1)+'%;width:'+Math.round(80+R()*180)+'px;--rot:'+(R()*10-5).toFixed(1)+'deg;animation-duration:'+(0.7+R()*0.6).toFixed(2)+'s;animation-delay:'+(-R()*1.2).toFixed(2)+'s"></s>';for(i=0;i<10;i++)h+='<s class="lf" style="top:'+(10+R()*80).toFixed(1)+'%;--rs:'+Math.round(R()*720-360)+'deg;animation-duration:'+(1.1+R()*0.9).toFixed(2)+'s;animation-delay:'+(-R()*1.5).toFixed(2)+'s"></s>'}
  return h}
 var SKC={'불':'rgba(255,86,64,.64)','물':'rgba(79,195,255,.64)','바람':'rgba(98,219,149,.64)'};
+/* 투명 WebM(VP9 알파)은 크롬·엣지·파이어폭스·안드로이드만. 사파리(아이폰·맥)는 알파를 못 그려 전신 PNG로 */
+function webmAlpha(){if(S.wa==null){var v=document.createElement('video'),ua=navigator.userAgent;S.wa=!!(v.canPlayType&&v.canPlayType('video/webm; codecs="vp9"'))&&!(/Safari\//.test(ua)&&!/Chrome|Chromium|Edg|Android/.test(ua))&&!/iP(hone|ad|od)/.test(ua)}return S.wa}
+function animWarm(ids){(ids||[]).forEach(function(id){var a=((S.A.art||{})[id]||{})['000']||{},u=a.skillAnim&&a.skillAnim.url;S.warm=S.warm||{};if(u&&webmAlpha()&&!S.warm[u]){S.warm[u]=1;fetch(u,{mode:'cors'}).catch(function(){})}})}  /* 전투 시작 때 미리 받아 둠 */
 function skillCut(chr,sd,d){var c=ch(chr),col=SKC[c.faction]||'rgba(107,122,255,.64)',a=((S.A.art||{})[chr]||{})['000']||{},ms=Math.max(600,Math.round(d*spk())),k=Math.min(innerWidth/788,innerHeight/360),pt='';
  if(!S.rmo)pt=fxOf(c.faction);if(false)for(var q=0;q<14;q++)pt+='<s style="left:'+Math.round(10+Math.random()*80)+'%;top:'+Math.round(15+Math.random()*70)+'%;--dx:'+Math.round(-120+Math.random()*240)+'px;--dy:'+Math.round(-140+Math.random()*120)+'px;animation-delay:'+(Math.random()*0.6).toFixed(2)+'s"></s>';
  var e=document.createElement('div');e.className='scut'+(S.skm==='over'?' over':'')+(sd==='opp'?' opp':'')+' fx-'+({'불':'fire','물':'water','바람':'wind'}[c.faction]||'none');e.style.setProperty('--c1',col);e.style.setProperty('--d',ms+'ms');e.style.setProperty('--k',k.toFixed(4));
- e.innerHTML='<i class="sbg"></i>'+pt+'<div class="sbox">'+(a.full?'<i class="sart" style="background-image:url('+a.full.url+')"></i>':'')+'<div class="stx"><b>'+esc(c.active_name||'액티브')+'</b><p>'+esc(c.active_text||'')+'</p></div></div>'+(S.rmo?'':'<i class="sfl"></i>')+'<button class="sskip" type="button">스킵하기 ▶</button>';
+ var va=a.skillAnim&&webmAlpha()?a.skillAnim.url:null;  /* 스킬 애니메이션(투명 WebM)이 있으면 전신 대신 재생, 배경·스킬명·설명은 그대로(캐릭터등록단순화) */
+ e.innerHTML='<i class="sbg"></i>'+pt+'<div class="sbox">'+(va?'<video class="sart sv" src="'+va+'" autoplay muted playsinline preload="auto"></video>':a.full?'<i class="sart" style="background-image:url('+a.full.url+')"></i>':'')+'<div class="stx"><b>'+esc(c.active_name||'액티브')+'</b><p>'+esc(c.active_text||'')+'</p></div></div>'+(S.rmo?'':'<i class="sfl"></i>')+'<button class="sskip" type="button">스킵하기 ▶</button>';
  document.querySelectorAll('body > .scut').forEach(function(x){x.remove()});document.body.appendChild(e);sfx({'불':'cut_fire','물':'cut_water','바람':'cut_wind'}[c.faction]||'ult');if(!S.rmo)setTimeout(function(){shakeBt(2)},120);
  var end=function(){if(e.parentNode)e.remove()};e.querySelector('.sskip').onclick=function(ev){ev.stopPropagation();end();if(S.anim&&S.anim.adv)S.anim.adv()};setTimeout(end,ms)}
 /* 설정의 스킬 연출 미리 보기: 닫기·바깥 탭까지 반복(끝나면 0.5초 쉬고 다시), 방식 전환은 바로 그 방식으로 이어서(기획지시 2026-11-06 스킬연출보기) */
