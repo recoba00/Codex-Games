@@ -169,9 +169,9 @@ try {
     {  // HP 0 즉시 종료(상세 01): skip 로그 문구, K.O. 연출(영어 표기·쓰러짐·섬광)
       const sk = await page.evaluate(() => { const ob = S.st.battle, G = groupsOf([{ t: "skip", phases: [4, 5], cards: [{ seat: ob.you, id: ob.me.hand[0]?.id || "C01" }] }, { t: "end", outcome: "a", reason: "hp" }], ob.you); return G.map((g) => capOf(g, ob.you, ob).html).join(" / "); });
       assert.match(sk, /K\.O\. · 처리하지 않은 단계: 4 공격 · 5 종료 \(안 나간 카드: 나 /);
-      await page.evaluate(() => koShow({ me: 100, opp: 0 })); await sleep(500);
-      await page.screenshot({ path: `/tmp/play_ko_${vp.width}.png` });
-      assert.ok(await page.$("#side_opp.down"), "K.O. 쓰러진 프로필");
+      const ko = await page.evaluate(() => { koShow({ me: 100, opp: 0 }); return !!document.querySelector("#side_opp.down") && !!document.querySelector("#bt .ko b"); });
+      assert.ok(ko, "K.O. 쓰러진 프로필·표기");  // 화면 갱신(턴 시작)과 겹칠 수 있어 같은 틱에서 확인
+      await sleep(500); await page.screenshot({ path: `/tmp/play_ko_${vp.width}.png` });
       await page.evaluate(() => { document.querySelectorAll(".ko,.koflash").forEach((x) => x.remove()); document.querySelectorAll(".down").forEach((x) => x.classList.remove("down")); $("bt").classList.remove("koing"); });
     }
     await page.click("#menu");
