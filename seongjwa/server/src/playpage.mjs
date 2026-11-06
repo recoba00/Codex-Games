@@ -873,6 +873,13 @@ body.rmo .pview .paura{animation:none}
 .stm .stb{display:flex;gap:calc(12px*var(--k));align-items:flex-start}
 .stm .stb>div{display:flex;flex-direction:column;gap:calc(6px*var(--k))}
 .stm .stb b{font-size:calc(28px*var(--k))}
+
+/* 스킬 연출 미리 보기(설정): 화면 전체 탭 = 닫기, 위 오른쪽 방식 전환·닫기는 항상 보임 */
+.skpv{position:fixed;inset:0;z-index:59;cursor:pointer}
+.skpb{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));display:flex;gap:6px}
+.skpb button{height:32px;padding:0 14px;border-radius:99px;border:0;background:rgba(10,13,32,.85);color:#cfd5ee;font-weight:700;font-size:13px}
+.skpb button.on{background:#2b5fd0;color:#fff}.skpb .skx{background:#fff;color:#111}
+body:has(.skpv) .scut .sskip{display:none}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1044,18 +1051,18 @@ function pickLay(n){var W=VW(),H=VH(),p=prepPad(),short=p.short,gap=12,inner=W-p
  var listH=H-p.t-p.b-topH-topM-band-6-barH-barM,rowsFit=function(cols,w){return Math.ceil(n/cols)*(w*1.4+4)+(Math.ceil(n/cols)-1)*g8+8};
  var cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor(((listH-4-g8)/2)/1.4)-4,cw=Math.min(wW,wH,170);
  if(cw<72){cols=4;cw=Math.min(Math.floor((cen-8-3*g8)/4)-4,170)}
- var sideH=H-p.t-p.b-topH-topM-barH-barM-40,sw=Math.floor(Math.min(side,sideH*0.7/1.4));  // 사선(전투와 같게): 나 왼쪽 아래, 상대 오른쪽 위 — 높이를 다 쓰지 않아 위아래 차이가 보이게
+ var sideH=H-p.t-p.b-topH-topM-barH-barM-18,sw=Math.floor(Math.min(side,sideH*0.7/1.4));  // 사선(전투와 같게): 나 왼쪽 아래, 상대 오른쪽 위 — 높이를 다 쓰지 않아 위아래 차이가 보이게
  return {p:p,gap:gap,side:side,cen:cen,cw:cw,cols:cols,listH:listH,sw:sw,band:band,short:short,scroll:rowsFit(cols,cw)>listH+1}}
 function renderPick(m){var P=m.prep,ban=m.phase==='ban',z=pickLay(P.characters.length),done=ban?!!P.myBan:!!P.myPick;
  var cur=ban?(P.myBan||S.banSel):(P.myPick||(S.pickSel&&P.banned.indexOf(S.pickSel)<0?S.pickSel:null));if(cur&&P.characters.indexOf(cur)<0)cur=null;
  var c=cur?ch(cur):null,badge=function(id){return (P.mastery.mine||{})[id]||1};
  var mine=cur?pvCard(cur,{w:z.sw,holo:0,badge:ban?1:badge(cur),tier:P.frame?frameOf(P.frame.mine).tier:null,cls:'rnd'+(ban?' ban':'')}):'<div class="emp" style="width:'+z.sw+'px">'+(ban?'밴할 캐릭터':'선택 전')+'</div>';
  var h='<div class="scr pk3" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--band:'+z.band+'px">'+topBar(m,done?(ban?'밴 완료':'선택 완료')+' · 상대 '+((ban?P.oppBanDone:P.oppPickDone)?'완료':'선택 중'):(ban?'상대가 못 쓰게 할 캐릭터를 고르세요':'캐릭터를 고르고 확정하세요 (동시·비공개)'))
-  +'<div class="pk3b"><div class="pcol me"><div class="lab2">'+esc(myName(P))+(ban?' · 내 밴':'')+'</div>'+mine+'<b class="pnm">'+(c?esc(c.name):'&nbsp;')+'</b></div>'
+  +'<div class="pk3b"><div class="pcol me"><div class="lab2">'+esc(myName(P))+(ban?' · 내 밴':'')+'</div>'+mine+'</div>'  /* 카드 안에 이름이 있어 아래 이름 삭제(기획지시 2026-11-06 이름중복) */
   +'<div class="pmid"><div class="plist c'+z.cols+(z.scroll?' scr2':'')+'" id="plist" style="--pw:'+(z.cw+4)+'px">'+P.characters.map(function(id){var x=ch(id),bn=!ban&&P.banned.indexOf(id)>=0;
    return '<div class="pk'+(cur===id?' sel':'')+(bn?' off':'')+'" data-pick="'+id+'">'+pvCard(id,{w:z.cw,holo:0,badge:badge(id),sub:x.role||'',cls:'rnd'+(bn?' ban':'')})+'<i class="ck">✓</i></div>'}).join('')+'</div>'
   +'<div class="pband">'+(c?'<div><b>'+esc(c.name)+'</b> <span class="mu">'+esc((c.job||'')+' · '+(c.role||''))+'</span> · 패시브 <b>'+esc(c.passive_name||'')+'</b> '+esc(c.passive_text||'')+'</div><div>액티브 <b>'+esc(c.active_name||'')+'</b> '+esc(c.active_text||'')+'</div>':'<div class="mu">캐릭터를 누르면 스킬이 보여요 · 시간이 지나면 '+(ban?'눌러 둔 캐릭터를 밴(없으면 밴 없음)':'눌러 둔 캐릭터 → 직전에 쓴 캐릭터 순으로 자동 선택')+'</div>')+'</div></div>'
-  +'<div class="pcol opp"><div class="lab2">'+esc(oppName(P,m))+'</div><div class="qcard" style="width:'+z.sw+'px">?</div><b class="pnm">&nbsp;</b></div></div>'
+  +'<div class="pcol opp"><div class="lab2">'+esc(oppName(P,m))+'</div><div class="qcard" style="width:'+z.sw+'px">?</div></div></div>'
   +'<div class="row bar pbar"><button id="qt">나가기</button><button class="pri confirm" id="pok"'+(done||!cur?' disabled':'')+(done?'':' data-lab="'+(ban?'밴 확정':'선택 확정')+'"')+'>'+(done?'대기 중…':(ban?'밴 확정':'선택 확정')+' ('+left(m.phaseDeadline)+'초 남음)')+'</button></div></div>';
  var keep=$('plist')?$('plist').scrollTop:0;$('app').innerHTML=h;var pl=$('plist');pl.scrollTop=keep;
  var fade=function(){pl.classList.toggle('more',z.scroll&&pl.scrollTop+pl.clientHeight<pl.scrollHeight-4)};pl.onscroll=fade;fade();
@@ -1435,7 +1442,7 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
   $('mLeft').onclick=function(){S.lefty=!S.lefty;lsSet('play_lefty',S.lefty?'1':'');S.menu=false;render()};$('mHelp').onclick=function(){S.menu=false;lsSet(firstKey(),'{}');render();guide(true)};
   $('mSpd').onclick=function(){S.rspd=SPD_NEXT[S.rspd||'normal'];lsSet('play_rspd',S.rspd);render()};if($('mMan'))$('mMan').onclick=function(){S.manual=!S.manual;lsSet('play_manual',S.manual?'1':'');render()};
   $('mSnd').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();render()};$('mMus').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();render()};$('mVib').onclick=function(){S.vibOff=!S.vibOff;lsSet('play_vib',S.vibOff?'0':'1');render()};
-  $('mRmo').onclick=function(){S.rmo=!S.rmo;lsSet('play_rmo',S.rmo?'1':'0');render()};$('mSkm').onclick=function(){S.skm=S.skm==='over'?'full':'over';lsSet('play_skm',S.skm);render();skillCut(me.char,'me',2000)}}
+  $('mRmo').onclick=function(){S.rmo=!S.rmo;lsSet('play_rmo',S.rmo?'1':'0');render()};$('mSkm').onclick=function(){S.skm=S.skm==='over'?'full':'over';lsSet('play_skm',S.skm);render();skPreview(me.char)}}
  if(S.guideOn&&S.guideShow)S.guideShow();
  if(b.turn===1&&!sub&&S.guideTurn!==m.code+':1'&&(S.forceGuide||Number(lsGet('play_games_'+(lsGet('play_dev')||''))||0)<3)){S.guideTurn=m.code+':1';setTimeout(function(){guide(false)},300)}}
 /* 공개 연출 중 감정표현 패널(다시 그리지 않고 붙였다 뗌) */
@@ -1475,6 +1482,16 @@ function skillCut(chr,sd,d){var c=ch(chr),col=SKC[c.faction]||'rgba(107,122,255,
  e.innerHTML='<i class="sbg"></i>'+pt+'<div class="sbox">'+(a.full?'<i class="sart" style="background-image:url('+a.full.url+')"></i>':'')+'<div class="stx"><b>'+esc(c.active_name||'액티브')+'</b><p>'+esc(c.active_text||'')+'</p></div></div>'+(S.rmo?'':'<i class="sfl"></i>')+'<button class="sskip" type="button">스킵하기 ▶</button>';
  document.querySelectorAll('body > .scut').forEach(function(x){x.remove()});document.body.appendChild(e);sfx({'불':'cut_fire','물':'cut_water','바람':'cut_wind'}[c.faction]||'ult');if(!S.rmo)setTimeout(function(){shakeBt(2)},120);
  var end=function(){if(e.parentNode)e.remove()};e.querySelector('.sskip').onclick=function(ev){ev.stopPropagation();end();if(S.anim&&S.anim.adv)S.anim.adv()};setTimeout(end,ms)}
+/* 설정의 스킬 연출 미리 보기: 닫기·바깥 탭까지 반복(끝나면 0.5초 쉬고 다시), 방식 전환은 바로 그 방식으로 이어서(기획지시 2026-11-06 스킬연출보기) */
+function skPreview(chr){skPrevStop();var pv=document.createElement('div');pv.id='skpv';pv.className='skpv';
+ var lab=function(){return '<div class="skpb"><button data-m="full"'+(S.skm!=='over'?' class="on"':'')+'>풀화면</button><button data-m="over"'+(S.skm==='over'?' class="on"':'')+'>오버레이</button><button class="skx" data-x="1">닫기 ✕</button></div>'};
+ pv.innerHTML=lab();document.body.appendChild(pv);S.skPrev={chr:chr,t:0};
+ var run=function(){if(!S.skPrev)return;clearTimeout(S.skPrev.t);skillCut(chr,'me',2000);S.skPrev.t=setTimeout(run,Math.max(600,Math.round(2000*spk()))+500)};
+ pv.onclick=function(ev){var m=ev.target.closest&&ev.target.closest('[data-m]');ev.stopPropagation();
+  if(m){if(S.skm!==m.dataset.m){S.skm=m.dataset.m;lsSet('play_skm',S.skm);pv.innerHTML=lab();if(battleOn())render()}run();return}
+  skPrevStop()};
+ run()}
+function skPrevStop(){if(S.skPrev){clearTimeout(S.skPrev.t);S.skPrev=null}var pv=$('skpv');if(pv)pv.remove();document.querySelectorAll('body > .scut').forEach(function(x){x.remove()})}
 var SPD_LAB={slow:'느리게',normal:'보통',fast:'빠르게'},SPD_NEXT={slow:'normal',normal:'fast',fast:'slow'},SPD_K={slow:1.5,normal:1,fast:0.5};
 function menuHtml(){return '<div class="menu"><button id="mSur">항복</button><button id="mLeft">왼손 모드 '+(S.lefty?'끄기':'켜기')+'</button><button id="mHelp">도움말 다시 보기</button><button id="mSpd">연출 속도: '+SPD_LAB[S.rspd||'normal']+'</button>'+(manualOk()?'<button id="mMan">탭하면 다음 행동: '+(S.manual?'켜짐':'꺼짐')+'</button>':'')+'</div>'}
 function manualOk(){var m=S.st;return !!m&&(m.mode==='practice'||m.mode==='friend')}  // 랭킹전은 수동 진행 숨김(기획답변 36차 2, 지연 플레이 방지)
@@ -1597,7 +1614,7 @@ function summaryOf(G,you){var who=function(s){return s===you?'내':'상대'},c=G
  var dealt=0,taken=0,blk=0;G.forEach(function(g){g.ev.forEach(function(e){if(e.t==='dmg'){if(e.seat===you){taken+=e.v;blk+=e.absorbed||0}else dealt+=e.v}})});
  if(!dealt&&!taken)return blk?'실드가 피해를 모두 막았어요':'서로 피해 없이 넘어갔어요';
  return '이번 턴 준 피해 '+dealt+' · 받은 피해 '+taken+(blk?' (실드로 '+blk+' 막음)':'')}
-function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me':'opp'};
+function play(ob,log,next){skPrevStop();var you=next.you,side=function(s){return s===you?'me':'opp'};
  var rv={me:[],opp:[]};(log||[]).forEach(function(e){if(e.t==='reveal')rv[side(e.seat)]=revealCells(e)});
  var fake=JSON.parse(JSON.stringify(S.st));fake.phase='battle';fake.battle=JSON.parse(JSON.stringify(ob));var gone=(ob.me.mySubmission&&ob.me.mySubmission.cards)||(S.selTurn===ob.turn?S.sel.cards.slice():[]);fake.battle.me.hand=fake.battle.me.hand.filter(function(c){return gone.indexOf(c.uid)<0});fake.battle.me.mySubmission=null;fake.battle.opp.submitted=false;fake.reveal=null;
  var keep=S.st;S.st=fake;renderBattle(fake,rv);S.st=keep;
