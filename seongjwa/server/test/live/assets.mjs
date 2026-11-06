@@ -242,7 +242,7 @@ try {
   assert.equal(art.SE["000"].thumb.h, 1024);
   const cd = art.SE["000"].card;
   assert.ok(Math.abs(cd.w - 0.6) < 0.01 && Math.abs(cd.x + cd.w / 2 - 0.5) < 0.02 && Math.abs(cd.y + cd.h / 2 - 0.4) < 0.04, JSON.stringify(cd));
-  assert.ok(Math.abs(cd.h * 2560 - (cd.w * 1440 * 4) / 3) < 3, "카드 3:4 유지");
+  assert.ok(Math.abs(cd.h * 2560 - (cd.w * 1440 * 7) / 5) < 3, "카드 5:7 유지");
   assert.ok(Math.abs(art.SE["000"].faceRect.x + art.SE["000"].faceRect.w / 2 - 0.5) < 0.02);
   // 데이터 배포 버튼(사용자 보고 2026-10-29: 앱 안 브라우저에서 안 먹힘 → 페이지 안 확인 창): 승인된 초안 → 배포 → 확인 → 라이브
   const up2 = await ok(call("/bo/v1/data/import?note=browser", XLSX, admin, true));
