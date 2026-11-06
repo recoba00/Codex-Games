@@ -900,8 +900,15 @@ function left(t){return t?Math.max(0,Math.ceil((t-now())/1000)):0}
 
 /* ---------- 카드 그리기 ---------- */
 /* 5:7 카드 영역(BO 지정)을 상자에 깔기: 폭을 꽉 채우고 위 맞춤, 남는 아래는 잘림. bA = 상자 가로/세로(기획지시 2026-11-06 카드영역5대7) */
-function regBg(src,cr,bA){var iw=100/cr.w,ih=iw*(src.h/src.w)*bA,py=ih<=100.01?0:Math.min(100,Math.max(0,cr.y/(1-100/ih)*100));
- return 'background-image:url('+src.url+');background-repeat:no-repeat;background-size:'+iw.toFixed(2)+'% '+ih.toFixed(2)+'%;background-position:'+(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(2)+'% '+py.toFixed(2)+'%'}
+function regPart(src,cr,bA){var iw=100/cr.w,ih=iw*(src.h/src.w)*bA,py=ih<=100.01?0:Math.min(100,Math.max(0,cr.y/(1-100/ih)*100));
+ return {size:iw.toFixed(2)+'% '+ih.toFixed(2)+'%',pos:(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(2)+'% '+py.toFixed(2)+'%'}}
+function regBg(src,cr,bA){var r=regPart(src,cr,bA);return 'background-image:url('+src.url+');background-repeat:no-repeat;background-size:'+r.size+';background-position:'+r.pos}
+/* 캐릭터 카드 한 장(배경층 + 5:7 영역, 합본이면 합본만)을 CSS 배경 여러 겹으로 — 결과 화면 등 단일 상자용 */
+function cardBgCss(chr){var c=ch(chr),a=((S.A.art||{})[chr]||{})['000']||{},sl=S.A.slots,bs=sl[a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))];
+ if(a.bg==='combined'&&a.combined)return 'background:url('+a.combined.url+') center/100% 100% no-repeat';
+ var bgl=a.bg==='color'&&a.bgColor?'linear-gradient(180deg,'+a.bgColor+',#111)':bs?'url('+bs.url+')':'linear-gradient(180deg,#334,#111)';
+ if(!a.full)return 'background:'+bgl+' center/cover no-repeat';var r=regPart(a.full,crOf(a),5/7);
+ return 'background-image:url('+a.full.url+'),'+bgl+';background-repeat:no-repeat;background-size:'+r.size+',cover;background-position:'+r.pos+',center'}
 function crOf(a){var f=a.full;return a.card||{x:0.125,y:0,w:0.75,h:0.75*(f?f.w/f.h:0.5625)*7/5}}
 /* 캐릭터 카드 그림층(.l): 합본이면 합본만 본체 전체(전신 안 그림, 합본규격변경 2), 아니면 배경(진영·컬러) + 전신 5:7 영역 */
 function charLay(chr,bA){var c=ch(chr),a=((S.A.art||{})[chr]||{})['000']||{},fb=slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL')));
@@ -1394,10 +1401,10 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
  +'<div class="hdr" style="left:'+X0.toFixed(1)+'px;top:'+L.Y0.toFixed(1)+'px;width:'+(X1-X0).toFixed(1)+'px;height:40px"><button id="menu" class="ib4'+(S.menu&&!reveal?' on':'')+'" title="설정">'+SVG_GEAR+'</button><button id="emo" class="ib4'+(S.emoOpen?' on':'')+'" title="감정표현">'+SVG_CHAT+'</button>'
  +'<div class="pills" id="pills">'+pills4(b,cnt)+'</div><button id="logb" class="logb'+(S.showLog?' on':'')+'" title="눌러서 전체 로그 (L)">전투로그</button></div>'
  +'<div class="center c4" style="'+P(CX,BY,cenW,cenH)+'"><div class="obar" id="phc"></div><div class="cap'+(waiting?' show':'')+'" id="cap">'+(waiting?'상대 기다리는 중':'')+'</div></div>'
- +'<div class="oppc" style="'+P(X1-87,BY,87)+'">'+profCard(op,'opp',87,116,fo)+'<div class="bdg" id="bdg_opp">'+buffs4(op,'opp',b.turn)+'</div></div>'
+ +'<div class="oppc" style="'+P(X1-87,BY,87)+'">'+profCard(op,'opp',87,122,fo)+'<div class="bdg" id="bdg_opp">'+buffs4(op,'opp',b.turn)+'</div></div>'
  +'<div class="opslots" style="'+P(opL,BY,opW)+'"><div class="slots opp srow4">'+slots4(opItems,false,nOp)+'</div>'
  +'<div class="ops cirs">'+actCirc(op,false)+spCirc(op,false)+'<span class="cir hc" style="'+(S.A.slots.CARD_BACK?'background-image:'+slotU('CARD_BACK'):'')+'" data-tip="상대 남은 전투카드 '+op.handCount+'장"><s></s><b>+'+op.handCount+'</b></span><span class="cir en" data-tip="상대 에너지 '+op.energy+'">E'+op.energy+'</span></div></div>'
- +'<div class="mec" style="'+P(X0,BB-170,112)+'"><div class="bdg" id="bdg_me">'+buffs4(me,'me',b.turn)+'</div>'+profCard(me,'me',112,150,fm)+'</div>'
+ +'<div class="mec" style="'+P(X0,BB-177,112)+'"><div class="bdg" id="bdg_me">'+buffs4(me,'me',b.turn)+'</div>'+profCard(me,'me',112,157,fm)  /* 캐릭터 카드 5:7 통일(사용자 요청 2026-11-06) */+'</div>'
  +'<div class="meslots" style="'+P(CX,BB-224,nMe*60-12)+'"><div class="slots me srow4">'+slots4(meItems,true,nMe)+'</div></div>'
  +'<div class="hand" style="'+P(CX,BB-157,CW,109)+';--ov:'+ov.toFixed(1)+'px">'+hand.map(function(c,i){var picked=chosen.indexOf(c.uid)>=0,sb=blockSkill&&card(c.id).kind==='skill',cant=!picked&&sumCost(me,chosen.concat([c.uid]))>me.energy,cls=picked?'picked':(c.sealed||sb)?'lock':cant?'cant':full?'dim':(reveal||sub)?'':'can';
   return bcCard(c.id,{w:72,mode:'hand',face:true,fig:true,cls:cls,attr:' data-uid="'+c.uid+'" data-i="'+i+'" data-cid="'+c.id+'"',extra:sb&&!picked?'<span class="lockt">이번 턴 사용 불가</span>':''})}).join('')+'</div>'
@@ -1703,7 +1710,8 @@ function stamp(el,t){if(!el)return;var s=document.createElement('div');s.classNa
 
 /* ---------- 결과 ---------- */
 /* 결과(재배치 4): 1:1 분할. 왼쪽 50% = 전신 PNG의 카드 영역(3:4)만, 공용 어두운 배경, 폭을 꽉 채우고 위 맞춤(넘치는 아래는 잘림), 아래 35% 마스크. 오른쪽 50% = 데이터 */
-function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{},src=a.full;if(!src)return '';var f=safe(),k=Math.min(VW()/788,VH()/360),l=Math.max(0,Math.max(60*k,f.l)-f.l);return 'background-image:url('+src.url+');left:'+l.toFixed(1)+'px;top:'+(40*k).toFixed(1)+'px;width:'+(320*k).toFixed(1)+'px;height:'+(569*k).toFixed(1)+'px;right:auto;bottom:auto'}
+function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{};if(!a.full&&!a.combined)return '';var f=safe(),k=Math.min(VW()/788,VH()/360),l=Math.max(0,Math.max(60*k,f.l)-f.l),cw=Math.min(320*k,(VH()-48*k)*5/7);  /* 결과 캐릭터도 5:7 카드(사용자 요청 2026-11-06 5:7 통일) */
+ return cardBgCss(id)+';left:'+l.toFixed(1)+'px;top:'+(24*k).toFixed(1)+'px;width:'+cw.toFixed(1)+'px;height:'+(cw*1.4).toFixed(1)+'px;right:auto;bottom:auto;border-radius:'+(12*k).toFixed(1)+'px'}
 function renderResult(m){var rk0=m.code+':'+((m.last&&m.last.id)||'');if(S.resSnd!==rk0){S.resSnd=rk0;var L0=m.last||{},w0=L0.outcome!=='draw'&&L0.outcome!=='void'&&((L0.outcome==='a')===(m.you===0));sfx(L0.outcome==='draw'||L0.outcome==='void'?'turn':w0?'win':'lose')}var L=m.last||{},you=m.you,win=L.outcome!=='draw'&&L.outcome!=='void'&&((L.outcome==='a')===(you===0)),draw=L.outcome==='draw',mine=(L.picks||[])[you];
  var f=safe(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((VW()-f.l-f.r)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
  var mode=m.mode,rk=L.rank&&L.rank[you],ec=L.econ&&L.econ[you];
