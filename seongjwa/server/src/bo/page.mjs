@@ -70,7 +70,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--panel2)}
 .pvb{position:absolute;inset:0;border-radius:6%/4.3%;overflow:hidden;isolation:isolate;background:#223;box-shadow:0 10px 24px -10px rgba(0,0,0,.6)}
 .pvl{position:absolute;inset:0;pointer-events:none}
 .pvbg{background-size:cover;background-position:center}
-.pvwin{position:absolute;left:5%;top:3.571%;width:90%;height:96.429%}
+.pvwin{position:absolute;left:0;top:0;width:100%;height:100%}  /* 그림 창 720×960 폐기, 카드 본체 전체(2026-11-06) */
 .pvchar{background-repeat:no-repeat}
 .pvname{top:auto;height:20%;display:flex;align-items:flex-end;padding:0 7cqw 5cqw;color:#F7F5EE;font-weight:700;font-size:max(11px,8cqw);background:linear-gradient(to top,rgba(8,10,22,.85),rgba(8,10,22,0))}
 .pvhb,.pvhf,.pvsp,.pvgl{display:none}
@@ -178,8 +178,9 @@ function alphaCheck(cv,need){var g=cv.getContext('2d'),W=cv.width,H=cv.height;
  var cs=[[0,0],[W-8,0],[0,H-8],[W-8,H-8]];for(var k=0;k<4;k++){var p=g.getImageData(cs[k][0],cs[k][1],8,8).data,clear=false;for(var j=3;j<p.length;j+=4)if(p[j]<250){clear=true;break}if(!clear)return '모서리가 투명하지 않아요(체크무늬가 박힌 이미지는 안 돼요)'}return null}
 /* 규격 맞추기: kind=full(9:16, 1080~1440 너비, 큰 건 1440×2560으로), slot/face(정해진 크기, 같은 비율이면 줄임) */
 function prepare(file,kind,slot){var A=T.ad.spec.art;return loadImg(URL.createObjectURL(file)).then(function(img){var W=img.naturalWidth,H=img.naturalHeight,tw,th,need;
- if(kind==='full'||kind==='combined'){if(W*16!==H*9)throw new Error((kind==='combined'?'합본':'전신')+'은 9:16이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<A.full.min[0])throw new Error('전신은 최소 '+A.full.min.join('×')+' (올린 파일 '+W+'×'+H+')');
-  tw=Math.min(W,A.full.max[0]);th=tw*16/9;if(tw%4||th%4)throw new Error('전신 가로·세로는 4의 배수여야 해요 ('+tw+'×'+th+')');need=kind==='full'?true:null}
+ if(kind==='combined'){if(W*7!==H*5)throw new Error('합본은 800×1120(5:7)로 올려 주세요 (올린 파일 '+W+'×'+H+')');tw=Math.min(W,800);th=tw*7/5;if(tw%4||th%4)throw new Error('합본 가로·세로는 4의 배수여야 해요 ('+tw+'×'+th+')');need=false}  /* 기획지시 2026-11-06 합본규격변경: 진영 카드 배경과 같은 5:7·800×1120, 큰 건 줄임, 투명은 경고만 */
+ else if(kind==='full'){if(W*16!==H*9)throw new Error('전신은 9:16이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<A.full.min[0])throw new Error('전신은 최소 '+A.full.min.join('×')+' (올린 파일 '+W+'×'+H+')');
+  tw=Math.min(W,A.full.max[0]);th=tw*16/9;if(tw%4||th%4)throw new Error('전신 가로·세로는 4의 배수여야 해요 ('+tw+'×'+th+')');need=true}
  else{var ex=kind==='face'?A.face.exact:[slot.w,slot.h];if(W*ex[1]!==H*ex[0])throw new Error('비율이 달라요: '+ex[0]+'×'+ex[1]+' 비율이어야 해요 (올린 파일 '+W+'×'+H+')');if(W<ex[0])throw new Error('최소 '+ex[0]+'×'+ex[1]+'이어야 해요 (올린 파일 '+W+'×'+H+')');tw=ex[0];th=ex[1];need=kind==='face'?true:slot.alpha}
  var cv=drawTo(img,tw,th),warn=need===null||need===undefined?null:alphaCheck(cv,need);  // 투명 검사는 경고만(사용자가 알아서 투명 처리, 2026-10-29)
  var q=(kind==='full'||kind==='combined'||kind==='face'||(slot&&slot.alpha===false))?0.9:1;
@@ -192,23 +193,23 @@ function compareBox(P){var cap=(P.kind==='full'||P.kind==='combined')?T.ad.spec.
  +'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aOk">승인·저장</button><button class="btn sm" id="aNo">취소</button></div></div>'}
 function drawCompare(P){loadImg(P.url).then(function(c){[[P.img,'cmpA',P.origW/P.w],[c,'cmpB',1]].forEach(function(x){var cv=$(x[1]);if(!cv)return;var g=cv.getContext('2d'),s=x[2],cx=P.w/2,cy=(P.kind==='full'?P.h*0.2:P.h/2);g.imageSmoothingEnabled=false;g.clearRect(0,0,240,240);g.drawImage(x[0],(cx-60)*s,(cy-60)*s,120*s,120*s,0,0,240,240)})})}
 function upload(blob,q){return fetch('/bo/v1/assets/upload?'+q,{method:'POST',headers:{authorization:'Bearer '+T.token,'content-type':'image/webp'},body:blob}).then(function(r){return r.json()}).then(function(j){if(!j.ok){var e=new Error((ERR[j.error]||j.error)+(j.detail?': '+j.detail:''));throw e}return j})}
-/* 영역 편집: 카드 그림 창(3:4)과 얼굴(1:1). 둘 다 그림을 끌어 옮기고 슬라이더로 크기 조절. 비율 좌표 0~1 */
+/* 영역 편집: 카드 영역(5:7, 카드 본체 전체 — 기획지시 2026-11-06 카드영역5대7)과 얼굴(1:1). 둘 다 그림을 끌어 옮기고 슬라이더로 크기 조절. 비율 좌표 0~1 */
 function regionEditor(img,W,H,R){var host=$('aReg');if(!host)return;var mode='card';
- var ratioH={card:(4/3)*W/H,face:W/H};  /* 너비(비율) → 높이(비율) */
+ var ratioH={card:(7/5)*W/H,face:W/H};  /* 너비(비율) → 높이(비율) */
  R.card=R.card?{x:R.card.x,y:R.card.y,w:R.card.w,h:R.card.w*ratioH.card}:{x:0,y:0,w:1,h:ratioH.card};
  R.face=R.face?{x:R.face.x,y:R.face.y,w:R.face.w,h:R.face.w*ratioH.face}:{x:0.3,y:0.05,w:0.4,h:0.4*ratioH.face};
  var maxW=function(k){return Math.min(1,1/ratioH[k])};
- host.innerHTML='<div class="row" style="margin-bottom:8px"><span class="small">그림을 끌어서 옮길 영역</span><button class="btn sm pri" data-rm="card">카드(3:4)</button><button class="btn sm" data-rm="face">얼굴(1:1)</button></div>'
- +'<div class="row" style="align-items:flex-start"><canvas id="rgFull" width="240" height="'+Math.round(240*H/W)+'" style="border:1px solid var(--line);touch-action:none;cursor:move"></canvas><div><div class="small muted">카드 그림 창(3:4)</div><canvas id="rgCard" width="150" height="200" style="border:1px solid var(--line)"></canvas><div class="small muted" style="margin-top:6px">얼굴(1:1)</div><canvas id="rgFace" width="100" height="100" style="border-radius:50%;border:1px solid var(--line)"></canvas></div></div>'
+ host.innerHTML='<div class="row" style="margin-bottom:8px"><span class="small">그림을 끌어서 옮길 영역</span><button class="btn sm pri" data-rm="card">카드(5:7)</button><button class="btn sm" data-rm="face">얼굴(1:1)</button></div>'
+ +'<div class="row" style="align-items:flex-start"><canvas id="rgFull" width="240" height="'+Math.round(240*H/W)+'" style="border:1px solid var(--line);touch-action:none;cursor:move"></canvas><div><div class="small muted">카드 영역(5:7)</div><canvas id="rgCard" width="150" height="210" style="border:1px solid var(--line)"></canvas><div class="small muted" style="margin-top:6px">얼굴(1:1)</div><canvas id="rgFace" width="100" height="100" style="border-radius:50%;border:1px solid var(--line)"></canvas></div></div>'
  +'<label class="small" style="display:block;margin-top:8px">카드 영역 크기 <input type="range" id="rgC" min="150" max="1000" value="'+Math.round(R.card.w/maxW('card')*1000)+'" style="width:100%"></label>'
  +'<label class="small" style="display:block">얼굴 영역 크기 <input type="range" id="rgS" min="50" max="1000" value="'+Math.round(R.face.w/maxW('face')*1000)+'" style="width:100%"></label><div class="small" id="rgWarn"></div><div class="small muted">파란 사각형 = 카드, 주황 사각형 = 얼굴. 위 버튼으로 끌어 옮길 영역을 고르세요.</div>';
  var full=$('rgFull'),sc=full.width/W;
  function clamp(k){var r=R[k];r.w=Math.min(maxW(k),Math.max(0.05,r.w));r.h=r.w*ratioH[k];r.x=Math.min(1-r.w,Math.max(0,r.x));r.y=Math.min(1-r.h,Math.max(0,r.y))}
  function draw(){var g=full.getContext('2d');g.clearRect(0,0,full.width,full.height);g.drawImage(img,0,0,full.width,full.height);
   [['card','#4fa3ff'],['face','#ffb020']].forEach(function(x){var r=R[x[0]];g.lineWidth=x[0]===mode?3:1.5;g.strokeStyle=x[1];g.strokeRect(r.x*W*sc,r.y*H*sc,r.w*W*sc,r.h*H*sc)});
-  var c=$('rgCard').getContext('2d');c.clearRect(0,0,150,200);c.drawImage(img,R.card.x*img.naturalWidth,R.card.y*img.naturalHeight,R.card.w*img.naturalWidth,R.card.h*img.naturalHeight,0,0,150,200);
+  var c=$('rgCard').getContext('2d');c.clearRect(0,0,150,210);c.drawImage(img,R.card.x*img.naturalWidth,R.card.y*img.naturalHeight,R.card.w*img.naturalWidth,R.card.h*img.naturalHeight,0,0,150,210);
   var f=$('rgFace').getContext('2d');f.clearRect(0,0,100,100);f.drawImage(img,R.face.x*img.naturalWidth,R.face.y*img.naturalHeight,R.face.w*img.naturalWidth,R.face.h*img.naturalHeight,0,0,100,100);
-  var px=Math.round(R.face.w*W);var cw=Math.round(R.card.w*W);$('rgWarn').innerHTML=(cw<720?'<span class="tag warn">카드 영역 '+cw+'×'+Math.round(R.card.h*H)+'px — 출력 720×960px보다 작아 흐릴 수 있어요(상세 10)</span> ':'<span class="tag ok">카드 영역 '+cw+'×'+Math.round(R.card.h*H)+'px</span> ')+(px<512?'<span class="tag warn">얼굴 영역 '+px+'px — 출력 512px보다 작아 흐릴 수 있어요(상세 10)</span>':'<span class="tag ok">얼굴 영역 '+px+'px</span>')}
+  var px=Math.round(R.face.w*W);var cw=Math.round(R.card.w*W);$('rgWarn').innerHTML=(cw<800?'<span class="tag warn">카드 영역 '+cw+'×'+Math.round(R.card.h*H)+'px — 출력 800×1120px보다 작아 흐릴 수 있어요(상세 10)</span> ':'<span class="tag ok">카드 영역 '+cw+'×'+Math.round(R.card.h*H)+'px</span> ')+(px<512?'<span class="tag warn">얼굴 영역 '+px+'px — 출력 512px보다 작아 흐릴 수 있어요(상세 10)</span>':'<span class="tag ok">얼굴 영역 '+px+'px</span>')}
  function resize(k,v){var r=R[k],cx=r.x+r.w/2,cy=r.y+r.h/2;r.w=maxW(k)*v/1000;r.h=r.w*ratioH[k];r.x=cx-r.w/2;r.y=cy-r.h/2;clamp(k);draw()}
  $('rgC').oninput=function(e){resize('card',e.target.value)};$('rgS').oninput=function(e){resize('face',e.target.value)};
  host.querySelectorAll('[data-rm]').forEach(function(b){b.onclick=function(){mode=b.dataset.rm;host.querySelectorAll('[data-rm]').forEach(function(x){x.className='btn sm'+(x.dataset.rm===mode?' pri':'')});draw()}});
@@ -309,20 +310,14 @@ var BG_OF={'불':'CARD_BG_FIRE','물':'CARD_BG_WATER','바람':'CARD_BG_WIND'};
 var BG_PAL=['#C8452E','#2E6FC8','#2EA06A','#D9A32B','#8E44AD','#E06A9A','#1FA3A3','#6B7A8F','#3B3F8C','#8A5A2B','#B83A3A','#2B2B33'];  /* 가안: 불·물·바람 + 9색, 디자인 시안 후 확정 */
 function darken(hex,p){var n=parseInt(hex.slice(1),16),f=function(x){return Math.round(x*(1-p))};return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
 function bgModeOf(cur){var o=cur.bgOpt||{};return {mode:o.mode||(cur.combined?'combined':'faction'),color:o.color||null}}
-/* 미리보기: 카드 그림 창(3:4) = 배경층 + 전신을 카드 영역대로 */
-function cardPreview(d,cur,slotBg,m,W){W=W||150;var H=Math.round(W*4/3),c=cur.card,f=cur.full,layers=[];
- var place=function(img){if(!img||!img.path)return null;if(!c)return 'url('+d.base+img.path+') center/contain no-repeat';var sw=W/c.w,sh=sw*img.h/img.w;return 'url('+d.base+img.path+') '+(-c.x*sw).toFixed(1)+'px '+(-c.y*sh).toFixed(1)+'px/'+sw.toFixed(1)+'px '+sh.toFixed(1)+'px no-repeat'};
- if(m.mode==='combined'&&cur.combined)layers.push(place(cur.combined));
- else{if(f)layers.push(place(f));if(m.mode==='color'&&m.color)layers.push('linear-gradient(180deg,'+m.color+','+darken(m.color,0.35)+')');else if(slotBg&&slotBg.path)layers.push('url('+d.base+slotBg.path+') center/cover no-repeat');else layers.push('#556')}
- return '<div style="width:'+W+'px;height:'+H+'px;border-radius:8px;border:1px solid var(--line);background:'+layers.filter(Boolean).join(',')+'"></div>'}
 function bgCard(d,c,cur,ed,K){var slot=BG_OF[c.faction]||'CARD_BG_NEUTRAL',bg=(d.assets.slots||{})[slot],m=bgModeOf(cur);if(T.bgPick&&T.bgPick.key===c.id+':'+T.askin)m={mode:T.bgPick.mode,color:T.bgPick.color||m.color};
  var radio=function(v,l){return '<label class="row" style="gap:6px"><input type="radio" name="aBgMode" value="'+v+'"'+(m.mode===v?' checked':'')+(ed?'':' disabled')+'> '+l+'</label>'};
- var warn=m.mode==='combined'&&!cur.combined?'<div class="note" style="margin-top:6px">합본이 아직 없어 게임에는 진영 기본 배경으로 보여요.</div>':m.mode==='color'&&!m.color?'<div class="note" style="margin-top:6px">색을 골라 주세요.</div>':'';
+ var warn=m.mode==='combined'&&!cur.combined?'<div class="note" style="margin-top:6px">'+(cur.combinedOld?'예전 9:16 합본('+cur.combinedOld.w+'×'+cur.combinedOld.h+')은 더 이상 쓰지 않아요. 800×1120(5:7)로 다시 올려 주세요. 그 전까지 게임에는 진영 기본 배경으로 보여요.':'합본이 아직 없어 게임에는 진영 기본 배경으로 보여요.')+'</div>':m.mode==='color'&&!m.color?'<div class="note" style="margin-top:6px">색을 골라 주세요.</div>':'';
  return '<div class="card" style="margin-bottom:14px"><h3>카드 배경</h3><div class="row" style="gap:14px">'+radio('faction','기본(진영: '+esc(c.faction||'-')+')')+radio('color','컬러 선택')+radio('combined','합본')+'</div>'
- +'<div class="row" style="margin-top:10px;align-items:flex-start;gap:16px"><div><div class="small muted">미리보기(카드 그림 창)</div>'+cardPreview(d,cur,bg,m)+'</div><div style="flex:1;min-width:200px">'
+ +'<div class="row" style="margin-top:10px;align-items:flex-start;gap:16px"><div><div class="small muted">미리보기(카드 틀 포함)</div><div style="padding:10px 12px">'+pvCard(d,c,T.askin,{tier:'GOLD',holo:0,badge:1,bg:m.mode,color:m.color,w:150})+'</div></div><div style="flex:1;min-width:200px">'
  +(m.mode==='faction'?'<div class="small muted">진영 기본 배경 '+slot+' 위에 전신(투명)을 카드 영역대로 얹어요. 배경 파일은 슬롯 목록의 \'카드\' 묶음에서 바꿔요.</div>':'')
  +(m.mode==='color'?'<div class="small muted" style="margin-bottom:6px">위에서 아래로 고른 색 → 같은 색 35% 어둡게(가안).</div><div class="row" style="gap:6px;flex-wrap:wrap">'+BG_PAL.map(function(h){return '<button class="btn sm" data-bgc="'+h+'" title="'+h+'" style="width:34px;height:34px;padding:0;background:'+h+';border:'+(m.color===h?'3px solid var(--ink)':'1px solid var(--line)')+'"'+(ed?'':' disabled')+'></button>'}).join('')+'</div>':'')
- +(m.mode==='combined'?'<div class="small muted" style="margin-bottom:6px">배경과 캐릭터가 한 장에 그려진 합본. 전신과 같은 9:16·같은 위치로 그려야 카드 영역이 맞아요. 전신(캐릭터만)은 위에서 따로 올려 밴픽·얼굴에 써요.</div>'
+ +(m.mode==='combined'?'<div class="small muted" style="margin-bottom:6px">합본은 800×1120(5:7)로 올려 주세요. 배경과 캐릭터가 한 장에 그려진 그림으로 카드 본체 전체에 깔고, 카드에는 전신을 따로 그리지 않아요. 전신(캐릭터만, 9:16)은 위에서 계속 올려 결과 화면·액티브 연출·밴픽·얼굴에 써요.</div>'
    +'<div class="row" style="align-items:flex-end;gap:12px"><div>'+aImg(cur.combined,160)+'</div><div class="small">'+(cur.combined?cur.combined.w+'×'+cur.combined.h+' · '+kb(cur.combined.bytes)+' '+metaLine(K('combined')):'아직 없음')+'</div></div>'
    +(ed?'<div class="row" style="margin-top:8px"><label class="btn pri sm">합본 올리기<input type="file" id="aComb" accept="image/png,image/webp,image/jpeg" hidden></label>'+revBtn('aCombRev','slot:ART_'+c.id+'_'+T.askin+'_COMBINED','합본 이전 파일로')+'</div>':''):'')
  +warn+(ed?'<div class="row" style="margin-top:10px"><button class="btn pri sm" id="aBgSave">배경 방식 저장</button>'+revBtn('aBgRev','slot:ART_'+c.id+'_'+T.askin+'_BG','이전 방식으로')+' '+metaLine('slot:ART_'+c.id+'_'+T.askin+'_BG')+'</div>':'')
@@ -338,7 +333,7 @@ function bindBg(d,cur,ch){var key=T.ach+':'+T.askin,m=bgModeOf(cur);
 
 
 /* ---------- 카드 미리보기: 등록한 에셋으로 캐릭터 카드를 홀로 연출 0~4·티어 프레임 7종별로(총괄 13장 카드 연출 등급, 상세 10 카드 구조·FRAME 여백) ----------
-   실제 게임은 Godot 셰이더로 그린다. 여기는 등록한 그림이 어울리는지 보는 근사치(CSS). 카드 800×1120, 그림 창 720×960(좌 40·위 40, 가정값), 프레임 928×1248(바깥 64px) */
+   실제 게임은 Godot 셰이더로 그린다. 여기는 등록한 그림이 어울리는지 보는 근사치(CSS). 카드 800×1120(5:7 카드 영역이 본체 전체), 프레임 928×1248(바깥 64px) */
 var HOLO=[['0','없음'],['1','메탈 테두리'],['2','리버스 홀로(배경만)'],['3','풀 홀로 + 스파클'],['4','풀 홀로 + 스파클 + 입체 시차']];
 var TIERS=[['BRONZE','브론즈'],['SILVER','실버'],['GOLD','골드'],['PLATINUM','플래티넘'],['DIAMOND','다이아'],['MASTER','마스터'],['LEGEND','레전드']];
 /* 캐릭터 카드 그림 배치(사용자 요청 2026-11-02): BO에서 지정한 카드 영역(cr)이 창 안에 전부 보이게, 영역 위쪽에 맞추고 아래는 그림이 카드 끝까지 이어짐(하단 잘림 방지).
@@ -347,10 +342,11 @@ function artBg(src,cr,url,full){var ww=full?1:0.9,wh=full?1.4:1.35,rw=cr.w*src.w
  var ox=(ww-rw*s)/2-cr.x*src.w*s,oy=-cr.y*src.h*s,px=Math.abs(ww-bw)<1e-6?0:ox/(ww-bw)*100,py=Math.abs(wh-bh)<1e-6?0:oy/(wh-bh)*100;
  return 'background-image:'+url+';background-size:'+(bw/ww*100).toFixed(2)+'% '+(bh/wh*100).toFixed(2)+'%;background-position:'+px.toFixed(2)+'% '+py.toFixed(2)+'%'}
 function pvCard(d,c,skin,o){var a=((d.art||{})[c.id]||{})[skin]||{},sl=d.assets.slots||{},u=function(f){return f&&f.path?'url('+d.base+f.path+')':''};
- var m=bgModeOf(a);if(o.bg!=='saved')m={mode:o.bg,color:o.bg==='color'?(m.color||'#8E44AD'):m.color};
+ var m=bgModeOf(a);if(o.bg!=='saved')m={mode:o.bg,color:o.bg==='color'?(o.color||m.color||'#8E44AD'):m.color};
  var slotBg=sl[BG_OF[c.faction]||'CARD_BG_NEUTRAL'],bgCss=m.mode==='color'&&m.color?'background:linear-gradient(180deg,'+m.color+','+darken(m.color,0.35)+')':slotBg?'background-image:'+u(slotBg):'background:#334';
- var src=m.mode==='combined'&&a.combined?a.combined:a.full,cr=a.card||{x:0.125,y:0.05,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3},ch='';
- if(src)ch=artBg(src,cr,u(src),false);
+ var comb=m.mode==='combined'&&a.combined,src=a.full,cr=a.card||{x:0.125,y:0,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*7/5},ch='';
+ if(comb)bgCss='background:'+u(a.combined)+' center/100% 100% no-repeat';  /* 합본: 카드 본체 전체, 전신 안 그림(기획지시 합본규격변경 2) */
+ else if(src)ch=artBg(src,cr,u(src),true);  /* 5:7 카드 영역 = 카드 본체 전체(기획지시 카드영역5대7 2) */
  var fr=sl['FRAME_'+o.tier],bd=o.badge>1?sl['MASTERY_'+o.badge]:null;
  return '<div class="pvc h'+o.holo+'" style="--w:'+o.w+'px"><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
   +'<div class="pvwin"><div class="pvl pvchar" style="'+ch+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'

@@ -66,20 +66,20 @@ try {
   await ok(put("kind=full&char=AU&skin=000", "full_1080.webp"));
   await ok(put("kind=thumb&char=AU&skin=000", "thumb.webp"));
   await ok(put("kind=face&char=AU&skin=000", "face.webp"));
-  await err(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.5, w: 1, h: 0.75 }, face: { x: 0, y: 0, w: 0.5, h: 0.28125 } }, admin), "asset_region");
-  const reg = await ok(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.75 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } }, admin));
+  await err(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.5, w: 1, h: 0.7875 }, face: { x: 0, y: 0, w: 0.5, h: 0.28125 } }, admin), "asset_region");
+  const reg = await ok(call("/bo/v1/assets/regions", { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.7875 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } }, admin));
   assert.match(reg.warnings[0], /432px/);
   const view = await ok(call("/bo/v1/assets", undefined, admin));
   assert.equal(view.editable, true);
   assert.deepEqual(Object.keys(view.art.AU["000"]).sort(), ["card", "face", "faceRect", "full", "thumb"]);
   assert.equal(typeof view.characters.find((c) => c.id === "AU").stats.hp, "number", "라이브 수치 읽기 전용");
-  step("슬롯·전신·축소본·얼굴 업로드(크기·비율·WebP 검사, 해시 이름), 영역 저장(카드 3:4·얼굴 1:1, 512px 미만 경고) — 초안 없이 바로 반영");
+  step("슬롯·전신·축소본·얼굴 업로드(크기·비율·WebP 검사, 해시 이름), 영역 저장(카드 5:7·얼굴 1:1, 512px 미만 경고) — 초안 없이 바로 반영");
 
   // 2) 게임 목록(/v1/assets) 바로 반영·ETag, 데이터 버전 배포·롤백·xlsx 업로드와 무관, 이전 파일로 되돌리기, 감사 로그
   const man = await ok(call("/v1/assets"));
   assert.match(man.rev, /^[0-9a-f]{16}$/);
   assert.ok(man.slots.TIER_GOLD.url.endsWith(tier.path));
-  assert.deepEqual(man.art.AU["000"].card, { x: 0, y: 0.1, w: 1, h: 0.75 });
+  assert.deepEqual(man.art.AU["000"].card, { x: 0, y: 0.1, w: 1, h: 0.7875 });
   const file = await fetch(man.art.AU["000"].full.url);
   assert.equal(file.status, 200);
   assert.equal((await file.arrayBuffer()).byteLength, readFileSync(fx("full_1080.webp")).length);
@@ -103,8 +103,9 @@ try {
   assert.equal((await ok(call("/v1/assets"))).art.AU["000"].face, null, "빼기 바로 반영");
   await ok(call("/bo/v1/assets/revert", { char: "AU", skin: "000", kind: "face" }, admin));
   assert.ok((await ok(call("/v1/assets"))).art.AU["000"].face, "빼기도 되돌림");
-  // 합본(기본 배경 사용 안 함, 2026-10-29): 전신과 같은 규격, 게임 목록 bg = combined, 빼면 진영 기본 배경, 되돌리기
-  await ok(put("kind=combined&char=AU&skin=000", "full_1080.webp"));
+  // 합본(기본 배경 사용 안 함): 5:7·800×1120(2026-11-06), 게임 목록 bg = combined, 빼면 진영 기본 배경, 되돌리기
+  await err(put("kind=combined&char=AU&skin=000", "full_1080.webp"), "asset_spec");  // 9:16 합본은 이제 안 받음(기획지시 2026-11-06 합본규격변경)
+  await ok(put("kind=combined&char=AU&skin=000", "comb_800.webp"));
   let mm = await ok(call("/v1/assets"));
   assert.deepEqual([mm.art.AU["000"].bg, Boolean(mm.art.AU["000"].combined)], ["combined", true]);
   await err(put("kind=combined&char=AU&skin=000", "thumb.webp"), "asset_spec");
@@ -124,12 +125,12 @@ try {
   await ok(call("/bo/v1/assets/bg", { char: "AU", skin: "000", mode: "color" }, admin));  // 색을 안 보내면 전에 고른 색 유지
   assert.equal((await ok(call("/v1/assets"))).art.AU["000"].bgColor, "#1FA3A3");
   // 얼굴 프로필을 합본에서 자르기: 합본 기준 1:1 영역 + 기준 "combined" → 게임 목록 faceFrom/faceRectC, 기준 "full"로 저장하면 전신으로 돌아옴
-  const RG = { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.75 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } };
+  const RG = { char: "AU", skin: "000", card: { x: 0, y: 0.1, w: 1, h: 0.7875 }, face: { x: 0.3, y: 0.05, w: 0.4, h: 0.225 } };
   await err(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0, y: 0, w: 0.5, h: 0.5 }, faceFrom: "combined" }, admin), "asset_region");
-  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.28125 }, faceFrom: "combined" }, admin));
+  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.35714 }, faceFrom: "combined" }, admin));
   mm = await ok(call("/v1/assets"));
   assert.deepEqual([mm.art.AU["000"].faceFrom, mm.art.AU["000"].faceRectC.x], ["combined", 0.25]);
-  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.28125 }, faceFrom: "full" }, admin));
+  await ok(call("/bo/v1/assets/regions", { ...RG, faceC: { x: 0.25, y: 0.1, w: 0.5, h: 0.35714 }, faceFrom: "full" }, admin));
   assert.equal((await ok(call("/v1/assets"))).art.AU["000"].faceFrom, "full");
   const audit = await sql("select action from public.audit_log where target like '에셋 %' order by id desc limit 20");
   assert.ok(audit.some((a) => a.action === "이전 파일로 되돌리기") && audit.some((a) => a.action === "슬롯 파일 교체"));

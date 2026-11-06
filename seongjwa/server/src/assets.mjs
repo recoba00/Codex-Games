@@ -11,9 +11,10 @@ export const ART = Object.freeze({
   full: { ratio: [9, 16], min: [1080, 1920], max: [1440, 2560], mult: 4, alpha: true },
   thumb: { exact: [576, 1024], alpha: true },
   face: { exact: [512, 512], alpha: true },
-  card: { ratio: [3, 4] },        // 카드 그림 창 영역: 3:4, 크기·위치는 얼굴처럼 자유(사용자 결정 2026-10-24)
+  card: { ratio: [5, 7] },        // 카드 영역 5:7 = 카드 본체 800×1120 전체(기획지시 2026-11-06 카드영역5대7, 이전 3:4 그림 창 폐기). 크기·위치 자유
   faceRect: { ratio: [1, 1], minPx: 512 },
-  cardRect: { ratio: [3, 4], minPx: 720 }  // 카드 그림 창 출력 720×960(기획답변 22차, 가정값). 작으면 경고만
+  cardRect: { ratio: [5, 7], minPx: 800 },  // 출력 800×1120 미만이면 경고만
+  combined: { ratio: [5, 7], size: [800, 1120], mult: 4 }  // 합본 = 진영 카드 배경과 같은 5:7·800×1120(기획지시 2026-11-06 합본규격변경, 이전 9:16 폐기)
 });
 
 // 슬롯 목록(상세 14 표, 규격은 상세 10 '슬롯 이미지 규격'·기획답변 18차). alpha: true = 투명 필요, false = 불투명, "corners" = 모서리만 투명
@@ -72,7 +73,14 @@ export function checkUpload(kind, info, bytes, slot = null) {
     if (info.w !== slot.w || info.h !== slot.h) throw bad(`${slot.id}: ${slot.w}×${slot.h}이어야 함 (올린 파일 ${info.w}×${info.h})`);
     return;
   }
-  if (kind === "full" || kind === "combined") {  // 합본도 전신과 같은 규격(같은 위치로 겹쳐야 카드 영역이 맞음)
+  if (kind === "combined") {  // 합본 5:7, 가로·세로 4의 배수(백오피스가 800×1120으로 줄여 올림). 투명은 경고만(화면 쪽)
+    const c = ART.combined;
+    if (info.w * c.ratio[1] !== info.h * c.ratio[0]) throw bad(`합본은 5:7(800×1120) (올린 파일 ${info.w}×${info.h})`);
+    if (info.w % c.mult || info.h % c.mult) throw bad("합본 가로·세로는 4의 배수");
+    if (info.w > c.size[0]) throw bad(`합본은 ${c.size.join("×")}까지 (올린 파일 ${info.w}×${info.h})`);
+    return;
+  }
+  if (kind === "full") {
     const s = ART.full;
     if (info.w * s.ratio[1] !== info.h * s.ratio[0]) throw bad(`전신은 9:16 (올린 파일 ${info.w}×${info.h})`);
     if (info.w < s.min[0] || info.w > s.max[0]) throw bad(`전신 너비 ${s.min[0]}~${s.max[0]} (올린 파일 ${info.w})`);
@@ -101,12 +109,12 @@ export function checkRegions(full, card, face) {
   if (!num(card) || !num(face)) throw bad("좌표는 0~1 비율 x·y·w·h");
   const eps = 0.002;
   const W = full.w, H = full.h;
-  if (Math.abs(card.h * H - (card.w * W * 4) / 3) > 2) throw bad("카드 영역 비율 3:4");
+  if (Math.abs(card.h * H - (card.w * W * 7) / 5) > 2) throw bad("카드 영역 비율 5:7");
   if (card.x + card.w > 1 + eps || card.y + card.h > 1 + eps) throw bad("카드 영역이 이미지 밖");
   if (Math.abs(face.w * W - face.h * H) > 2) throw bad("얼굴 영역 비율 1:1");
   if (face.x + face.w > 1 + eps || face.y + face.h > 1 + eps) throw bad("얼굴 영역이 이미지 밖");
   const warnings = [];
-  if (card.w * W < ART.cardRect.minPx) warnings.push(`카드 영역 ${Math.round(card.w * W)}×${Math.round(card.h * H)}px — 출력 720×960px보다 작아 흐릴 수 있음(상세 10)`);
+  if (card.w * W < ART.cardRect.minPx) warnings.push(`카드 영역 ${Math.round(card.w * W)}×${Math.round(card.h * H)}px — 출력 800×1120px보다 작아 흐릴 수 있음(상세 10)`);
   if (face.w * W < ART.faceRect.minPx) warnings.push(`얼굴 영역 ${Math.round(face.w * W)}px — 출력 512px보다 작아 흐릴 수 있음(상세 10)`);
   return { card: round(card), face: round(face), warnings };
 }
@@ -149,6 +157,19 @@ export function checkBg(mode, color) {
 // 캐릭터 카드 기본 배경: 진영별 슬롯(불·물·바람). 합본이 있으면 합본을 쓴다
 export const FACTION_BG = { "불": "CARD_BG_FIRE", "물": "CARD_BG_WATER", "바람": "CARD_BG_WIND" };
 
+// 옛 3:4 카드 영역 → 5:7(기획지시 2026-11-06 카드영역5대7): 같은 중심·가로폭, 이미지 밖이면 안쪽으로 밀어 넣음(넘치면 폭을 줄임)
+export function cardTo57(card, W, H) {
+  if (!card || !W || !H) return card ?? null;
+  if (Math.abs(card.h * H - (card.w * W * 7) / 5) <= 2) return card;  // 이미 5:7
+  let w = card.w, h = (w * W * 7) / 5 / H;
+  if (h > 1) { h = 1; w = (H * 5) / 7 / W; }
+  const cx = card.x + card.w / 2, cy = card.y + card.h / 2;
+  const cl = (v, hi) => Math.min(Math.max(v, 0), Math.max(0, hi));
+  const r = (v) => Math.round(v * 1e5) / 1e5;
+  return { x: r(cl(cx - w / 2, 1 - w)), y: r(cl(cy - h / 2, 1 - h)), w: r(w), h: r(h) };
+}
+const is57 = (f) => f && f.w && f.h && f.w * 7 === f.h * 5;
+
 // asset_list() 결과 → { slots: {ID: 파일}, art: {캐릭터: {스킨: {full, thumb, face, card, faceRect}}} } (pick = "cur" | "prev")
 export function shapeAssets(rows = {}, pick = "cur") {
   const slots = {}, art = {};
@@ -163,6 +184,11 @@ export function shapeAssets(rows = {}, pick = "cur") {
       const s = ((art[p[1]] ??= {})[p[2]] ??= {});
       if (p[3] === "regions") { if (v.card) s.card = v.card; if (v.faceRect) s.faceRect = v.faceRect; if (v.faceRectC) s.faceRectC = v.faceRectC; if (v.faceFrom) s.faceFrom = v.faceFrom; } else s[p[3]] = v;
     }
+  }
+  for (const skins of Object.values(art)) for (const s of Object.values(skins)) {
+    if (s.card && s.full) s.card = cardTo57(s.card, s.full.w, s.full.h);
+    // 옛 9:16 합본은 쓰지 않음(다시 올릴 때까지 진영 기본 배경, 기획지시 합본규격변경 5). 백오피스 안내용으로 combinedOld에 둔다
+    if (s.combined && !is57(s.combined)) { s.combinedOld = s.combined; delete s.combined; }
   }
   return { slots, art };
 }

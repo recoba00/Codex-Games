@@ -35,7 +35,7 @@ h1{margin:0;font-size:28px;letter-spacing:2px}
 .pvc{--mx:.5;--my:.5;--px:0;--py:0;position:relative;width:var(--w,150px);aspect-ratio:5/7;transform:perspective(800px) rotateX(calc(var(--py)*-7deg)) rotateY(calc(var(--px)*9deg));container-type:inline-size;flex:none}
 .pvb{position:absolute;inset:0;border-radius:6%/4.3%;overflow:hidden;isolation:isolate;background:#223;box-shadow:0 10px 24px -10px rgba(0,0,0,.6)}
 .pvl{position:absolute;inset:0;pointer-events:none}.pvbg{background-size:cover;background-position:center}
-.pvwin{position:absolute;left:5%;top:3.571%;width:90%;height:96.429%}  /* 아래는 카드 끝까지(이름 띠가 위에 겹침, 하단 일러스트 잘림 방지) */.pvchar{background-repeat:no-repeat}
+.pvwin{position:absolute;left:0;top:0;width:100%;height:100%}  /* 5:7 카드 영역 = 카드 본체 전체(기획지시 2026-11-06 카드영역5대7, 그림 창 720×960 폐기) */.pvchar{background-repeat:no-repeat}
 .pvname{top:auto;height:22%;display:flex;flex-direction:column;justify-content:flex-end;padding:0 7cqw 5cqw;color:#F7F5EE;font-weight:700;font-size:max(11px,8cqw);line-height:1.15;background:linear-gradient(to top,rgba(8,10,22,.9),rgba(8,10,22,0))}
 .pvname small{font-size:max(9px,5cqw);font-weight:500;opacity:.8}
 .pvhb,.pvhf,.pvsp,.pvgl{display:none}
@@ -899,15 +899,18 @@ function now(){return Date.now()+S.off}
 function left(t){return t?Math.max(0,Math.ceil((t-now())/1000)):0}
 
 /* ---------- 카드 그리기 ---------- */
-/* 캐릭터 카드 그림 배치(사용자 요청 2026-11-02): BO에서 지정한 카드 영역(cr)이 창 안에 전부 보이게, 영역 위쪽에 맞추고 아래는 그림이 카드 끝까지 이어짐(하단 잘림 방지).
-   full = 전투 프로필처럼 테두리 여백 없이 카드 전체를 창으로 쓰고, 폭을 꽉 채움(영역 위쪽 기준, 남는 아래는 그림 그대로). 단위는 카드 폭 1 기준 */
-function artBg(src,cr,url,full){var ww=full?1:0.9,wh=full?1.4:1.35,rw=cr.w*src.w,rh=cr.h*src.h,s=full?ww/rw:Math.min(ww/rw,wh/rh),bw=src.w*s,bh=src.h*s;
- var ox=(ww-rw*s)/2-cr.x*src.w*s,oy=-cr.y*src.h*s,px=Math.abs(ww-bw)<1e-6?0:ox/(ww-bw)*100,py=Math.abs(wh-bh)<1e-6?0:oy/(wh-bh)*100;
- return 'background-image:'+url+';background-size:'+(bw/ww*100).toFixed(2)+'% '+(bh/wh*100).toFixed(2)+'%;background-position:'+px.toFixed(2)+'% '+py.toFixed(2)+'%'}
+/* 5:7 카드 영역(BO 지정)을 상자에 깔기: 폭을 꽉 채우고 위 맞춤, 남는 아래는 잘림. bA = 상자 가로/세로(기획지시 2026-11-06 카드영역5대7) */
+function regBg(src,cr,bA){var iw=100/cr.w,ih=iw*(src.h/src.w)*bA,py=ih<=100.01?0:Math.min(100,Math.max(0,cr.y/(1-100/ih)*100));
+ return 'background-image:url('+src.url+');background-repeat:no-repeat;background-size:'+iw.toFixed(2)+'% '+ih.toFixed(2)+'%;background-position:'+(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(2)+'% '+py.toFixed(2)+'%'}
+function crOf(a){var f=a.full;return a.card||{x:0.125,y:0,w:0.75,h:0.75*(f?f.w/f.h:0.5625)*7/5}}
+/* 캐릭터 카드 그림층(.l): 합본이면 합본만 본체 전체(전신 안 그림, 합본규격변경 2), 아니면 배경(진영·컬러) + 전신 5:7 영역 */
+function charLay(chr,bA){var c=ch(chr),a=((S.A.art||{})[chr]||{})['000']||{},fb=slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL')));
+ if(a.bg==='combined'&&a.combined)return '<div class="l art" style="background:url('+a.combined.url+') center/100% 100% no-repeat"></div>';
+ var h='<div class="l art" style="'+(a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':fb?'background-image:'+fb:'background:#334')+'"></div>';
+ if(a.full)h+='<div class="l" style="'+regBg(a.full,crOf(a),bA||5/7)+'"></div>';return h}
 function pvCard(id,o){var c=ch(id),a=((S.A.art||{})[id]||{})['000']||{},sl=S.A.slots;
  var bgCss=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':(sl[a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))]?'background-image:'+slotU(a.bgSlot||('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'))):'background:#334');
- var src=a.bg==='combined'&&a.combined?a.combined:a.full,cr=a.card||{x:0.125,y:0.05,w:0.75,h:0.75*(src?src.w/src.h:0.5625)*4/3},chs='';
- if(src)chs=artBg(src,cr,'url('+src.url+')',!!o.full);
+ var chs='';if(a.bg==='combined'&&a.combined)bgCss='background:url('+a.combined.url+') center/100% 100% no-repeat';else if(a.full)chs=regBg(a.full,crOf(a),5/7);
  var fr=o.tier?sl['FRAME_'+o.tier]:null,bd=o.badge>1?sl['MASTERY_'+o.badge]:null,fc=sl['FACTION_'+FAC[c.faction]];
  return '<div class="pvc h'+(o.holo||0)+(o.full?' full':'')+(o.cls?' '+o.cls:'')+'" style="--w:'+o.w+'px"'+(o.attr||'')+'><div class="pvb"><div class="pvl pvbg" style="'+bgCss+'"></div><div class="pvl pvhb"></div>'
   +'<div class="pvwin"><div class="pvl pvchar" style="'+chs+'"></div></div><div class="pvl pvhf"></div><div class="pvl pvsp"></div><div class="pvl pvgl"></div>'
@@ -916,8 +919,7 @@ function pvCard(id,o){var c=ch(id),a=((S.A.art||{})[id]||{})['000']||{},sl=S.A.s
   +(fr?'<div class="pvframe" style="background-image:url('+fr.url+')"></div>':'')+(bd?'<div class="pvbadge" style="background-image:url('+bd.url+')"></div>':'')+'</div>'}
 function bcCard(id,o){var k=card(id),sl=S.A.slots,art=sl['CARD_ART_'+id],lay='',own=k.owner_character;
  if(own){var c=ch(own),a=((S.A.art||{})[own]||{})['000']||{},f=a.full,cr=a.card,fb=slotU('CARD_BG_'+(FAC[c.faction]||'NEUTRAL'));
-  lay='<div class="l art" style="'+(fb?'background-image:'+fb:'background:#334')+'"></div>';
-  if(f){if(cr){var iw=100/cr.w,ih=iw*(f.h/f.w)*(5/7);lay+='<div class="l" style="background-image:url('+f.url+');background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'% '+ih.toFixed(1)+'%;background-position:'+(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(1)+'% '+(cr.h>=1?0:cr.y/(1-cr.h)*100).toFixed(1)+'%"></div>'}else lay+='<div class="l" style="background:url('+f.url+') center 10%/cover no-repeat"></div>'}}
+  lay=charLay(own)}
  else if(art)lay='<div class="l art" style="background-image:url('+art.url+')"></div>';
  else lay='<div class="l art" style="'+(sl.CARD_BG_NEUTRAL?'background-image:'+slotU('CARD_BG_NEUTRAL'):'background:linear-gradient(160deg,#3a4058,#1b1f2e)')+'"></div><div class="symt">'+esc(KIND_KO[k.kind]||k.kind)+'</div>';
  var fr=sl.CARD_FRAME,cost=o.cost==null?k.cost:o.cost;  // 유형·비용은 텍스트 뱃지(기획지시 2026-11-01 유형에너지텍스트, KIND_* 아이콘 폐지)
@@ -1114,8 +1116,7 @@ function cellCard(id,w,attr){return {k:card(id).kind,id:id,ord:phOf(id),lab:phLa
 function spellCard(id,w,attr,used){var sp=S.data.spells[id]||{},ic=S.A.slots['SPELL_'+id],fr=S.A.slots.CARD_FRAME,t=Array.from(String(sp.effect_text||''));
  return '<div class="bc hand face2 spcard" style="--w:'+w+'px;width:'+w+'px"'+(attr||'')+' data-tip="'+esc('스펠 '+sname(id)+' — '+(sp.effect_text||''))+'"><div class="l art" style="'+(ic?'background-image:url('+ic.url+')':'background:linear-gradient(160deg,#3a4a8a,#1b1f3e)')+'"></div>'+(ic?'':'<div class="symt">스펠</div>')+'<div class="l shade"></div>'+(fr?'<div class="l frm" style="background-image:url('+fr.url+')"></div>':'')+'<div class="bdk" style="background:#6b7aff">스펠</div><div class="txt"><div class="nm">'+esc(sname(id))+'</div><div class="sht">'+esc(t.length>15?t.slice(0,15).join('')+'…':t.join(''))+'</div></div>'+''+'</div>'}
 function cellSpell(id,w,attr,used){if(S.st&&S.st.phase==='battle')return {k:'spell',id:id,ord:-1,lab:'0 스펠',html:spellCard(id,w,attr,used)};var ic=S.A.slots['SPELL_'+id];return {k:'spell',id:id,ord:-1,lab:'0 스펠',html:'<div class="cell spc" style="--w:'+w+'px"'+(attr||'')+' data-tip="'+esc(sname(id)+' — '+((S.data.spells[id]||{}).effect_text||''))+'"><i style="'+(ic?'background-image:url('+ic.url+')':'')+'">'+(ic?'':esc(sname(id).slice(0,2)))+'</i><b>'+esc(sname(id))+'</b>'+(used?'<em>사용</em>':'')+'</div>'}}
-function activeCard(chr,w,attr){var c=ch(chr),sl=S.A.slots,a=((S.A.art||{})[chr]||{})['000']||{},f=a.full,cr=a.card,fb=slotU('CARD_BG_'+(FAC[c.faction]||'NEUTRAL')),fr=sl.CARD_FRAME,lay='<div class="l art" style="'+(fb?'background-image:'+fb:'background:#334')+'"></div>';
- if(f){if(cr){var iw=100/cr.w,ih=iw*(f.h/f.w)*(5/7);lay+='<div class="l" style="background-image:url('+f.url+');background-repeat:no-repeat;background-size:'+iw.toFixed(1)+'% '+ih.toFixed(1)+'%;background-position:'+(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(1)+'% '+(cr.h>=1?0:cr.y/(1-cr.h)*100).toFixed(1)+'%"></div>'}else lay+='<div class="l" style="background:url('+f.url+') center 10%/cover no-repeat"></div>'}
+function activeCard(chr,w,attr){var c=ch(chr),sl=S.A.slots,a=((S.A.art||{})[chr]||{})['000']||{},f=a.full,cr=a.card,fb=slotU('CARD_BG_'+(FAC[c.faction]||'NEUTRAL')),fr=sl.CARD_FRAME,lay=charLay(chr);
  var t=Array.from(String(c.active_text||''));
  return '<div class="bc hand face2 accard" style="--w:'+w+'px;width:'+w+'px"'+(attr||'')+' data-tip="'+esc('액티브 '+(c.active_name||'')+' — '+(c.active_text||''))+'">'+lay+'<div class="l shade"></div>'+(fr?'<div class="l frm" style="background-image:url('+fr.url+')"></div>':'')+'<div class="bdk" style="background:#d9a32b">액티브</div><div class="txt"><div class="nm">'+esc(c.active_name||'액티브')+'</div><div class="sht">'+esc(t.length>15?t.slice(0,15).join('')+'…':t.join(''))+'</div></div></div>'}
 function cellActive(chr,w,attr,used,fr){if(S.st&&S.st.phase==='battle')return {k:'active',id:chr,ord:3.5,lab:'3 스킬(액티브)',html:activeCard(chr,w,attr)};var c=ch(chr),f=fr?S.A.slots['FRAME_'+fr]:null;return {k:'active',id:chr,ord:3.5,lab:'3 스킬(액티브)',html:'<div class="cell acc" style="--w:'+w+'px"'+(attr||'')+' data-tip="'+esc('액티브 '+(c.active_name||'')+' — '+(c.active_text||''))+'"><div class="af" style="'+faceCss(chr)+'">'+(f?'<s style="background-image:url('+f.url+')"></s>':'')+'</div><b>'+esc(c.active_name||'액티브')+'</b>'+(used?'<em>사용</em>':'')+'</div>'}}
@@ -1323,12 +1324,11 @@ S.rmo=lsGet('play_rmo')==='1'||(lsGet('play_rmo')==null&&!!(window.matchMedia&&m
 function lay4(){var W=VW(),H=VH(),f=safe(),sl=Math.max(60,f.l),sr=Math.max(60,f.r),st=Math.max(0,f.t),sb=Math.max(16,f.b);
  var k=Math.max(0.6,Math.min((W-sl-sr)/668,(H-st-sb)/344)),Wd=W/k,Hd=H/k;
  return {k:k,Wd:Wd,Hd:Hd,X0:sl/k,X1:Wd-sr/k,Y0:st/k,BY:st/k+40,BB:Hd-sb/k}}
-/* 프로필(시안 캐릭터 카드): 등급 프레임 + 3:4 그림 창(BO 카드 영역) + 위 속성·확정 뱃지 + 아래 이름·HP */
+/* 프로필(시안 캐릭터 카드): 등급 프레임 + 카드 영역 5:7(상자에 폭 맞춤·위 맞춤) + 위 속성·확정 뱃지 + 아래 이름·HP */
 function profCard(p,who,w,h,tier){var c=ch(p.char),a=((S.A.art||{})[p.char]||{})['000']||{},sl=S.A.slots,fac=sl['FACTION_'+FAC[c.faction]],fr=tier?sl['FRAME_'+tier]:null;
  var max=p.maxHp,hp=p.hp,sh=Math.min(p.shield,max),pw=Math.max(0,100*hp/max),sw=Math.min(100-pw,100*sh/max);
- var src=a.bg==='combined'&&a.combined?a.combined:a.full,cr=a.card,art='';
- if(src){if(cr){var iw=100/cr.w,ih=iw*(src.h/src.w)*0.75;art='background-image:url('+src.url+');background-size:'+iw.toFixed(1)+'% '+ih.toFixed(1)+'%;background-position:'+(cr.w>=1?0:cr.x/(1-cr.w)*100).toFixed(1)+'% '+(cr.h>=1?0:cr.y/(1-cr.h)*100).toFixed(1)+'%'}else art='background:url('+src.url+') center 10%/cover no-repeat'}
- var bgs=a.bgSlot&&sl[a.bgSlot],bgL=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':a.bg==='combined'?'background:#223':bgs?'background:url('+bgs.url+') center/cover no-repeat':'background:#c13701';
+ var comb=a.bg==='combined'&&a.combined,art=comb?regBg(a.combined,{x:0,y:0,w:1,h:1},w/h):a.full?regBg(a.full,crOf(a),w/h):'';
+ var bgs=a.bgSlot&&sl[a.bgSlot],bgL=a.bg==='color'&&a.bgColor?'background:linear-gradient(180deg,'+a.bgColor+',#111)':comb?'background:#223':bgs?'background:url('+bgs.url+') center/cover no-repeat':'background:#c13701';
  var ok=who==='me'?!!p.mySubmission:!!p.submitted;
  return '<div class="vc side pf" id="side_'+who+'" style="width:'+w+'px;height:'+h+'px"><div class="pfill"><div class="pbg" style="'+bgL+'"></div><div class="vfa" id="face_'+who+'"><div class="part" style="'+art+'"></div></div></div>'
   +'<div class="pcont pbot">'

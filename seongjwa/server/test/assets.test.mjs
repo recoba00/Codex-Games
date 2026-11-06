@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { artKey, assetManifest, bgOf, checkBg, checkRegions, checkUpload, shapeAssets, SLOTS, slotOf, webpInfo } from "../src/assets.mjs";
+import { artKey, assetManifest, bgOf, cardTo57, checkBg, checkRegions, checkUpload, shapeAssets, SLOTS, slotOf, webpInfo } from "../src/assets.mjs";
 
 const f = (n) => readFileSync(new URL(`./fixtures/assets/${n}`, import.meta.url));
 
@@ -39,18 +39,34 @@ test("업로드 규격 검사: 전신 9:16·1080~1440·4의 배수, 축소본·�
   assert.throws(() => checkUpload("face", webpInfo(f("face.webp")), 3e6), /asset_too_large/);
 });
 
-test("영역: 카드는 3:4(크기·위치 자유), 얼굴은 1:1·이미지 안, 512px 미만이면 경고", () => {
+test("영역: 카드는 5:7(크기·위치 자유, 기획지시 2026-11-06 카드영역5대7), 얼굴은 1:1·이미지 안, 512px 미만이면 경고", () => {
   const full = { w: 1440, h: 2560 };
-  const r = checkRegions(full, { x: 0, y: 0.1, w: 1, h: 0.75 }, { x: 0.3, y: 0.05, w: 0.4, h: 0.225 });
+  const r = checkRegions(full, { x: 0, y: 0.1, w: 1, h: 0.7875 }, { x: 0.3, y: 0.05, w: 0.4, h: 0.225 });
   assert.deepEqual(r.warnings, []);
-  assert.match(checkRegions(full, { x: 0, y: 0, w: 1, h: 0.75 }, { x: 0.3, y: 0.05, w: 0.2, h: 0.1125 }).warnings[0], /288px/);
-  const small = checkRegions(full, { x: 0, y: 0, w: 0.4, h: 0.3 }, { x: 0.3, y: 0.05, w: 0.4, h: 0.225 });
-  assert.match(small.warnings[0], /카드 영역 576×768px/);  // 720×960 미만이면 경고만(기획답변 22차)
-  checkRegions(full, { x: 0.1, y: 0.05, w: 0.6, h: 0.45 }, { x: 0, y: 0, w: 0.4, h: 0.225 });  // 카드도 크기·위치 자유(3:4만)
-  assert.throws(() => checkRegions(full, { x: 0.1, y: 0, w: 0.6, h: 0.6 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /3:4/.test(e.extra.detail));
-  assert.throws(() => checkRegions(full, { x: 0.5, y: 0, w: 0.6, h: 0.45 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /밖/.test(e.extra.detail));
-  assert.throws(() => checkRegions(full, { x: 0, y: 0.3, w: 1, h: 0.75 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /밖/.test(e.extra.detail));
-  assert.throws(() => checkRegions(full, { x: 0, y: 0, w: 1, h: 0.75 }, { x: 0, y: 0, w: 0.4, h: 0.4 }), (e) => /1:1/.test(e.extra.detail));
+  assert.match(checkRegions(full, { x: 0, y: 0, w: 1, h: 0.7875 }, { x: 0.3, y: 0.05, w: 0.2, h: 0.1125 }).warnings[0], /288px/);
+  const small = checkRegions(full, { x: 0, y: 0, w: 0.5, h: 0.39375 }, { x: 0.3, y: 0.05, w: 0.4, h: 0.225 });
+  assert.match(small.warnings[0], /카드 영역 720×1008px — 출력 800×1120px/);  // 800×1120 미만이면 경고만
+  assert.throws(() => checkRegions(full, { x: 0, y: 0, w: 1, h: 0.75 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /5:7/.test(e.extra.detail));  // 옛 3:4는 저장 불가
+  assert.throws(() => checkRegions(full, { x: 0.5, y: 0, w: 0.6, h: 0.4725 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /밖/.test(e.extra.detail));
+  assert.throws(() => checkRegions(full, { x: 0, y: 0.3, w: 1, h: 0.7875 }, { x: 0, y: 0, w: 0.4, h: 0.225 }), (e) => /밖/.test(e.extra.detail));
+  assert.throws(() => checkRegions(full, { x: 0, y: 0, w: 1, h: 0.7875 }, { x: 0, y: 0, w: 0.4, h: 0.4 }), (e) => /1:1/.test(e.extra.detail));
+  // 옛 3:4 → 5:7: 같은 중심·가로폭, 이미지 밖이면 안쪽으로(위가 0이면 머리 그대로)
+  assert.deepEqual(cardTo57({ x: 0.08843, y: 0, w: 0.79, h: 0.5925 }, 1440, 2560), { x: 0.08843, y: 0, w: 0.79, h: 0.62213 });
+  assert.deepEqual(cardTo57({ x: 0, y: 0.25, w: 1, h: 0.75 }, 1440, 2560), { x: 0, y: 0.2125, w: 1, h: 0.7875 });
+  const ok = { x: 0, y: 0, w: 1, h: 0.7875 };
+  assert.equal(cardTo57(ok, 1440, 2560), ok);
+});
+
+test("합본 규격: 5:7·4의 배수·800×1120까지(기획지시 2026-11-06 합본규격변경), 옛 9:16 합본은 쓰지 않음", () => {
+  checkUpload("combined", { w: 800, h: 1120 }, 10);
+  checkUpload("combined", { w: 400, h: 560 }, 10);
+  assert.throws(() => checkUpload("combined", { w: 1440, h: 2560 }, 10), (e) => /5:7/.test(e.extra.detail));
+  assert.throws(() => checkUpload("combined", { w: 1000, h: 1400 }, 10), (e) => /800×1120까지/.test(e.extra.detail));
+  const rows = { "art:AU:000:full": { cur: { path: "f", w: 1440, h: 2560 } }, "slot:ART_AU_000_COMBINED": { cur: { path: "c", w: 1440, h: 2560 } } };
+  const sh = shapeAssets(rows).art.AU["000"];
+  assert.equal(sh.combined, undefined);
+  assert.equal(sh.combinedOld.path, "c");
+  assert.equal(bgOf(sh, "CARD_BG_FIRE").bg, "CARD_BG_FIRE", "다시 올릴 때까지 진영 기본 배경");
 });
 
 test("클라이언트 목록: 공개 주소 + 해시 이름, 없는 슬롯은 빠짐(내장 기본 이미지), 표 asset_files 키 → 모양", () => {
@@ -65,11 +81,11 @@ test("클라이언트 목록: 공개 주소 + 해시 이름, 없는 슬롯은 �
   const m = assetManifest(shaped, { SUPABASE_URL: "https://p.supabase.co/" });
   assert.equal(m.slots.TIER_GOLD.url, "https://p.supabase.co/storage/v1/object/public/assets/slots/TIER_GOLD.abc.webp");
   assert.equal(m.art.AU["000"].face, null);
-  assert.deepEqual(m.art.AU["000"].card, { x: 0, y: 0, w: 1, h: 0.75 });
+  assert.deepEqual(m.art.AU["000"].card, { x: 0, y: 0, w: 1, h: 0.7875 }, "옛 3:4 영역은 5:7로 바꿔 내보냄");
   assert.equal(m.art.AU["001"], undefined, "전신 없는 스킨은 내보내지 않음");
   assert.equal(m.art.AU["000"].bg, "CARD_BG_NEUTRAL", "진영 모르면 중립 배경");
   // 합본(기본 배경 사용 안 함): slot:ART_AU_000_COMBINED → art.AU.000.combined, bg = combined. 슬롯 목록엔 안 나옴
-  const rows2 = { ...rows, "slot:ART_AU_000_COMBINED": { cur: { path: "art/AU_000_combined.c.webp", w: 1440, h: 2560, bytes: 7 } } };
+  const rows2 = { ...rows, "slot:ART_AU_000_COMBINED": { cur: { path: "art/AU_000_combined.c.webp", w: 800, h: 1120, bytes: 7 } } };
   const sh2 = shapeAssets(rows2);
   assert.equal(sh2.slots.ART_AU_000_COMBINED, undefined);
   const m2 = assetManifest(sh2, { SUPABASE_URL: "https://p.supabase.co" }, { AU: "불" });
@@ -84,5 +100,5 @@ test("클라이언트 목록: 공개 주소 + 해시 이름, 없는 슬롯은 �
   assert.equal(shapeAssets({ "slot:ART_AU_000_BG": { cur: { mode: "color", color: "#ABCDEF" } } }).art.AU["000"].bgOpt.color, "#ABCDEF");
   assert.throws(() => checkBg("color", "red"), /value_invalid/);
   assert.deepEqual(checkBg("color", "#abcdef"), { mode: "color", color: "#ABCDEF" });
-  checkUpload("combined", webpInfo(f("full_1080.webp")), 10000);
+  assert.throws(() => checkUpload("combined", webpInfo(f("full_1080.webp")), 10000), /asset_spec/);  // 9:16 합본은 이제 안 받음(5:7)
 });
