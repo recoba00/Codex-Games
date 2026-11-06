@@ -523,7 +523,7 @@ export function resolveTurn(state) {
     state.log.push({ t: "active", seat: p.seat, char: p.char });
     useActive(state, p, opp(p));
   }
-  if (finishIfDead(state)) return state;
+  if (finishIfDead(state, 3, plays)) return state;
 
   // 4 공격: SPD 순 연출, 판정 동시(HP 0 확인은 단계 끝). 반격은 상대 공격 카드를 순서대로 1장씩 무효
   const attacks = [];
@@ -561,7 +561,7 @@ export function resolveTurn(state) {
     }
     if (c.id === "TE01" && isFlood(state, p)) gaugeAdd(state, p, prm.floodGauge);
   }
-  if (finishIfDead(state)) return state;
+  if (finishIfDead(state, 4, plays)) return state;
 
   // 5 턴 종료: 작열 → 월광 재생 → 실드 이월 → 판정
   state.log.push({ t: "phase", n: 5 });  // 연출용 단계 표시(앞 단계 카드 결과와 턴 종료 효과 구분)
@@ -581,7 +581,7 @@ export function resolveTurn(state) {
     p.shield = { carried: keepNorm + p.shield.full, norm: 0, full: 0 };
     for (const [k, s] of Object.entries(p.st)) if (k !== "burn" && s && s.to !== undefined && s.to <= state.turn) delete p.st[k];
   }
-  if (finishIfDead(state)) return state;
+  if (finishIfDead(state, 5, plays)) return state;
 
   // AFK: 연속 무행동 N턴이면 이탈(2턴째 경고는 DO가 알림)
   const afk = state.players.filter((p) => p.idle >= state.rules.afk_turns_leave);
@@ -667,10 +667,18 @@ function useActive(state, p, o) {
   }
 }
 
-function finishIfDead(state) {
+function finishIfDead(state, ph = 5, plays = null) {
   const [A, B] = state.players;
   const da = A.hp <= 0, db = B.hp <= 0;
   if (!da && !db) return false;
+  // HP 0 즉시 종료(상세 01 전투 종료, 기획지시 11-05 1): 남은 단계는 처리하지 않고 전투 로그에만 남긴다
+  if (ph < 5) {
+    const from = state.log.findLastIndex((e) => e.t === "turn");
+    const voided = new Set(state.log.slice(from + 1).filter((e) => e.t === "void" || e.t === "countered").map((e) => e.seat + ":" + e.card));
+    const cards = [];
+    if (plays) for (const [p, pl] of plays) for (const c of pl.cards) if (c && state.cards[c.id].phase > ph && !voided.has(p.seat + ":" + c.id)) cards.push({ seat: p.seat, id: c.id });
+    state.log.push({ t: "skip", phases: [4, 5].filter((n) => n > ph), cards });
+  }
   if (da && db) {  // 같은 단계 동시 HP 0(기획답변 56차, 총괄 6·12장): 10턴 판정과 같은 순서 — HP 비율(둘 다 0) → 누적 준 HP 피해 → 무승부
     finish(state, A.dealt !== B.dealt ? (A.dealt > B.dealt ? "a" : "b") : "draw", "hp", { koBoth: true });
     return true;
@@ -710,7 +718,7 @@ export function view(state, seat) {
   });
   return {
     turn: state.turn, dataVersion: state.dataVersion, rules: { max_turn: state.rules.max_turn, rush_start_turn: state.rules.rush_start_turn, rush_dmg_step: state.rules.rush_dmg_step, cards_per_turn_max: state.rules.cards_per_turn_max,
-      turn_select_sec: state.rules.turn_select_sec, reveal_max_sec: state.rules.reveal_max_sec, reveal_zoom_sec: state.rules.reveal_zoom_sec },
+      turn_select_sec: state.rules.turn_select_sec, rush_siren_sec: state.rules.rush_siren_sec, reveal_max_sec: state.rules.reveal_max_sec, reveal_zoom_sec: state.rules.reveal_zoom_sec },
     you: seat, me: pub(state.players[seat], true), opp: pub(state.players[1 - seat], false),
     log: state.log, result: state.result
   };

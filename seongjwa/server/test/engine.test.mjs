@@ -163,6 +163,18 @@ test("작열: 턴 종료마다 최대 HP 3%, 실드 무시, 2턴 후 소멸, 최
   assert.ok(before - target.hp >= 1);
 });
 
+test("HP 0 즉시 종료: 남은 단계는 처리하지 않고 skip 로그만 (상세 01 전투 종료, 기획지시 11-05)", () => {
+  const st = battle("UM", "AU");
+  st.players[1].hp = 1; st.players[0].gauge = 100; st.players[1].energy = 5;
+  const atk = give(st, 1, "C02");
+  play(st, { active: true }, { cards: [atk] });
+  assert.equal(st.result?.reason, "hp");
+  const sk = st.log.find((e) => e.t === "skip");
+  assert.deepEqual(sk, { t: "skip", phases: [4, 5], cards: [{ seat: 1, id: "C02" }] });
+  assert.ok(!st.log.some((e) => e.t === "phase" || (e.t === "card" && e.phase === 4)));
+  assert.ok(st.log.findIndex((e) => e.t === "skip") < st.log.findIndex((e) => e.t === "end"));
+});
+
 test("같은 단계 동시 HP 0: 누적 준 HP 피해가 많은 쪽 승, 같으면 무승부 (기획답변 56차, 총괄 6·12장)", () => {
   const st = battle("UM", "UM");
   st.players[0].hp = 1; st.players[1].hp = 1; st.players[0].crit = 0; st.players[1].crit = 0;

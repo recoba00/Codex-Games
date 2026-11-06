@@ -11,6 +11,7 @@ export const RULE_DEFAULTS = Object.freeze({
   dmg_global_mult: 1,        // 전역 피해 배율(시트 설정값, 기획답변 42차): 공격·반격·액티브 피해 최종값에 곱함. 작열 틱은 제외
   reconnect_grace_sec: 60,
   reveal_max_sec: 20,        // 공개 연출 상한(총괄 6장, 2026-11-01 10→20초 가안). 양쪽이 연출을 끝내면 바로 다음 선택
+  rush_siren_sec: 8,         // 폭주 턴 선택 단계 사이렌 간격(상세 01, 가안 8, 시트 설정값 추가 대기)
   reveal_zoom_sec: 2,        // 공개 연출 확대 단계 기본(글자 수에 따라 최대 3초, 행동 7개 이상이면 1초)
   // 아래는 총괄 6장·상세 02 문구 값(시트에 키가 생기면 그쪽 우선)
   energy_max: 5,
