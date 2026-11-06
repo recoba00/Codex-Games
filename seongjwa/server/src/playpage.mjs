@@ -839,6 +839,23 @@ button.busy::before{content:"";display:inline-block;width:.85em;height:.85em;mar
 .pview .phint{position:absolute;right:max(calc(60px*var(--k)),env(safe-area-inset-right));bottom:max(calc(16px*var(--k)),env(safe-area-inset-bottom));font-size:calc(12px*var(--k));color:rgba(255,255,255,.7)}
 .bt4 .vc.pf{cursor:pointer}
 body.rmo .pview .paura{animation:none}
+
+/* ----- 공개 설명·말풍선·툴팁 정리(2026-11-06): 크기 고정, 테두리 없음, 같은 모양 ----- */
+.zw.zh{flex-direction:row;align-items:stretch;gap:12px;max-width:none;border:0;border-radius:12px;padding:10px;background:linear-gradient(180deg,rgba(20,25,56,.97),rgba(8,10,24,.97));box-shadow:0 14px 34px rgba(0,0,0,.65)}
+.zh .zc{flex:none;display:flex;align-items:center}
+.zh .zc .bc{box-shadow:none}
+.zh .zx{width:190px;flex:none;display:flex;flex-direction:column;gap:6px;text-align:left;min-width:0}
+.zh .zt{display:flex;gap:5px;align-items:center;font-weight:700}
+.zh .zt span,.zh .zt em{font-size:10px;font-style:normal;line-height:1;padding:4px 7px;border-radius:99px;margin:0;color:#fff}
+.zh .zt span{background:#2b5fd0}.zw.zh.opp .zt span{background:#b23a63}
+.zh .zt em{background:var(--kc,#4152b5)}
+.zh b{font-size:16px;font-weight:800;line-height:1.25;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zh p{margin:0;font-size:13px;line-height:1.5;text-align:left;color:#dfe3f5;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all}
+.bc.lit,.bt4 .bc.lit,.cell.lit{box-shadow:none!important;filter:brightness(1.15)}
+.bub{width:250px;max-width:60vw;border:0;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.45;background:rgba(10,13,32,.96);box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.bub::after{border:0}
+.first{width:420px;max-width:90vw;border:0;border-radius:8px;padding:8px 12px;line-height:1.5;text-align:left;background:rgba(10,13,32,.96);box-shadow:0 8px 22px rgba(0,0,0,.55);word-break:keep-all}
+.tip{width:220px;max-width:80vw;border:0;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;background:rgba(10,13,32,.97);box-shadow:0 8px 22px rgba(0,0,0,.55);word-break:keep-all}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1618,16 +1635,17 @@ function dimOn(sd){var b=$('bt');if(!b||!sd)return;var d=$('dimv');if(!d){d=docu
  b.querySelectorAll('.up').forEach(function(x){x.classList.remove('up')});b.querySelectorAll(sd==='me'?'.mec,.meslots':'.oppc,.opslots').forEach(function(x){x.classList.add('up')})}
 function dimOff(){var d=$('dimv');if(d)d.remove();document.querySelectorAll('#bt .up').forEach(function(x){x.classList.remove('up')})}
 function zoom(g,sd,kd,col,d,ob,from){var b=$('bt');if(!b)return;var z=document.createElement('div');z.className='zoom';z.style.setProperty('--kc',col);var ms=Math.round(d*spk());
- var w=Math.round(Math.min(150,b.clientHeight*0.3*5/7)),who=sd==='me'?'나':'상대',body,title;
- if(g.k==='spell'){title='스펠 '+sname(g.id);body=spellCard(g.id,w)+'<p>'+esc((S.data.spells[g.id]||{}).effect_text||'')+'</p>'}
- else if(g.k==='active'){var chr=sd==='me'?ob.me.char:ob.opp.char;title='액티브 '+(ch(chr).active_name||'');body=activeCard(chr,w)+'<p>'+esc(ch(chr).active_text||'')+'</p>'}
- else{title=card(g.id).name;body=bcCard(g.id,{w:w,mode:'hand',fig:true})+'<p>'+esc(card(g.id).effect_text||'')+'</p>'}
- z.innerHTML='<div class="zw '+(sd||'')+'"><div class="zt"><span>'+who+'</span> '+esc(title)+'</div>'+body+'</div>';b.appendChild(z);
+ var w=Math.round(Math.min(120,b.clientHeight*0.28*5/7)),who=sd==='me'?'나':'상대',cardH,title,txt,kl;
+ if(g.k==='spell'){title=sname(g.id);kl='스펠';cardH=spellCard(g.id,w);txt=(S.data.spells[g.id]||{}).effect_text||''}
+ else if(g.k==='active'){var chr=sd==='me'?ob.me.char:ob.opp.char;title=ch(chr).active_name||'액티브';kl='액티브';cardH=activeCard(chr,w);txt=ch(chr).active_text||''}
+ else{var cd=card(g.id);title=cd.name;kl=KIND_KO[cd.kind]||cd.kind;cardH=bcCard(g.id,{w:w,mode:'hand',fig:true});txt=cd.effect_text||''}
+ /* 공개 카드 설명: 크기 고정(카드 + 설명 칸 190), 테두리 없음(사용자 요청 2026-11-06) */
+ z.innerHTML='<div class="zw zh '+(sd||'')+'" style="height:'+Math.round(w*1.4+20)+'px"><div class="zc">'+cardH+'</div><div class="zx"><div class="zt"><span>'+who+'</span><em>'+esc(kl)+'</em></div><b>'+esc(title)+'</b><p>'+esc(txt)+'</p></div></div>';b.appendChild(z);
  var br={left:0,top:0,width:b.clientWidth,height:b.clientHeight},zr={width:z.offsetWidth,height:z.offsetHeight},src=from||$('side_'+sd)||b,r=src===b?br:lr(src),cx=r.left+r.width/2,bw=(S.wide&&$('wdet'))?lr($('wdet')).left-12:br.width;
  var x=Math.max(8,Math.min(bw-zr.width-8,cx-zr.width/2)),y=sd==='opp'?r.bottom+10:r.top-zr.height-10;y=Math.max(8,Math.min(br.height-zr.height-8,y));
  z.style.left=x+'px';z.style.top=y+'px';var dx=cx-(x+zr.width/2),dy=(r.top+r.height/2)-(y+zr.height/2),s0=Math.max(0.12,Math.min(0.5,r.width/zr.width));
  var at='translate('+dx+'px,'+dy+'px) scale('+s0+')';dimOn(sd);
- z.animate([{transform:at,opacity:.3},{transform:'none',opacity:1,offset:0.18},{transform:'none',opacity:1,offset:0.82},{transform:at,opacity:0}],{duration:ms,easing:'ease-out',fill:'both'});
+ var po=Math.min(0.08,140/ms),pc=Math.max(0.92,1-120/ms);z.animate([{transform:at,opacity:.3,easing:'cubic-bezier(.2,1.3,.4,1)'},{transform:'none',opacity:1,offset:po},{transform:'none',opacity:1,offset:pc},{transform:at,opacity:0}],{duration:ms,fill:'both'});  /* 빠르게 커지고(≈0.14초) 설명은 더 오래 */
  setTimeout(function(){z.remove();if(!document.querySelector('.zoom'))dimOff()},ms+40)}
 /* 잠금 연출(전투UX2차 2): 무효가 된 카드는 그 카드 차례에 자물쇠 + 흑백, 이후 흐리게 유지 */
 function lockCell(el,why){if(!el||el.classList.contains('locked'))return;sfx('void');el.classList.add('locked');var k=document.createElement('div');k.className='lk';k.innerHTML='🔒<small>'+esc(why)+'</small>';el.appendChild(k)}
