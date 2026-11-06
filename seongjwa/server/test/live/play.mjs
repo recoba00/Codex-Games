@@ -148,7 +148,9 @@ try {
       assert.equal(await page.$("#ok"), null, "공개 중 확정 버튼 없음");
       await page.waitForSelector("#bub", { timeout: 8000 });  // 효과 자막(슬롯 옆 말풍선)
       if (t === 1 && playable) await page.waitForSelector("#bt .zoom", { timeout: 10000 });  // 슬롯에서 커지는 확대(전투UX2차 1)
-      assert.ok(await page.$(".obar i"), "처리 순서 막대");
+      assert.ok(!(await page.$(".obar")), "가운데 처리 순서 줄 없음(기획지시 2026-11-06)");
+      if (t === 2) assert.ok(await page.$("#phk"), "공개 중 단계 칩 유지");
+      if (t === 2) console.log("center", JSON.stringify(await page.evaluate(() => { const c = document.querySelector("#bt .center").getBoundingClientRect(), z = document.querySelector("#stg"), k = parseFloat(z.style.zoom) || 1; return { h: Math.round(c.height / (S.zs || 1)), design: Math.round(c.height / (S.zs || 1) / k), k }; })));
       if (t === 2) { await sleep(1300); await page.screenshot({ path: `/tmp/play_rev_${vp.width}.png` }); }
       if (t >= 2) await page.click("#skip");  // 건너뛰기(연출 상한 20초라 시험 시간 단축)
       await page.waitForFunction((n) => (S.hlog?.[n] ?? []).length > 0, t);  // 전투로그(서랍)에 이번 턴 기록

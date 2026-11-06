@@ -1394,18 +1394,19 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
  var prevR={},zk=(S.zs||1)*k;document.querySelectorAll('.slots.me [data-skey]').forEach(function(el){prevR[el.dataset.skey]=el.getBoundingClientRect()});
  var lef=!!S.lefty,P=function(l,t,w,h){if(lef&&w!=null)l=L.Wd-l-w;return 'left:'+l.toFixed(1)+'px;top:'+t.toFixed(1)+'px'+(w!=null?';width:'+w.toFixed(1)+'px':'')+(h!=null?';height:'+h.toFixed(1)+'px':'')};
  var X0=L.X0,X1=L.X1,BY=L.BY,BB=L.BB,CX=X0+124,CW=X1-CX,nMe=Math.max(3,Math.min(5,meItems.length)),nOp=Math.max(3,Math.min(5,opItems.length)),opW=nOp*48+(nOp-1)*12,OR=X1-99,opL=OR-opW;
- var cenW=Math.max(80,opL-8-CX),cenH=Math.max(24,BB-228-BY),n=hand.length,ov=n>1?Math.max(-60,Math.min(2,(CW-72*n)/(n-1))):2;
+ var cenW=Math.max(80,opL-8-CX),cenH=Math.max(24,BB-228-BY),sy=Math.min(60,Math.max(0,cenH-100)*0.5);cenH-=sy;  /* 세로가 남으면 내 슬롯을 올려 슬롯~손패 간격으로 흡수(기획지시 2026-11-06 처리순서줄제거 3) */
+ var n=hand.length,ov=n>1?Math.max(-60,Math.min(2,(CW-72*n)/(n-1))):2;
  var emb='';if(rushing)for(var q=0;q<10;q++)emb+='<s style="left:'+Math.round(4+q*9.6+Math.random()*4)+'%;animation-delay:-'+(Math.random()*3).toFixed(2)+'s;animation-duration:'+(2.4+Math.random()*1.6).toFixed(2)+'s"></s>';
  var h='<div class="bt bt3 bt4'+(lef?' lefty':'')+(reveal?' rev':'')+(rushing?' rushing':'')+'" id="bt" data-turn="'+b.turn+'"><div id="stg" style="width:'+L.Wd.toFixed(1)+'px;height:'+L.Hd.toFixed(1)+'px;zoom:'+k.toFixed(4)+';--pr:'+(L.Wd-X1).toFixed(1)+'px;--y0:'+L.Y0.toFixed(1)+'px;--hd:'+L.Hd.toFixed(1)+'px">'
  +(rushing?'<div class="redge">'+emb+'</div>':'')
  +'<div class="hdr" style="left:'+X0.toFixed(1)+'px;top:'+L.Y0.toFixed(1)+'px;width:'+(X1-X0).toFixed(1)+'px;height:40px"><button id="menu" class="ib4'+(S.menu&&!reveal?' on':'')+'" title="설정">'+SVG_GEAR+'</button><button id="emo" class="ib4'+(S.emoOpen?' on':'')+'" title="감정표현">'+SVG_CHAT+'</button>'
  +'<div class="pills" id="pills">'+pills4(b,cnt)+'</div><button id="logb" class="logb'+(S.showLog?' on':'')+'" title="눌러서 전체 로그 (L)">전투로그</button></div>'
- +'<div class="center c4" style="'+P(CX,BY,cenW,cenH)+'"><div class="obar" id="phc"></div><div class="cap'+(waiting?' show':'')+'" id="cap">'+(waiting?'상대 기다리는 중':'')+'</div></div>'
+ +'<div class="center c4" style="'+P(CX,BY,cenW,cenH)+'"><div class="cap'+(waiting?' show':'')+'" id="cap">'+(waiting?'상대 기다리는 중':'')+'</div></div>'
  +'<div class="oppc" style="'+P(X1-87,BY,87)+'">'+profCard(op,'opp',87,122,fo)+'<div class="bdg" id="bdg_opp">'+buffs4(op,'opp',b.turn)+'</div></div>'
  +'<div class="opslots" style="'+P(opL,BY,opW)+'"><div class="slots opp srow4">'+slots4(opItems,false,nOp)+'</div>'
  +'<div class="ops cirs">'+actCirc(op,false)+spCirc(op,false)+'<span class="cir hc" style="'+(S.A.slots.CARD_BACK?'background-image:'+slotU('CARD_BACK'):'')+'" data-tip="상대 남은 전투카드 '+op.handCount+'장"><s></s><b>+'+op.handCount+'</b></span><span class="cir en" data-tip="상대 에너지 '+op.energy+'">E'+op.energy+'</span></div></div>'
  +'<div class="mec" style="'+P(X0,BB-177,112)+'"><div class="bdg" id="bdg_me">'+buffs4(me,'me',b.turn)+'</div>'+profCard(me,'me',112,157,fm)  /* 캐릭터 카드 5:7 통일(사용자 요청 2026-11-06) */+'</div>'
- +'<div class="meslots" style="'+P(CX,BB-224,nMe*60-12)+'"><div class="slots me srow4">'+slots4(meItems,true,nMe)+'</div></div>'
+ +'<div class="meslots" style="'+P(CX,BB-224-sy,nMe*60-12)+'"><div class="slots me srow4">'+slots4(meItems,true,nMe)+'</div></div>'
  +'<div class="hand" style="'+P(CX,BB-157,CW,109)+';--ov:'+ov.toFixed(1)+'px">'+hand.map(function(c,i){var picked=chosen.indexOf(c.uid)>=0,sb=blockSkill&&card(c.id).kind==='skill',cant=!picked&&sumCost(me,chosen.concat([c.uid]))>me.energy,cls=picked?'picked':(c.sealed||sb)?'lock':cant?'cant':full?'dim':(reveal||sub)?'':'can';
   return bcCard(c.id,{w:72,mode:'hand',face:true,fig:true,cls:cls,attr:' data-uid="'+c.uid+'" data-i="'+i+'" data-cid="'+c.id+'"',extra:sb&&!picked?'<span class="lockt">이번 턴 사용 불가</span>':''})}).join('')+'</div>'
  +'<div class="brow ctl" style="'+P(CX,BB-40,CW,40)+'"><div class="cirs">'+actCirc(me,true,sub,reveal)+spCirc(me,true,sub)
@@ -1617,7 +1618,7 @@ function play(ob,log,next){var you=next.you,side=function(s){return s===you?'me'
  var zt=function(g){return g.k==='tick'||g.k==='rush'||g.k==='auto'?0:g.k==='active'?2000:big?Math.min(3000,zb+Math.max(0,Array.from(ztext(g)).length-20)*50):1000};
  var per=function(g){return g.k==='rush'?900:g.k==='tick'||g.k==='auto'?600:zt(g)+700},tot=400+acts.reduce(function(a,g){return a+per(g)},0)+(acts.length?0:1500),k=Math.min(1,cap/tot);
  // 처리 순서 막대(효과연출 3): 지금 행동은 빛나고 끝난 건 흐리게, 내/상대 테두리 구분, 최대 10개
- var bar=acts.filter(function(g){return g.k!=='rush'&&g.k!=='auto'}).slice(0,10),phc=$('phc');
+ /* 가운데 처리 순서 줄은 제거(기획지시 2026-11-06 처리순서줄제거) — #phc가 없으면 아래는 건너뜀 */var bar=acts.filter(function(g){return g.k!=='rush'&&g.k!=='auto'}).slice(0,10),phc=$('phc');
  if(phc){phc.className='obar';phc.innerHTML=bar.map(function(g,i){var kd=kindOf(g),sd=g.seat==null?'':side(g.seat),ic=null;
   return '<i data-bi="'+G.indexOf(g)+'" class="'+sd+'" style="background:'+(ic?'url('+ic.url+') center/80% no-repeat,':'')+KCOL[kd]+'" data-tip="'+esc((sd==='me'?'나':sd?'상대':'')+' · '+(g.k==='card'||g.k==='void'||g.k==='counter'?card(g.id).name:g.k==='spell'?'스펠 '+sname(g.id):g.k==='active'?'액티브':'턴 끝')+' ('+g.ph+' '+PH[g.ph]+')')+'">'+(ic?'':KSH[kd])+'<sub>'+g.ph+'</sub></i>'}).join('')}
  var cellOf=function(sd,g,mark){var arr=rv[sd],kd=g.k==='active'?'active':g.k==='spell'?'spell':null;for(var i=0;i<arr.length;i++){var x=arr[i];if((kd?x.k===kd:x.id===g.id)&&!(mark&&used[sd][i])){if(mark)used[sd][i]=1;return $('rv_'+sd+i)}}return null};
