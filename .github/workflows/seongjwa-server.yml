@@ -37,7 +37,7 @@ jobs:
   test:
     name: Server Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25  # 통합 테스트가 늘어 15분을 넘김(2026-11-06)
     services:
       postgres:  # 경제 통합 테스트용 실제 DB(마이그레이션 적용)
         image: postgres:16
