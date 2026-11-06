@@ -224,15 +224,33 @@ try {
   assert.match(await page.textContent("#aPrep"), /1620×2880 .* → WebP 1440×2560/);
   await page.click("#aOk");
   await page.waitForFunction(() => document.body.textContent.includes("합본을 올려 주세요"), null, { timeout: 15000 });  // 합본 없는 스킨 안내(게임은 전신 임시)
-  // 합본 업로드 제약 완화(사용자 요청 2026-11-06): 9:16 PNG도 가운데 기준 5:7로 잘라 800×1120
+  // 합본 영역 선택 창(기획지시 2026-11-06 합본영역선택): 9:16 PNG → 5:7 틀 cover·가운데 시작, 끌기·슬라이더·두 손가락 확대, 격자·카드 미리보기, 저장 = 800×1120
   await sleep(1000); await page.setInputFiles("#aComb", fx("full_1620.png"));
-  await page.waitForFunction(() => /→ WebP 800×1120/.test(document.querySelector("#aPrepBg")?.textContent ?? ""), null, { timeout: 15000 }).catch(async (e) => { console.error("PREP", await page.evaluate(() => document.querySelector("#aPrepBg")?.innerText)); throw e; });
-  assert.match(await page.textContent("#aPrepBg"), /1620×2880 .* → WebP 800×1120/);
-  assert.match(await page.textContent("#aPrepBg"), /5:7로 잘라냄: 위아래 612px/);
-  await page.click("#aPrepBg #aOk");
+  await page.waitForSelector("#ccF canvas");
+  await page.waitForSelector("#ccP .pvc");
+  assert.match(await page.textContent("#ccW"), /선택 영역 1620×2268px → 800×1120/, "처음엔 꽉 채움(가로 전체)");
+  await page.locator("#ccF").scrollIntoViewIfNeeded();
+  const fb = await page.locator("#ccF").boundingBox();
+  await page.mouse.move(fb.x + fb.width / 2, fb.y + fb.height / 2); await page.mouse.down(); await page.mouse.move(fb.x + fb.width / 2 + 80, fb.y + fb.height / 2 + 400, { steps: 4 }); await page.mouse.up();  // 틀 밖으로 못 나감
+  assert.match(await page.textContent("#ccW"), /1620×2268/);
+  { // 두 손가락 벌리기(휴대폰 핀치) → 확대
+    const cdp = await page.context().newCDPSession(page), cx = fb.x + fb.width / 2, cy = fb.y + fb.height / 2;
+    const tp = (d) => [{ x: cx - d, y: cy, id: 1 }, { x: cx + d, y: cy, id: 2 }];
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(20) });
+    for (const d of [30, 45, 60]) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: tp(d) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    const zv = Number(await page.inputValue("#ccZ"));
+    assert.ok(zv >= 150, `핀치 확대 ${zv}%`);
+  }
+  await page.fill("#ccZ", "300"); await page.dispatchEvent("#ccZ", "input");
+  assert.match(await page.textContent("#ccW"), /선택 영역 540×756px — 출력 800×1120보다 작아/, "작으면 경고만");
+  await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_comb_crop.png` });
+  await page.fill("#ccZ", "100"); await page.dispatchEvent("#ccZ", "input");
+  await page.click("#ccS");
   for (let i = 0; i < 30 && !(await ok(call("/v1/assets"))).art.SE?.["000"]?.combined; i += 1) await sleep(200);
   assert.deepEqual([(await ok(call("/v1/assets"))).art.SE["000"].combined.w, (await ok(call("/v1/assets"))).art.SE["000"].combined.h], [800, 1120]);
-  await page.waitForSelector("#rcFull"); await page.locator("#aComb").scrollIntoViewIfNeeded().catch(() => null);
+  await page.waitForSelector("#faceNext");  // 저장 뒤 바로 얼굴 영역 지정(건너뛰기 가능)
+  await page.waitForSelector("#rcFull"); await page.click("#faceSkip"); assert.equal(await page.$("#faceNext"), null);
   await page.screenshot({ path: `${process.env.SHOT_DIR ?? "/tmp"}/bo_char_simple.png`, fullPage: true });
   await page.click('[data-askin="000"]');
   await page.fill("#aSkinNew", "001"); await page.click("#aSkinAdd");
