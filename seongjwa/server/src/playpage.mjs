@@ -1492,7 +1492,7 @@ function cardModal(id){var k=card(id),H=innerHeight,cw=Math.round(Math.min(H*0.7
 /* 카드 상세·한 줄 설명: 호버 0.2초 / 길게 누르기 0.35초. 다시 그려져도 같은 대상이면 닫지 않음(효과연출 5: 누르는 동안 계속 표시) */
 function tipHide(){var o=$('tip');if(o)o.remove()}
 function tipShow(el){tipHide();var t=document.createElement('div');t.id='tip';t.className='tip';t.textContent=el.dataset.tip;document.body.appendChild(t);
- var r=el.getBoundingClientRect(),w=t.offsetWidth,h=t.offsetHeight,x=Math.min(innerWidth-w-6,Math.max(6,r.left+r.width/2-w/2)),y=r.top-h-6;if(y<4)y=r.bottom+6;t.style.left=x+'px';t.style.top=y+'px'}
+ var r=el.getBoundingClientRect(),w=t.offsetWidth,h=t.offsetHeight,m=12,x=Math.min(innerWidth-w-m,Math.max(m,r.left+r.width/2-w/2)),y=r.top-h-6;if(y<m)y=r.bottom+6;if(y+h>innerHeight-m)y=Math.max(m,innerHeight-h-m);t.style.left=x+'px';t.style.top=y+'px'}
 function infoEl(e){return e.target.closest&&e.target.closest('[data-cid],[data-tip]')}
 function infoKey(el){return el?(el.dataset.cid||'')+'|'+(el.dataset.tip||'')+'|'+(el.dataset.uid||el.id||el.dataset.bi||''):null}
 function infoShow(el){if(el.dataset.cid){if(S.wide&&$('wdet')&&S.st&&S.st.phase==='battle')wdetCard(el.dataset.cid);else peekShow(el.dataset.cid)}else tipShow(el)}
@@ -1663,7 +1663,8 @@ function markWait(sd){var v=$('side_'+sd),f=$('face_'+sd);if(!v&&!f)return;var w
 /* 효과 자막 = 해당 슬롯 옆 말풍선(사선구도 4-1): 내 칸은 위, 상대 칸은 아래 */
 function bubble(el,sd,html,col,bad){var b=$('bt');if(!b)return;var o=$('bub');if(!o){o=document.createElement('div');o.id='bub';b.appendChild(o)}o.className='bub '+(sd||'')+(bad?' bad':'');o.style.setProperty('--kc',col||'#8a90a8');o.innerHTML=html;
  if(!el){o.style.left='50%';o.style.top='50%';o.style.transform='translate(-50%,-50%)';return}var r=lr(el),bw=b.clientWidth,x=r.left+r.width/2,w=o.offsetWidth;x=Math.max(w/2+6,Math.min(bw-w/2-6,x));o.style.left=x+'px';
- if(sd==='opp'){o.style.top=(r.bottom+6)+'px';o.style.transform='translateX(-50%)'}else{o.style.top=(r.top-6)+'px';o.style.transform='translate(-50%,-100%)'}}
+ var h=o.offsetHeight,bh=b.clientHeight,dn=sd==='opp';if(dn&&r.bottom+6+h>bh-6)dn=false;else if(!dn&&r.top-6-h<6)dn=true;  /* 화면 밖이면 위/아래 뒤집기(기획지시 11-05 4) */
+ if(dn){o.style.top=Math.min(bh-h-6,r.bottom+6)+'px';o.style.transform='translateX(-50%)'}else{o.style.top=Math.max(h+6,r.top-6)+'px';o.style.transform='translate(-50%,-100%)'}}
 function firstTip(t){var b=$('bt');if(!b)return;var e=document.createElement('div');e.className='first';e.innerHTML='<b>처음 보는 종류</b> '+esc(t);b.appendChild(e);setTimeout(function(){e.remove()},3200)}
 function bars(sd,hp,sh,mx){var w=Math.max(0,100*hp[sd]/mx[sd]),sw=Math.min(100-w,100*sh[sd]/mx[sd]);
  $('hp_'+sd).style.width=w+'%';$('gh_'+sd).style.width=w+'%';var s=$('sh_'+sd);s.style.left=w+'%';s.style.width=sw+'%';$('hpt_'+sd).textContent=hp[sd]+'/'+mx[sd];$('sht_'+sd).textContent=sh[sd]?'+'+sh[sd]:''}
