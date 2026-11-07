@@ -1044,7 +1044,8 @@ button.sec{background:transparent;border:1px solid #4152b5;color:#f4f6ff}
 .skpv .skpb{top:auto;bottom:max(16px,env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));gap:8px;z-index:2}
 .skpv .skpb button{height:40px;min-width:96px;border-radius:8px;font-size:12px;padding:0 16px}
 .skpv .skpb button.sec{background:rgba(15,19,40,.85);border:1px solid #4152b5;color:#f4f6ff}.skpv .skpb button.sec.on{background:#2b5fd0;border-color:#2b5fd0}
-.tip{border-radius:8px;max-width:240px}
+.tip{border-radius:8px;width:calc(220px*var(--zs,1));max-width:min(80vw,calc(240px*var(--zs,1)));font-size:min(16px,calc(12px*var(--zs,1)))}  /* 툴팁: 최대 폭 240pt·글자 상한 16(전투 포함, 84차 ⑤) */
+.fic{position:absolute;display:flex;align-items:center;z-index:5}.fic .ibh{position:relative;width:var(--s);height:var(--s);padding:0;border-radius:8px;background:rgba(20,27,74,.74);border:1px solid #1e2866;display:grid;place-items:center;color:#f4f6ff;font-weight:800;font-size:calc(var(--s)*.5)}.fic .ibh::after{content:'';position:absolute;inset:min(0px,calc((var(--s) - 44px)/2))}.fic .ibh svg{width:calc(var(--s)*.75);height:calc(var(--s)*.75)}
 @media (max-height:500px){.plst .ppb{display:grid;grid-template-columns:1fr 1fr;column-gap:calc(16*var(--u));align-content:start}.plst .pprow:last-child{border-bottom:1px solid rgba(255,255,255,.08)}.ppw.plst.many{width:calc(600*var(--u))}.plst.many .ppb{grid-template-columns:1fr 1fr 1fr}}  /* 휴대폰: 설정 줄 44 유지, 여러 열로 본문 스크롤 없이 */
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
@@ -1310,7 +1311,11 @@ function render(){applyZoom();musicSync();var m=S.st;if(!m)return home();if(m.ph
  if(m.phase==='result')return renderResult(m);
  $('app').innerHTML='<div class="scr home"><div class="mu">준비 중…</div></div>'}
 function stepChips(cur){return '<div class="chips">'+[['pick','픽'],['loadout','스펠·덱'],['battle','전투']].map(function(x){return '<span class="chip'+(x[0]===cur||(cur==='ban'&&x[0]==='pick')?' on':'')+'">'+x[1]+'</span>'}).join('')+'</div>'}
-function topBar(m,label,extra){return '<div class="top"><div class="tl">'+(m?stepChips(m.phase):'<div class="chips"><span class="chip on">'+esc(extra||'')+'</span></div>')+'<span class="mu">'+esc(label)+'</span></div><div class="timer" id="tm"></div><div class="tr">'+(m?'':'<button class="ib44" id="rmore" title="신고">⋯</button>')+'<button class="ib44" id="fSet" title="설정">'+SVG_GEAR+'</button><button class="ib44" id="fHelp" title="도움말">?</button></div></div>'}
+/* ⚙·? = 전투 상단 바의 ⚙·💬와 같은 좌표·크기(기획답변 84차 ④, lay4와 같은 계산). 터치 영역 44 */
+function hdrPos(){var W=VW(),H=VH(),f=safe(),sl=Math.max(60,f.l),sr=Math.max(60,f.r),st=Math.max(0,f.t),sb=Math.max(16,f.b),k=Math.max(0.6,Math.min((W-sl-sr)/668,(H-st-sb)/344));return {x:sl,y:st+4*k,s:32*k,g:8*k}}
+function topBar(m,label,extra){var h=hdrPos(),p=prepPad(),pl=Math.max(0,Math.ceil(h.x+2*h.s+h.g+8-p.l));
+ return '<div class="fic" style="left:'+h.x.toFixed(1)+'px;top:'+h.y.toFixed(1)+'px;--s:'+h.s.toFixed(1)+'px;gap:'+h.g.toFixed(1)+'px"><button class="ibh" id="fSet" title="설정">'+SVG_GEAR+'</button><button class="ibh" id="fHelp" title="도움말">?</button></div>'
+  +'<div class="top"><div class="tl" style="padding-left:'+pl+'px">'+(m?stepChips(m.phase):'<div class="chips"><span class="chip on">'+esc(extra||'')+'</span></div>')+'<span class="mu">'+esc(label)+'</span></div><div class="timer" id="tm"></div><div class="tr">'+(m?'':'<button class="ib44" id="rmore" title="신고">⋯</button>')+'</div></div>'}
 /* 위 줄 오른쪽 설정·도움말(밴·픽·스펠·덱·결과 공통) */
 function frmBind(){if($('fSet'))$('fSet').onclick=function(){setPop()};if($('fHelp'))$('fHelp').onclick=function(){helpOpen()}}
 function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.holo:0}}

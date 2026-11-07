@@ -81,6 +81,8 @@ try {
     console.log(`  덱 카드 폭 ${vp.name} ${Math.round(await page.$eval(".deck2 .bc", (e) => e.getBoundingClientRect().width))}px`);
     await page.screenshot({ path: `/tmp/play_lo_${vp.width}${vp.safe ? 's' : ''}.png` });
     await noScroll(page, "스펠·덱");
+    const rc = (q) => page.evaluate((q) => { const b = document.querySelector(q)?.getBoundingClientRect(); return b && [b.left, b.top, b.width, b.height].map((v) => Math.round(v * 10) / 10); }, q);
+    const gearLo = await rc("#fSet");
     step(`${vp.name}: 시작 → 픽 → 스펠·덱 화면(스크롤 없음)`);
     await page.click("#ok");
     await page.waitForSelector("#side_me", { timeout: 15000 });
@@ -88,6 +90,7 @@ try {
     for (let i = 0; i < 3; i += 1) await page.click("#gnext");
     assert.equal(await page.$("#guide"), null);
     await noScroll(page, "전투");
+    { const gearBt = await rc("#menu"); console.log(`  ⚙ 좌표 ${vp.name} 스펠·덱 ${gearLo} / 전투 ${gearBt}`); assert.ok(gearLo.every((v, i) => Math.abs(v - gearBt[i]) <= 1), "⚙ 위치 = 전투(기획답변 84차 ④)"); }
     const [opp, me] = await page.evaluate(() => ["#side_opp", "#side_me"].map((q) => document.querySelector(q).getBoundingClientRect().left));
     await page.screenshot({ path: `/tmp/play_t1_${vp.width}${vp.safe ? 's' : ''}.png` });
     assert.ok(opp > me + 100, `상대 프로필 우상단, 내 프로필 좌하단 ${opp} ${me}`);
