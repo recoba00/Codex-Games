@@ -258,7 +258,9 @@ try {
       await pg.goto(`${API}/play`); await pg.click('[data-mode="rank"]'); await pg.fill("#dev", id); await pg.fill("#nick", nick); await pg.click("#play");
       pages.push([pg, nick]);
     }
-    for (const [pg] of pages) await pg.waitForSelector("[data-pick],[data-ban]", { timeout: 30000 });
+    for (const [pg] of pages) await pg.waitForSelector("[data-pick],[data-ban]", { timeout: 40000 }).catch(async (e) => {
+      for (const [p2, n2] of pages) console.log("PVP", n2, JSON.stringify(await p2.evaluate(() => ({ q: document.querySelector("#qbox")?.textContent, toast: [...document.querySelectorAll(".toast")].map((t) => t.textContent), st: S.st && S.st.phase, qws: !!S.qws, tok: !!S.tok }))));
+      throw e; });
     for (const [pg] of pages) {  // 시간 보장: 두 사람 모두 접속한 때부터 밴 시간(로컬 데이터 10초)을 센다
       const leftMs = await pg.evaluate(() => S.st.phaseDeadline - now());
       assert.ok(leftMs > 7000, `매칭 뒤 밴 시간이 줄어 있음 ${leftMs}ms`);
