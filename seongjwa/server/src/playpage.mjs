@@ -1326,9 +1326,8 @@ function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);clearInterval(S
  var acct='<div class="lcard lacct"><small class="lbk">TEST ACCOUNT</small><b class="lt">테스트 계정</b><label>아이디 <input id="dev" value="'+esc(dev)+'" placeholder="예: kim01" autocapitalize="off" autocomplete="off"></label><label>닉네임 <input id="nick" value="'+esc(lsGet('play_nick')||'')+'" placeholder="2~12자" maxlength="12" autocomplete="off"></label><small class="mu">/dev에서 쓰던 아이디를 넣으면 그 계정 티어·숙련도로 보여요</small></div>';
  var rankCard='<div class="lcard lrank" id="lRank">'+tierEmb(rk&&rk.name)+'<div class="lrk"><small class="lbk">RANK</small><b>'+esc(rk?rk.name:'-')+'</b><small>'+(rk?rk.cur+' / '+rk.span+' RP':'랭크 정보 없음')+'</small></div><div class="lbar"><i style="width:'+(rk?rk.pct:0).toFixed(0)+'%"></i></div><small class="mu lsub">'+esc(e.rankRoad&&e.rankRoad.nextRewardTier?'다음 랭크 로드 보상 · '+e.rankRoad.rpToNext+' RP 남음':'랭크 로드 보상 정보 없음')+'</small></div>';
  var repCard='<div class="lcard lrep"><small class="lbk">대표 캐릭터</small><div class="lrn"><b>'+esc(c.name||'')+'</b><span class="mu">'+esc([c.job,'기본 스킨'].filter(Boolean).join(' · '))+'</span></div><div class="lrb"><span class="lchip fac f'+esc(FAC[c.faction]||'')+'">● '+esc(c.faction||'')+'</span><button class="sm sec" id="lRep">대표 변경</button></div></div>';
- var modes='<div class="lmodes">'+[['rank','랭킹전'],['ai','AI 대전'],['friend','친구 대전']].map(function(x){return '<button data-mode="'+x[0]+'" class="'+(mode===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>'
-  +(mode==='ai'?'<div class="ldiff">'+[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(function(d){return '<button data-d="'+d[0]+'" class="'+(S.diff===d[0]?'on':'')+'">'+d[1]+'</button>'}).join('')+'</div>':'');
- var sub=mode==='rank'?'랭킹전 · 30초 안에 상대가 없으면 AI 랭킹전':mode==='ai'?'AI 대전 · '+({easy:'쉬움',normal:'보통',hard:'어려움'}[S.diff]||'보통'):'친구 대전 · 준비 중';
+ var modes='<div class="lmodes">'+[['rank','랭킹전'],['ai','AI 대전'],['friend','친구 대전']].map(function(x){return '<button data-mode="'+x[0]+'" class="'+(mode===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+ var sub=mode==='rank'?'랭킹전 · 30초 안에 상대가 없으면 AI 랭킹전':mode==='ai'?'AI 대전 · 바로 시작':'친구 대전 · 준비 중';
  var play='<button class="lplay" id="play"><b>플레이</b><small id="qbox">'+esc(sub)+'</small><kbd>Enter</kbd></button>';
  var recent='<div class="lcard lrec"><small class="lbk">최근 10경기</small><b class="lt">최근 전적</b><div class="lrs">'+lobRecent()+'</div></div>';
  var h='<div class="scr lb'+(dsk?' dsk':' mob')+'" id="lobby" style="'+padCss(p)+frmVars(p)+';--g:'+p.g.toFixed(1)+'px">'
@@ -1349,7 +1348,6 @@ function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);clearInterval(S
  var devOk=function(){var di=$('dev'),d=di?di.value.trim().toLowerCase():dev;if(!/^[a-z0-9_-]{3,32}$/.test(d)){toast('아이디는 영문 소문자·숫자 3~32자');return null}var n=$('nick')?$('nick').value.trim():lsGet('play_nick')||'';if(n&&!/^[\p{L}\p{N}_]{2,12}$/u.test(n)){toast('닉네임은 한글·영문·숫자·_ 2~12자');return null}
   if(d!==lsGet('play_dev')){S.tok=null;S.lob=null;S.lobAt=0}localStorage.setItem('play_dev',d);lsSet('play_nick',n);return d};
  document.querySelectorAll('[data-mode]').forEach(function(b){b.onclick=function(){if(S.qws)return;S.lobMode=b.dataset.mode;lsSet('play_mode',S.lobMode);home()}});
- document.querySelectorAll('[data-d]').forEach(function(b){b.onclick=function(){S.diff=b.dataset.d;localStorage.setItem('play_diff',S.diff);home()}});
  document.querySelectorAll('[data-ft]').forEach(function(b){b.onclick=function(){S.lobFt=b.dataset.ft;home()}});
  document.querySelectorAll('[data-soon]').forEach(function(b){b.onclick=soon});
  document.querySelectorAll('[data-mclaim]').forEach(function(b){b.onclick=function(){busy(b,'…');api('/v1/missions/claim',{kind:'daily',id:b.dataset.mclaim,requestId:'mc-'+Date.now()}).then(function(){toast('보상을 받았어요');lobLoad(true)}).catch(function(x){toast('받기 실패: '+x.message);home()})}});
@@ -1387,7 +1385,7 @@ function queueStart(d){var qb=$('qbox'),pv=$('play');if(S.qws){try{S.qws.send('{
  .catch(function(e){S.qws=null;home(QERR[e.message]||('매칭 실패: '+e.message))})}
 function login(d){return api('/v1/auth/dev',{devId:d}).then(function(j){S.tok=j.accessToken})}
 function defs(){var l=lsGet('play_last'),ld=lastLoad(l);return {preferred:l?[l]:[],spells:ld.spells,preset:ld.preset}}
-function start(d){var pb=$('play');if(pb){pb.classList.add('busy');pb.querySelector('small').textContent='AI 대전 준비 중…'}(S.tok?Promise.resolve():login(d).then(ensureName)).then(function(){return api('/v1/practice',{difficulty:S.diff,defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home('시작 실패: '+e.message)})}
+function start(d){var pb=$('play');if(pb){pb.classList.add('busy');pb.querySelector('small').textContent='AI 대전 준비 중…'}(S.tok?Promise.resolve():login(d).then(ensureName)).then(function(){return api('/v1/practice',{defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home('시작 실패: '+e.message)})}  /* 난이도 선택 없음(사용자 요청 2026-11-07): 서버 기본 '보통' */
 function connect(code){sessionStorage.setItem('play_room',code);if(S.room!==code){S.room=code;S.emo={};S.emLeft=null;S.emoOpen=false;S.hlog={};S.lastOpp=null;S.pickedSelf=null;S.loadSelf=false;S.load=null;S.menu=false}api('/v1/rooms/'+code+'/ticket',{}).then(function(j){
  var ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/v1/rooms/'+code+'/ws?ticket='+encodeURIComponent(j.ticket));S.ws=ws;S.replaced=false;ws.last=Date.now();
  ws.onopen=function(){ws.last=Date.now();S.badAt=0;S.retry=0;flushQ()};
@@ -2193,7 +2191,7 @@ function resRp(mode,rk,ec){var l1='',l2='',l3=[],c='';
   if(rk.streak>=2)l3.push(rk.streak+'연승');if(rk.bonus)l3.push('연승 보너스 +'+rk.bonus);if(rk.aiCapped)l3.push('AI 판 RP 일일 상한')}
  if(ec&&ec.gold)l3.push('골드 +'+ec.gold);
  return (l1?'<div class="rp1'+c+'">'+esc(l1)+'</div>':'')+(l2?'<div class="rp2">'+esc(l2)+'</div>':'')+(l3.length?'<div class="rp3">'+esc(l3.join(' · '))+'</div>':'')}
-function again(){quit();var d=localStorage.getItem('play_dev');api('/v1/practice',{difficulty:S.diff,defaults:defs()}).then(function(j){S.st=null;S.load=null;connect(j.code)}).catch(function(){login(d).then(function(){return api('/v1/practice',{difficulty:S.diff,defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home(e.message)})})}
+function again(){quit();var d=localStorage.getItem('play_dev');api('/v1/practice',{defaults:defs()}).then(function(j){S.st=null;S.load=null;connect(j.code)}).catch(function(){login(d).then(function(){return api('/v1/practice',{defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home(e.message)})})}
 
 /* ---------- 타이머·홀로·키 ---------- */
 setInterval(function(){var m=S.st;if(!m||S.anim)return;var t=m.phase==='battle'?m.deadline:m.phaseDeadline,s=left(t);
