@@ -657,7 +657,6 @@ body.rmo #bt.shk,body.rmo #bt.shk2{animation:none}
 @keyframes stx2{0%{opacity:0;transform:translateX(10%)}100%{opacity:1;transform:none}}
 .scut .sskip{position:absolute;right:max(calc(60px*var(--k)),env(safe-area-inset-right));bottom:max(calc(16px*var(--k)),env(safe-area-inset-bottom));pointer-events:auto;height:calc(32px*var(--k));padding:0 calc(14px*var(--k));border-radius:999px;background:rgba(7,10,28,.72);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:calc(13px*var(--k));font-weight:700;z-index:3}
 body.rmo .scut .sart{animation:none}
-.cdm{position:fixed;inset:0;z-index:62;background:rgba(4,6,14,.8);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(10px*var(--k));animation:fi .15s;cursor:pointer}
 .cdm .cdw{display:flex;align-items:center;gap:calc(40px*var(--k));padding:0 max(calc(60px*var(--k)),env(safe-area-inset-left));max-width:100%}
 .cdm .cdl .bc{box-shadow:0 12px 40px rgba(0,0,0,.7);animation:cdin .3s cubic-bezier(.2,1.4,.4,1) both}
 @keyframes cdin{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
@@ -972,19 +971,81 @@ html[lang=ko] .bt4 .float.fx.crit::before{content:"치명!"}
 .coach .cskip{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));height:28px;padding:0 10px;border-radius:99px;border:0;background:rgba(255,255,255,.12);color:#cfd5ee;font-size:12px}
 .cterm{display:inline;border:0;border-radius:6px;padding:0 5px;margin:0 1px;background:rgba(242,201,76,.22);color:#ffe08a;font:inherit;font-weight:700;cursor:pointer}
 /* 도움말: 왼쪽 목록 + 오른쪽 내용(내용만 세로 스크롤) */
-.help{position:fixed;inset:0;z-index:70;background:rgba(5,7,16,.72);display:flex;align-items:center;justify-content:center;animation:fi .15s ease-out both}
-.help .hwin{width:min(980px,calc(100vw - 2*max(16px,env(safe-area-inset-left))));height:min(640px,calc(100vh - 24px));background:#0f1328;border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
-.help .hhd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.help .hhd b{font-size:16px}.help .hhd button{margin-left:auto}
-.help .hrk{font-size:12px;color:#ffb08a}
-.help .hbd{flex:1;display:flex;min-height:0}
-.help nav{width:clamp(120px,26%,210px);display:flex;flex-direction:column;gap:2px;padding:8px;border-right:1px solid rgba(255,255,255,.08);overflow:hidden}
-.help nav button{text-align:left;border:0;background:none;color:#cfd5ee;padding:8px 10px;border-radius:8px;font-size:13px;min-height:36px}
-.help nav button.on{background:#2b5fd0;color:#fff}
-.help section{flex:1;overflow-y:auto;padding:12px 16px;font-size:13px;line-height:1.6;-webkit-overflow-scrolling:touch}
-.help .hgrid{display:flex;flex-wrap:wrap;gap:8px}.help .hcard{cursor:pointer}
-.help .hst>div{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)}
-.help .hord{padding-left:0;list-style:none}.help .hord li{padding:5px 0}
+#help .hrk{font-size:12px;color:#ffb08a}
+#help .hbd{flex:1;display:flex;min-height:0}
+#help nav{width:clamp(120px,26%,210px);display:flex;flex-direction:column;gap:2px;padding:8px;border-right:1px solid rgba(255,255,255,.08);overflow:hidden}
+#help nav button{text-align:left;border:0;background:none;color:#cfd5ee;padding:8px 10px;border-radius:8px;font-size:13px;min-height:36px}
+#help nav button.on{background:#2b5fd0;color:#fff}
+#help section{flex:1;overflow-y:auto;padding:12px 16px;font-size:13px;line-height:1.6;-webkit-overflow-scrolling:touch}
+#help .hgrid{display:flex;flex-wrap:wrap;gap:8px}#help .hcard{cursor:pointer}
+#help .hst>div{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+#help .hord{padding-left:0;list-style:none}#help .hord li{padding:5px 0}
 @media (max-height:440px){.help nav button{min-height:30px;padding:5px 8px;font-size:12px}}
+
+/* ===== 공통 화면 틀·팝업·데스크톱 크기(기획지시 2026-11-07 밴픽스펠덱정돈, 상세 01 1~4절) ===== */
+.frm .top{height:40px;min-height:40px;margin:0 0 12px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.frm .top .tl{display:flex;align-items:center;gap:8px;min-width:0}.frm .top .tl>.mu{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.frm .top .chips{gap:4px;flex:none}.frm .top .chip{font-size:10px;padding:3px 8px}
+.frm .top .timer{font-size:14px;font-weight:800;min-width:44px;text-align:center}
+.frm .top .tr{display:flex;justify-content:flex-end;gap:4px}
+.ib44{width:44px;height:44px;margin:-2px 0;border:0;border-radius:8px;background:none;display:grid;place-items:center;color:#f4f6ff;font-size:18px;font-weight:800;padding:0}.ib44:hover{background:rgba(65,82,181,.25)}.ib44 svg{width:22px;height:22px}
+.frm .fbar,.frm.pk3 .pbar,.frm .pbar{height:48px;min-height:48px;margin:12px 0 0;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap}
+.frm .fsub{flex:1;min-width:0;height:28px;font-size:10px;line-height:14px;color:var(--mu);overflow:hidden;padding:0;background:none!important;border:0!important;border-radius:0}
+.frm .fsub div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.frm .fsub b{color:#f4f6ff}
+.frm .fbar button{height:40px;padding:0 16px;font-size:12px;border-radius:8px;flex:none}
+.frm .fbar button.pri{min-width:120px;font-weight:800}
+button.sec{background:transparent;border:1px solid #4152b5;color:#f4f6ff}
+.frm .pk3b{align-items:center}
+.frm .pcol{height:var(--ch);justify-content:space-between;gap:8px}.frm .pcol.me,.frm .pcol.opp{justify-content:space-between}
+.frm .pmid{height:var(--ch);gap:0}.frm .plist{padding:4px}
+.frm .lab2,.frm.pk3 .lab2{font-size:12px;line-height:18px;padding:0 12px}
+.frm .sprow{gap:8px}.frm .deck2.two{gap:8px}.frm .top .chip{padding:4px 8px}
+#help nav{gap:4px}#help nav button{padding:8px 12px}#help .hst>div{padding:8px 0}#help .hord li{padding:4px 0}
+.frm .rcol2{height:var(--ch);justify-content:space-between;gap:12px;margin:0}
+.frm .spb2{height:var(--sph);justify-content:center}
+.frm .tabs{height:32px;gap:8px}.frm .tabs .tab2{height:32px;padding:0 12px;font-size:12px}
+.frm.res3{display:flex;grid-template-columns:none;background:#0b0d1a}
+.frm .rbody{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.frm .rimg{inset:0}
+.frm .rr{padding:0 0 0 16px;justify-content:center;gap:12px;min-height:0}
+.frm .stats .st small{font-size:10px}.frm .stats .st b{font-size:14px}.frm .stats{gap:8px}.frm .stats .st{padding:4px 12px;border-radius:8px}.frm .rew{font-size:12px;gap:4px}
+/* 공통 팝업 Popup */
+.pp{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;--u:calc(var(--zs,1)*1px);animation:fi .15s ease-out both;cursor:default}
+.pp.stk{z-index:99}.pp.re,.pp.re .ppw{animation:none}
+.ppw{position:relative;display:flex;flex-direction:column;max-width:calc(.92*(100vw - (var(--sl,0px) + var(--sr,0px))*var(--zs,1)));max-height:calc(.9*(100vh - (var(--st,0px) + var(--sb,0px))*var(--zs,1)));background:#0f1328;border:1px solid #2a3470;border-radius:calc(12*var(--u));box-shadow:0 6px 20px rgba(0,0,0,.35);overflow:hidden;color:#f4f6ff;animation:ppin .15s ease-out both}
+@keyframes ppin{from{opacity:0;transform:translateY(calc(8*var(--u)))}}
+.ppw.pps{width:calc(440*var(--u))}.ppw.ppl{width:calc(600*var(--u))}
+.pph{flex:none;height:calc(44*var(--u));display:flex;align-items:center;gap:calc(8*var(--u));padding-left:calc(16*var(--u));border-bottom:1px solid rgba(255,255,255,.1)}
+.pph>b{font-size:min(18px,calc(14*var(--u)));font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pph .ppx{margin-left:auto;flex:none;width:calc(44*var(--u));height:calc(44*var(--u));border:0;border-radius:0;background:none;padding:0;font-size:min(18px,calc(14*var(--u)));color:#cfd5ee}.pph .ppx:hover{color:#fff;background:rgba(255,255,255,.06)}
+.ppb{flex:1;min-height:0;overflow-y:auto;padding:calc(16*var(--u));display:flex;flex-direction:column;gap:calc(12*var(--u));font-size:min(16px,calc(12*var(--u)));line-height:1.5;-webkit-overflow-scrolling:touch}
+.ppb .ppm{margin:0}
+.ppf{flex:none;display:flex;justify-content:flex-end;gap:calc(8*var(--u));padding:0 calc(16*var(--u)) calc(16*var(--u))}
+.ppf button{height:calc(40*var(--u));min-width:calc(96*var(--u));padding:0 calc(16*var(--u));border-radius:calc(8*var(--u));font-size:min(16px,calc(12*var(--u)));font-weight:700}
+.plst .ppb{padding:0 calc(16*var(--u));gap:0}
+.pprow{display:flex;align-items:center;justify-content:space-between;gap:calc(12*var(--u));height:calc(44*var(--u));min-height:calc(44*var(--u));padding:0;border:0;border-bottom:1px solid rgba(255,255,255,.08);border-radius:0;background:none;color:#f4f6ff;font-size:min(16px,calc(12*var(--u)));text-align:left;width:100%}
+.pprow:last-child{border-bottom:0}.pprow em{font-style:normal;color:#ffd97a;font-weight:700}.pprow:hover{background:rgba(65,82,181,.18)}
+/* 도움말 = 큰 팝업, 본문(오른쪽 칸)만 스크롤 */
+.ppw.hwin{height:calc(.9*(100vh - (var(--st,0px) + var(--sb,0px))*var(--zs,1)));max-height:calc(560*var(--u))}
+.hwin .ppb{padding:0;flex-direction:row;overflow:hidden}
+.pph .hrk{font-size:min(13px,calc(10*var(--u)));color:#ffb08a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#help .hbd{flex:1;display:flex;min-height:0;width:100%}
+#help nav{width:calc(160*var(--u));flex:none;padding:calc(8*var(--u))}#help nav button{font-size:min(16px,calc(12*var(--u)));min-height:calc(36*var(--u))}
+#help section{padding:calc(12*var(--u)) calc(16*var(--u));font-size:min(16px,calc(12*var(--u)))}
+/* 카드·상태 상세 = 큰 팝업 */
+.pp.cdm{--k:calc(var(--zs,1)*.6)}
+.pp.cdm .cdw{padding:0;gap:calc(16*var(--u));max-width:none;align-items:flex-start}
+.pp.cdm .cdr{max-width:none;flex:1;min-width:0;gap:calc(12*var(--u));max-height:none}
+.pp.cdm .cdr small{font-size:min(13px,calc(10*var(--u)))}.pp.cdm .cdr b{font-size:min(18px,calc(14*var(--u)))}
+.pp.cdm .cdr p{font-size:min(16px,calc(12*var(--u)))}.pp.cdm .cdr .aff{font-size:min(13px,calc(10*var(--u)))}
+/* 스킬 보기: 연출은 화면 전체, 머리줄·버튼줄만 팝업 규격 */
+.skpv .skph{position:absolute;top:0;left:0;right:0;height:44px;background:rgba(15,19,40,.92);border-bottom:1px solid #2a3470;padding-left:max(16px,env(safe-area-inset-left));--u:1px;z-index:2}
+.skpv .skph .ppx{margin-right:env(safe-area-inset-right)}
+.skpv .skpb{top:auto;bottom:max(16px,env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));gap:8px;z-index:2}
+.skpv .skpb button{height:40px;min-width:96px;border-radius:8px;font-size:12px;padding:0 16px}
+.skpv .skpb button.sec{background:rgba(15,19,40,.85);border:1px solid #4152b5;color:#f4f6ff}.skpv .skpb button.sec.on{background:#2b5fd0;border-color:#2b5fd0}
+.tip{border-radius:8px;max-width:240px}
+@media (max-height:500px){.plst .ppb{display:grid;grid-template-columns:1fr 1fr;column-gap:calc(16*var(--u));align-content:start}.plst .pprow:last-child{border-bottom:1px solid rgba(255,255,255,.08)}.ppw.plst.many{width:calc(600*var(--u))}.plst.many .ppb{grid-template-columns:1fr 1fr 1fr}}  /* 휴대폰: 설정 줄 44 유지, 여러 열로 본문 스크롤 없이 */
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1008,7 +1069,7 @@ var I18N={
   'lb.immune2':'IMMUNE 2T','lb.cleanse':'IMMUNE · CLEANSE','lb.atkUp':'ATK +{n}%','lb.shieldPct':'SHIELD +{n}%','lb.healUp':'HEAL +{n}% · 2T','lb.spd':'SPD +{n}',
   'lb.handFull':'HAND FULL','lb.block':'SHIELD BLOCK',
   'bn.reveal':'REVEAL!','bn.ko':'K.O.','bn.turn':'Turn','bn.rush':'RAMPAGE','bn.rushNext':'Rampage next turn','bn.rushPct':'ALL DAMAGE +{n}%','bn.last':'FINAL TURN',
-  'set.lang':'Language',
+  'set.lang':'Language','res.title':'Result','set.title':'Settings','pp.ok':'OK','pp.cancel':'Cancel','pp.confirm':'Confirm',
   'kind.attack':'Deals damage. Shields absorb it first; the rest hits HP','kind.defense':'Creates a shield that blocks damage this turn','kind.counter':'Voids one enemy attack and strikes back','kind.silence':"Cuts off the enemy's skills and active",'kind.immune':"Blocks silence and debuffs. Doesn't stop damage",'kind.disrupt':'Applies debuffs like Weaken or Mark','kind.skill':'Support effects: heal, draw, gauge',
   'help.view':"Your side is bottom-left, the opponent's top-right. Pick cards from your hand and confirm; both sides reveal at once",
   'help.order':"Cards resolve by type: 0 Spell → 1 Guard → 2 Disrupt → 3 Skill → 4 Attack → 5 End. Pick order doesn't matter; within a step, higher SPD shows first",
@@ -1025,7 +1086,7 @@ var I18N={
   'lb.immune2':'면역 2턴','lb.cleanse':'면역 · 해제','lb.atkUp':'공격 +{n}%','lb.shieldPct':'실드 +{n}%','lb.healUp':'회복 +{n}% · 2턴','lb.spd':'SPD +{n}',
   'lb.handFull':'손패 가득','lb.block':'실드가 막음',
   'bn.reveal':'공개!','bn.ko':'K.O.','bn.turn':'턴','bn.rush':'폭주 시작','bn.rushNext':'다음 턴부터 폭주','bn.rushPct':'모든 피해 +{n}%','bn.last':'마지막 턴',
-  'set.lang':'언어',
+  'set.lang':'언어','res.title':'결과','set.title':'설정','pp.ok':'확인','pp.cancel':'취소','pp.confirm':'확인',
   'kind.attack':'상대에게 피해를 줘요. 실드가 먼저 막고, 남은 만큼 HP가 줄어요','kind.defense':'이번 턴 받는 피해를 막는 실드를 만들어요','kind.counter':'상대 공격 1장을 무효로 하고 되돌려 줘요','kind.silence':'상대의 스킬·액티브를 끊어요','kind.immune':'침묵과 디버프에 걸리지 않아요. 피해는 못 막아요','kind.disrupt':'상대에게 약화·표식 같은 불리한 효과를 걸어요','kind.skill':'회복·드로우·게이지처럼 나를 돕는 효과예요',
   'help.view':'내 영역은 왼쪽 아래, 상대는 오른쪽 위예요. 손패에서 카드를 골라 확정을 누르면 양쪽이 동시에 공개돼요',
   'help.order':'카드는 종류별 단계 순서로 처리돼요: 0 스펠 → 1 보호 → 2 방해 → 3 스킬 → 4 공격 → 5 종료. 고른 순서와는 상관없고, 같은 단계에서는 속도(SPD)가 높은 쪽이 먼저 보여요',
@@ -1075,12 +1136,13 @@ function helpBody(k){var D=S.data||{},R=(S.st&&S.st.battle&&S.st.battle.rules)||
  if(k==='rush')return '<p>'+esc(T('help.rush',{start:R.rush_start_turn||st.rush_start_turn||7,max:R.max_turn||st.max_turn||10}))+'</p>';  /* 수치는 데이터(설정값)에서 */
  if(k==='rank')return '<p>'+esc(T('help.rank'))+'</p><p class="mu small">'+esc(T('help.soon'))+'</p>';
  if(k==='tut')return '<p class="mu">'+esc(T('help.soon'))+'</p>';return ''}
-function helpOpen(k){var ex=$('help');if(ex)ex.remove();k=k||S.helpK||'view';S.helpK=k;evt('help_open',{item:k,inBattle:!!(S.st&&S.st.phase==='battle')});
- var d=document.createElement('div');d.id='help';d.className='help';var rk=S.st&&S.st.phase==='battle'&&S.st.mode==='ranked';
- d.innerHTML='<div class="hwin"><div class="hhd"><b>'+esc(T('help.title'))+'</b>'+(rk?'<span class="hrk">'+esc(T('help.rankedTimer'))+'</span>':'')+'<button class="sm" id="hClose">'+esc(T('help.close'))+'</button></div><div class="hbd"><nav>'+HELP.map(function(h){return '<button data-hk="'+h+'"'+(h===k?' class="on"':'')+'>'+esc(T('help.k.'+h))+'</button>'}).join('')+'</nav><section id="hSec">'+helpBody(k)+'</section></div></div>';
- document.body.appendChild(d);
- d.onclick=function(e){var b=e.target.closest('[data-hk]');if(b){helpOpen(b.dataset.hk);return}var c=e.target.closest('[data-hcard]');if(c){cardModal(c.dataset.hcard);return}var sk=e.target.closest('[data-hsk]');if(sk){d.remove();skPreview(sk.dataset.hsk);return}
-  if(e.target.id==='hClose'||e.target===d){d.remove();return}if(e.target.id==='hTour'){d.remove();tourView()}}}
+function helpOpen(k){k=k||S.helpK||'view';S.helpK=k;evt('help_open',{item:k,inBattle:!!(S.st&&S.st.phase==='battle')});
+ var rk=S.st&&S.st.phase==='battle'&&S.st.mode==='ranked',d=ppOpen({id:'help',big:true,cls:'hwin',xid:'hClose',title:esc(T('help.title')),hx:rk?'<span class="hrk">'+esc(T('help.rankedTimer'))+'</span>':'',
+  body:'<div class="hbd"><nav>'+HELP.map(function(h){return '<button data-hk="'+h+'"'+(h===k?' class="on"':'')+'>'+esc(T('help.k.'+h))+'</button>'}).join('')+'</nav><section id="hSec">'+helpBody(k)+'</section></div>'});
+ d.onclick=function(e){if(e.target===d||(e.target.closest&&e.target.closest('.ppx'))){ppClose(d);return}var b=e.target.closest('[data-hk]');if(b){helpOpen(b.dataset.hk);return}
+  var c=e.target.closest('[data-hcard]');if(c){var hk=S.helpK;ppClose(d);cardModal(c.dataset.hcard,function(){helpOpen(hk)});return}  /* 팝업 위에 쌓지 않고 바꿔 열고, 닫으면 도움말로 돌아감 */
+  var sk=e.target.closest('[data-hsk]');if(sk){ppClose(d);skPreview(sk.dataset.hsk);return}
+  if(e.target.id==='hTour'){ppClose(d);tourView()}}}
 function tourView(){coach([{sel:'.mec',title:'내 영역과 상대 영역',body:'왼쪽 아래가 나, 오른쪽 위가 상대예요'},{sel:'.mec .vc',title:'HP',body:'HP가 0이 되면 져요. 아래쪽 막대가 HP예요'},{sel:'.hand',title:'손패',body:'이번 턴에 쓸 수 있는 카드예요'},
  {sel:'.hand .bc',title:'카드 읽기',body:'이름·비용(E1)·종류 색·짧은 효과. 길게 누르면 자세히 봐요'},{sel:'#pills',title:'처리 순서',body:'카드는 종류별 순서대로 처리돼요. 위가 나, 아래가 상대예요'}],{onStep:function(i){evt('tutorial_step',{step:'view_'+i})}})}
 function stName(k){var d=ST[k]||[k];return S.lang==='ko'?d[0]:(d[1]||stDoc(ST_MAP[k]||k)[0]||d[0])}  /* 공개 연출 단계 칩은 영어(상세 01, 기획지시 11-05 2) */
@@ -1089,7 +1151,30 @@ var $=function(id){return document.getElementById(id)};
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.tok?{authorization:'Bearer '+S.tok}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
 function toast(m){var t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2200)}
-function ask(msg,yes,fn){var d=document.createElement('div');d.className='dlg';d.innerHTML='<div><p>'+esc(msg)+'</p><div class="row" style="justify-content:center"><button id="dN">취소</button><button class="pri" id="dY">'+esc(yes)+'</button></div></div>';document.body.appendChild(d);d.querySelector('#dN').onclick=function(){d.remove()};d.querySelector('#dY').onclick=function(){d.remove();fn()}}
+/* 공통 팝업 Popup(상세 01 2026-11-07 2절): 딤드 60%·머리줄 44(제목 왼쪽, ✕ 오른쪽 한 곳)·여백 16·버튼 40(주 버튼 맨 오른쪽)·작은 440/큰 600·본문만 스크롤.
+   팝업 위 팝업은 쌓지 않음(확인창만 stack). 같은 id로 다시 열면 내용만 바꿈(깜빡임 없음). Esc·딤드·✕로 닫힘(modal이면 딤드로 안 닫힘) */
+function ppOpen(o){var d=$(o.id),fresh=!d;if(!o.stack)document.querySelectorAll('.pp:not(.stk)').forEach(function(x){if(x.id!==o.id)ppClose(x)});
+ if(!d){d=document.createElement('div');d.id=o.id;document.body.appendChild(d)}d.className='pp'+(o.stack?' stk':'')+(fresh?'':' re')+(o.wcls?' '+o.wcls:'');
+ d.innerHTML='<div class="ppw '+(o.big?'ppl':'pps')+(o.cls?' '+o.cls:'')+'" role="dialog"><div class="pph"><b>'+o.title+'</b>'+(o.hx||'')+'<button class="ppx" id="'+(o.xid||o.id+'X')+'" aria-label="close">✕</button></div><div class="ppb">'+o.body+'</div>'+(o.btns?'<div class="ppf">'+o.btns+'</div>':'')+'</div>';
+ d._close=o.onClose||null;d.onclick=function(e){if((e.target===d&&!o.modal)||(e.target.closest&&e.target.closest('.ppx'))){e.stopPropagation();ppClose(d)}};return d}
+function ppClose(d){if(!d||!d.parentNode)return;d.remove();var f=d._close;d._close=null;if(f)f()}
+document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;var l=document.querySelectorAll('.pp');if(!l.length)return;e.preventDefault();e.stopPropagation();var d=l[l.length-1],x=d.querySelector('.ppx');if(x)x.click();else ppClose(d)},true);
+function ask(msg,yes,fn,o){o=o||{};var d=ppOpen({id:'dlg',stack:true,modal:true,title:esc(o.title||T('pp.confirm')),body:'<p class="ppm">'+esc(msg)+'</p>',btns:(o.one?'':'<button id="dN" class="sec">'+esc(T('pp.cancel'))+'</button>')+'<button class="pri" id="dY">'+esc(yes)+'</button>'});
+ if(d.querySelector('#dN'))d.querySelector('#dN').onclick=function(){ppClose(d)};d.querySelector('#dY').onclick=function(){ppClose(d);fn()}}
+/* 설정 줄(44, 왼쪽 라벨·오른쪽 값). bt = 전투 전용 줄 포함 */
+function menuRows(bt){var r=function(id,l,v){return '<button id="'+id+'" class="pprow"><span>'+esc(l)+'</span>'+(v!=null?'<em>'+esc(v)+'</em>':'')+'</button>'},on=function(off){return off?'꺼짐':'켜짐'};
+ return (bt?r('mSur','항복')+r('mLeft','왼손 모드',S.lefty?'켜짐':'꺼짐')+r('mHelp','도움말 다시보기')+r('mSpd','연출속도',SPD_LAB[S.rspd||'normal'])+(manualOk()?r('mMan','탭으로 행동',S.manual?'켜짐':'꺼짐'):''):'')
+  +r('mMus','음악',on(S.musOff))+r('mSnd','효과음',on(S.sndOff))+r('mVo','캐릭터 음성',on(S.voOff))+r('mVib','진동',on(S.vibOff))+r('mRmo','동작 줄이기',S.rmo?'켜짐':'꺼짐')+r('mSkm','스킬 연출',S.skm==='over'?'오버레이':'풀화면')+r('mHelpX',T('set.help'))+r('mLang',T('set.lang'),langName())}
+/* 밴·픽·스펠·덱·결과 설정 팝업(전투는 renderBattle에서 같은 줄로 염) */
+function setPop(){var d=ppOpen({id:'m4',title:esc(T('set.title')),xid:'mClose',body:menuRows(false),cls:'plst'}),re=function(){setPop()},P=S.st&&S.st.prep;
+ $('mMus').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();re()};$('mSnd').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();re()};
+ $('mVo').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');re()};$('mVib').onclick=function(){S.vibOff=!S.vibOff;lsSet('play_vib',S.vibOff?'0':'1');re()};
+ $('mRmo').onclick=function(){S.rmo=!S.rmo;lsSet('play_rmo',S.rmo?'1':'0');render();re()};
+ $('mSkm').onclick=function(){S.skm=S.skm==='over'?'full':'over';lsSet('play_skm',S.skm);var c=P&&(P.myPick||P.characters&&P.characters[0]);ppClose(d);if(c)skPreview(c)};
+ $('mHelpX').onclick=function(){ppClose(d);helpOpen()};$('mLang').onclick=function(){langPop()}}
+/* 언어 선택 팝업(작은 팝업, 고르면 바로 적용·닫힘) */
+function langPop(){S.menu=false;var d=ppOpen({id:'plang',title:esc(T('set.lang')),cls:'plst',body:LANGS.map(function(l){return '<button class="pprow" data-lang="'+l[0]+'"><span>'+esc(l[1])+'</span>'+(S.lang===l[0]?'<em>✓</em>':'')+'</button>'}).join('')});
+ d.querySelectorAll('[data-lang]').forEach(function(b){b.onclick=function(){S.lang=b.dataset.lang;lsSet('play_lang',S.lang);document.documentElement.lang=S.lang;ppClose(d);render()}})}
 function slotU(id){var f=S.A&&S.A.slots[id];return f?'url('+f.url+')':''}
 function ch(id){return (S.data&&S.data.characters[id])||{name:id}}
 function card(id){return (S.data&&S.data.cards[id])||{name:id,kind:'attack',cost:0,effect_text:''}}
@@ -1163,7 +1248,7 @@ function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);var dev=localSt
  document.querySelectorAll('[data-d]').forEach(function(b){b.onclick=function(){S.diff=b.dataset.d;localStorage.setItem('play_diff',S.diff);home()}});
  if($('inst'))$('inst').onclick=function(){PWA.install()};if($('ihok'))$('ihok').onclick=function(){lsSet('pwa_ios_hint','1');$('ihint').remove()};
  var devOk=function(){var d=$('dev').value.trim().toLowerCase();if(!/^[a-z0-9_-]{3,32}$/.test(d)){toast('아이디는 영문 소문자·숫자 3~32자');return null}var n=$('nick').value.trim();if(n&&!/^[\p{L}\p{N}_]{2,12}$/u.test(n)){toast('닉네임은 한글·영문·숫자·_ 2~12자');return null}localStorage.setItem('play_dev',d);lsSet('play_nick',n);return d};
- $('musT').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();this.textContent='음악 '+(S.musOff?'꺼짐':'켜짐')};$('sndT').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();this.textContent='효과음 '+(S.sndOff?'꺼짐':'켜짐')};$('voT').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');this.textContent='캐릭터 음성 '+(S.voOff?'꺼짐':'켜짐')};$('helpT').onclick=function(){helpOpen()};$('langT').onclick=function(){langNext();render()};
+ $('musT').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();this.textContent='음악 '+(S.musOff?'꺼짐':'켜짐')};$('sndT').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();this.textContent='효과음 '+(S.sndOff?'꺼짐':'켜짐')};$('voT').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');this.textContent='캐릭터 음성 '+(S.voOff?'꺼짐':'켜짐')};$('helpT').onclick=function(){helpOpen()};$('langT').onclick=function(){langPop()};
  $('go').onclick=function(){var d=devOk();if(d)start(d)};$('pvp').onclick=function(){var d=devOk();if(d)queueStart(d)};
  var code=sessionStorage.getItem('play_room');if(code&&!msg){if(S.tok)connect(code);else login(dev).then(function(){connect(code)}).catch(function(){sessionStorage.removeItem('play_room')})}}
 window.onPwaChange=function(){if(!S.st&&S.data&&$('go'))home()};
@@ -1225,7 +1310,9 @@ function render(){applyZoom();musicSync();var m=S.st;if(!m)return home();if(m.ph
  if(m.phase==='result')return renderResult(m);
  $('app').innerHTML='<div class="scr home"><div class="mu">준비 중…</div></div>'}
 function stepChips(cur){return '<div class="chips">'+[['pick','픽'],['loadout','스펠·덱'],['battle','전투']].map(function(x){return '<span class="chip'+(x[0]===cur||(cur==='ban'&&x[0]==='pick')?' on':'')+'">'+x[1]+'</span>'}).join('')+'</div>'}
-function topBar(m,label){return '<div class="top">'+stepChips(m.phase)+'<div class="mu small">'+esc(label)+'</div><div class="timer" id="tm"></div></div>'}
+function topBar(m,label,extra){return '<div class="top"><div class="tl">'+(m?stepChips(m.phase):'<div class="chips"><span class="chip on">'+esc(extra||'')+'</span></div>')+'<span class="mu">'+esc(label)+'</span></div><div class="timer" id="tm"></div><div class="tr">'+(m?'':'<button class="ib44" id="rmore" title="신고">⋯</button>')+'<button class="ib44" id="fSet" title="설정">'+SVG_GEAR+'</button><button class="ib44" id="fHelp" title="도움말">?</button></div></div>'}
+/* 위 줄 오른쪽 설정·도움말(밴·픽·스펠·덱·결과 공통) */
+function frmBind(){if($('fSet'))$('fSet').onclick=function(){setPop()};if($('fHelp'))$('fHelp').onclick=function(){helpOpen()}}
 function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.holo:0}}
 /* 밴·픽: 가로 3단(기획지시 2026-11-01 밴픽화면재배치). 왼쪽 내 선택 · 가운데 4열 목록(이 화면만 세로 스크롤, 줄 단위 멈춤) · 오른쪽 상대 "?".
    선택 테두리 자리는 처음부터 2pt(투명) → 눌러도 크기·위치 불변. 눌러 둔 캐릭터는 서버에 hint로 보내 시간 초과 때 그것으로 확정(37차) */
@@ -1233,62 +1320,64 @@ function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.h
 /* 화면 배율(사용자 요청 2026-11-02, 4K·태블릿·휴대폰): 기준 높이로 앱 전체를 확대·축소. 배치는 가상 크기 VW()×VH()로 계산하고 #app을 scale로 키움.
    몸통 위에 띄우는 팝업(카드 상세·툴팁·턴 배너)은 실제 화면 기준 */
 /* 기기별로 화면을 꽉 쓰게(사용자 요청 2026-11-02): 휴대폰 가로(높이 500 이하)는 높이 390 기준, 높이 700 이상(태블릿·노트북·4K)은 높이 800 기준으로 배율. 안전 영역 값도 같은 배율로 나눠 유지 */
-function bigScale(){var W=innerWidth,H=innerHeight,s=1;if(H<=500&&W>H)s=Math.max(1,Math.min(1.25,H/390,W/760));else if(H>=700&&W>H)s=Math.max(1,Math.min(H/800,W/1000));return Math.round(s*1000)/1000}
+/* 화면 배율(상세 01 2026-11-07 4절): s_base = min(폭/844, 높이/390). 데스크톱(안쪽 폭 ≥1180 & 높이 ≥600)은 절반만 따라 커지고 상한 1.3,
+   휴대폰·태블릿은 기존 값 그대로. 콘텐츠 최대 폭 960(prepPad) */
+function bigScale(){var W=innerWidth,H=innerHeight,w=window.__SAFE||{},sb=Math.min(W/844,H/390),s=1;S.dsk=(W-(w.l||0)-(w.r||0))>=1180&&H>=600;
+ if(S.dsk)s=Math.min(1.3,1+(sb-1)*0.5);else if(H<=500&&W>H)s=Math.max(1,Math.min(1.25,H/390,W/760));else if(H>=700&&W>H)s=Math.max(1,Math.min(H/800,W/1000));return Math.round(s*1000)/1000}
 function VW(){return innerWidth/(S.zs||1)}function VH(){return innerHeight/(S.zs||1)}
-function applyZoom(){var z=bigScale(),a=$('app'),ch=S.zs!==z;S.zs=z;if(ch)applySafe();if(!a)return;if(z!==1){a.style.width=(innerWidth/z)+'px';a.style.height=(innerHeight/z)+'px';a.style.right='auto';a.style.bottom='auto';a.style.transform='scale('+z+')';a.style.transformOrigin='0 0'}else{a.style.width='';a.style.height='';a.style.right='';a.style.bottom='';a.style.transform='';a.style.transformOrigin=''}}
-function prepPad(){var f=safe(),short=VH()<=500;return {t:Math.max(12,f.t),r:f.r+14,b:Math.max(12,f.b),l:f.l+14,short:short}}  // 상하단 12 확보(사용자 요청 2026-11-01), 안전 영역이 더 크면 그만큼  // 확정 버튼은 홈 표시줄 위로 12
+function applyZoom(){var z=bigScale(),a=$('app'),ch=S.zs!==z,de=document.documentElement;S.zs=z;de.style.setProperty('--zs',z);de.classList.toggle('dsk',!!S.dsk);if(ch)applySafe();if(!a)return;if(z!==1){a.style.width=(innerWidth/z)+'px';a.style.height=(innerHeight/z)+'px';a.style.right='auto';a.style.bottom='auto';a.style.transform='scale('+z+')';a.style.transformOrigin='0 0'}else{a.style.width='';a.style.height='';a.style.right='';a.style.bottom='';a.style.transform='';a.style.transformOrigin=''}}
+function prepPad(){var f=safe(),short=VH()<=500,W=VW(),x=S.dsk&&W>960?(W-960)/2:0;return {t:Math.max(8,f.t),r:f.r+14+x,b:Math.max(8,f.b),l:f.l+14+x,short:short}}  /* 공통 틀(상세 01 2026-11-07 1절): 좌우 14·위아래 8(안전 영역이 크면 그만큼), 데스크톱 콘텐츠 최대 폭 960 가운데 */
 function padCss(p){return 'padding:'+p.t+'px '+p.r+'px '+p.b+'px '+p.l+'px'}
-function pickLay(n){var W=VW(),H=VH(),p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
- var topH=short?30:40,topM=short?4:12,band=short?28:44,barH=short?40:46,barM=short?4:12,g8=8;  // 상하단 12 확보 후에도 휴대폰 5열 유지
- var listH=H-p.t-p.b-topH-topM-band-6-barH-barM,rowsFit=function(cols,w){return Math.ceil(n/cols)*(w*1.4+4)+(Math.ceil(n/cols)-1)*g8+8};
- var cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor(((listH-4-g8)/2)/1.4)-4,cw=Math.min(wW,wH,170);
- if(cw<72){cols=4;cw=Math.min(Math.floor((cen-8-3*g8)/4)-4,170)}
- var sideH=H-p.t-p.b-topH-topM-barH-barM-18,sw=Math.floor(Math.min(side,sideH*0.7/1.4));  // 사선(전투와 같게): 나 왼쪽 아래, 상대 오른쪽 위 — 높이를 다 쓰지 않아 위아래 차이가 보이게
- return {p:p,gap:gap,side:side,cen:cen,cw:cw,cols:cols,listH:listH,sw:sw,band:band,short:short,scroll:rowsFit(cols,cw)>listH+1}}
+/* 공통 틀: 위 줄 40 + 12 + 본문 + 12 + 아래 줄 48. 세 단의 위·아래 끝선 = 본문 안 가운데 같은 높이(--ch). 데스크톱 목록 카드 83·선택 카드 190pt 이내 */
+function pickLay(n){var W=VW(),H=VH(),p=prepPad(),gap=12,g8=8,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
+ var bodyH=H-p.t-p.b-40-12-12-48,rowsFit=function(cols,w){var r=Math.ceil(n/cols);return r*(w*1.4+4)+(r-1)*g8+8};
+ var cap=S.dsk?83:170,cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor(((bodyH-8-g8)/2-4)/1.4),cw=Math.min(wW,wH,cap);
+ if(cw<72){cols=4;cw=Math.min(Math.floor((cen-8-3*g8)/4)-4,cap)}
+ var scroll=rowsFit(cols,cw)>bodyH+1,chH=scroll?bodyH:Math.min(bodyH,Math.ceil(rowsFit(cols,cw))),sw=Math.floor(Math.min(side,(chH-26)/1.4,S.dsk?190/(S.zs||1):1e9));
+ return {p:p,gap:gap,side:side,cen:cen,cw:cw,cols:cols,listH:chH,chH:chH,sw:sw,short:p.short,scroll:scroll}}
 function renderPick(m){var P=m.prep,ban=m.phase==='ban',z=pickLay(P.characters.length),done=ban?!!P.myBan:!!P.myPick;
  var cur=ban?(P.myBan||S.banSel):(P.myPick||(S.pickSel&&P.banned.indexOf(S.pickSel)<0?S.pickSel:null));if(cur&&P.characters.indexOf(cur)<0)cur=null;
  var c=cur?ch(cur):null,badge=function(id){return (P.mastery.mine||{})[id]||1};
  var mine=cur?pvCard(cur,{w:z.sw,holo:0,badge:ban?1:badge(cur),tier:P.frame?frameOf(P.frame.mine).tier:null,cls:'rnd'+(ban?' ban':'')}):'<div class="emp" style="width:'+z.sw+'px">'+(ban?'밴할 캐릭터':'선택 전')+'</div>';
- var h='<div class="scr pk3" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--band:'+z.band+'px">'+topBar(m,done?(ban?'밴 완료':'선택 완료')+' · 상대 '+((ban?P.oppBanDone:P.oppPickDone)?'완료':'선택 중'):(ban?'상대가 못 쓰게 할 캐릭터를 고르세요':'캐릭터를 고르고 확정하세요 (동시·비공개)'))
+ var h='<div class="scr pk3 frm" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--ch:'+z.chH+'px">'+topBar(m,done?(ban?'밴 완료':'선택 완료')+' · 상대 '+((ban?P.oppBanDone:P.oppPickDone)?'완료':'선택 중'):(ban?'상대가 못 쓰게 할 캐릭터를 고르세요':'캐릭터를 고르고 확정하세요 (동시·비공개)'))
   +'<div class="pk3b"><div class="pcol me"><div class="lab2">'+esc(myName(P))+(ban?' · 내 밴':'')+'</div>'+mine+'</div>'  /* 카드 안에 이름이 있어 아래 이름 삭제(기획지시 2026-11-06 이름중복) */
   +'<div class="pmid"><div class="plist c'+z.cols+(z.scroll?' scr2':'')+'" id="plist" style="--pw:'+(z.cw+4)+'px">'+P.characters.map(function(id){var x=ch(id),bn=!ban&&P.banned.indexOf(id)>=0;
    return '<div class="pk'+(cur===id?' sel':'')+(bn?' off':'')+'" data-pick="'+id+'">'+pvCard(id,{w:z.cw,holo:0,badge:badge(id),sub:x.role||'',cls:'rnd'+(bn?' ban':'')})+'<i class="ck">✓</i></div>'}).join('')+'</div>'
-  +'<div class="pband">'+(c?'<div><b>'+esc(c.name)+'</b> <span class="mu">'+esc((c.job||'')+' · '+(c.role||''))+'</span> · 패시브 <b>'+esc(c.passive_name||'')+'</b> '+esc(c.passive_text||'')+'</div><div>액티브 <b>'+esc(c.active_name||'')+'</b> '+esc(c.active_text||'')+'</div>':'<div class="mu">캐릭터를 누르면 스킬이 보여요 · 시간이 지나면 '+(ban?'눌러 둔 캐릭터를 밴(없으면 밴 없음)':'눌러 둔 캐릭터 → 직전에 쓴 캐릭터 순으로 자동 선택')+'</div>')+'</div></div>'
+  +'</div>'
   +'<div class="pcol opp"><div class="lab2">'+esc(oppName(P,m))+'</div><div class="qcard" style="width:'+z.sw+'px">?</div></div></div>'
-  +'<div class="row bar pbar"><button id="qt">나가기</button><button class="pri confirm" id="pok"'+(done||!cur?' disabled':'')+(done?'':' data-lab="'+(ban?'밴 확정':'선택 확정')+'"')+'>'+(done?'대기 중…':(ban?'밴 확정':'선택 확정')+' ('+left(m.phaseDeadline)+'초 남음)')+'</button></div></div>';
+  +'<div class="row fbar pbar"><div class="fsub pband">'+(c?'<div><b>'+esc(c.name)+'</b> <span class="mu">'+esc((c.job||'')+' · '+(c.role||''))+'</span> · 패시브 <b>'+esc(c.passive_name||'')+'</b> '+esc(c.passive_text||'')+'</div><div>액티브 <b>'+esc(c.active_name||'')+'</b> '+esc(c.active_text||'')+'</div>':'<div class="mu">캐릭터를 누르면 스킬이 보여요 · 시간이 지나면 '+(ban?'눌러 둔 캐릭터를 밴(없으면 밴 없음)':'눌러 둔 캐릭터 → 직전에 쓴 캐릭터 순으로 자동 선택')+'</div>')+'</div><button id="qt" class="sec">나가기</button><button class="pri confirm" id="pok"'+(done||!cur?' disabled':'')+(done?'':' data-lab="'+(ban?'밴 확정':'선택 확정')+'"')+'>'+(done?'대기 중…':(ban?'밴 확정':'선택 확정')+' ('+left(m.phaseDeadline)+'초 남음)')+'</button></div></div>';
  var keep=$('plist')?$('plist').scrollTop:0;$('app').innerHTML=h;var pl=$('plist');pl.scrollTop=keep;
  var fade=function(){pl.classList.toggle('more',z.scroll&&pl.scrollTop+pl.clientHeight<pl.scrollHeight-4)};pl.onscroll=fade;fade();
  document.querySelectorAll('[data-pick]').forEach(function(el){el.onclick=function(){var id=el.dataset.pick;if(done||(!ban&&P.banned.indexOf(id)>=0))return;if(ban)S.banSel=id;else{if(S.pickSel!==id)voice(id,'PICK');S.pickSel=id}send({type:'hint',characterId:id});render()}});voWarm(ban?[]:P.characters,['PICK']);
- $('pok').onclick=confirmPick;$('qt').onclick=function(){quit();home()}}
+ $('pok').onclick=confirmPick;$('qt').onclick=function(){quit();home()};frmBind()}
 function confirmPick(){var m=S.st;if(!m||(m.phase!=='pick'&&m.phase!=='ban'))return;var P=m.prep;
  if(m.phase==='ban'){if(P.myBan||!S.banSel)return;send({type:'ban',characterId:S.banSel});return}
  var id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id});var b=$('pok');if(b){busy(b,'확정 중…')}}
 /* 스펠·덱(재배치 3): 왼쪽 상대(위)·나(아래) 같은 크기, 오른쪽 스펠 8종 한 줄(링+체크, 2개) + 설명 한 줄 + 덱 탭 + 덱 12장 한 줄(이름 없이, 길게 누르면 상세). 폭 44 미만이면 6×2 */
 /* 스펠·덱(사용자 요청 2026-11-01): 픽 화면과 같은 틀 — 왼쪽 아래 나, 오른쪽 위 상대(19% 열), 가운데 스펠 8종 + 설명 + 덱 탭 + 덱 12장 두 줄(6×2) */
-function loLay(){var W=VW(),H=VH(),p=prepPad(),short=p.short,gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
- var topH=short?30:40,topM=short?4:12,barH=short?40:46,barM=short?4:12,cenH=H-p.t-p.b-topH-topM-barH-barM,sideH=cenH-40,sw=Math.floor(Math.min(side,sideH*0.7/1.4));
- var spH=short?68:86,infoH=short?18:20,tabsH=short?34:38,avail=cenH-spH-infoH-tabsH-3*8,dw=Math.floor(Math.min((cen-5*6)/6,(avail-6)/2/1.4,96));
- return {p:p,gap:gap,side:side,cen:cen,sw:sw,dw:dw,two:true,short:short}}
+function loLay(){var W=VW(),H=VH(),p=prepPad(),gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
+ var bodyH=H-p.t-p.b-40-12-12-48,spH=p.short?68:80,tabsH=32,dw=Math.floor(Math.min((cen-5*8)/6,(bodyH-spH-tabsH-24-8)/2/1.4,S.dsk?80:96));  /* 스펠 줄·덱 탭·덱 카드 줄 사이 12, 설명은 아래 줄 보조 텍스트 */
+ var chH=S.dsk?Math.min(bodyH,Math.ceil(spH+tabsH+24+2*dw*1.4+8)):bodyH,sw=Math.floor(Math.min(side,(chH-26)/1.4,S.dsk?190/(S.zs||1):1e9));
+ return {p:p,gap:gap,side:side,cen:cen,sw:sw,dw:dw,two:true,short:p.short,spH:spH,chH:chH}}
 var DECK_DESC={aggro:'먼저 크게 때려요',balance:'공격·방어를 고루',defense:'막고 버티며 이겨요',variant:'받아치며 흐름을 뺏어요'};  // 덱 설명 한 줄(기획답변 46차: 12자 안팎 제안)
 var STYLE_KO={aggro:'공세',balance:'균형',defense:'수비',variant:'변칙'};
 function renderLoadout(m){var P=m.prep,z=loLay();S.load=S.load||lastLoad(P.myPick);var L=P.myLoadout||S.load,done=!!P.myLoadout;
  var preset=(S.data.presets[P.myPick]||[]).find(function(x){return x.slot===L.preset})||{cards:[]};
  var own=Object.keys(S.data.cards).filter(function(id){return S.data.cards[id].owner_character===P.myPick}).sort(),deck=preset.cards.concat(own);  // 덱 12장 = 프리셋 10 + 전용 2(엔진 buildDeck)
  var sp=L.spells,desc=sp.map(function(id){return sname(id)+': '+((S.data.spells[id]||{}).effect_text||'')}).join(' / ');
- var h='<div class="scr lo3 pk3" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px">'+topBar(m,done?'준비 완료 · 상대 '+(P.oppLoadoutDone?'완료':'선택 중'):'스펠 2개와 덱을 고르세요')
+ var h='<div class="scr lo3 pk3 frm" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--ch:'+z.chH+'px;--sph:'+z.spH+'px">'+topBar(m,done?'준비 완료 · 상대 '+(P.oppLoadoutDone?'완료':'선택 중'):'스펠 2개와 덱을 고르세요')
   +'<div class="pk3b"><div class="pcol me"><div class="lab2">'+esc(myName(P))+'</div>'+pvCard(P.myPick,{w:z.sw,holo:0,cls:'rnd',tier:P.frame?frameOf(P.frame.mine).tier:null,badge:(P.mastery.mine||{})[P.myPick]||1})+'</div>'
   +'<div class="rcol2"><div class="sprow">'+Object.keys(S.data.spells).map(function(id){var s=S.data.spells[id],ic=S.A.slots['SPELL_'+id],on=sp.indexOf(id)>=0;
    return '<button class="spb2'+(on?' on':'')+'" data-sp="'+id+'"'+(done?' disabled':'')+' data-tip="'+esc(s.name+' · 쿨다운 '+s.cooldown+'턴 — '+(s.effect_text||''))+'"><i style="'+(ic?'background-image:url('+ic.url+')':'')+'">'+(ic?'':esc(s.name.slice(0,1)))+'</i><b>'+esc(s.name)+'</b><small>쿨 '+s.cooldown+'</small>'+(on?'<em>✓</em>':'')+'</button>'}).join('')+'</div>'
-  +'<div class="small mu line1" id="spinfo">'+esc(desc||'스펠 2개를 고르세요')+'</div>'
-  +'<div class="row tabs">'+(S.data.presets[P.myPick]||[]).map(function(p){return '<button data-pre="'+p.slot+'" class="sm tab2'+(L.preset===p.slot?' on':'')+'"'+(done?' disabled':'')+'>'+(STYLE_KO[p.style]||p.style)+' 덱</button>'}).join('')+'<span class="small mu line1">'+esc(DECK_DESC[preset.style]||'')+' · 카드를 누르면 상세</span></div>'
+  +'<div class="row tabs">'+(S.data.presets[P.myPick]||[]).map(function(p){return '<button data-pre="'+p.slot+'" class="sm tab2'+(L.preset===p.slot?' on':'')+'"'+(done?' disabled':'')+'>'+(STYLE_KO[p.style]||p.style)+' 덱</button>'}).join('')+'</div>'
   +'<div class="deck2'+(z.two?' two':'')+'" style="--dw:'+z.dw+'px">'+deck.map(function(id){return bcCard(id,{w:z.dw,mode:'hand',cls:'mini',attr:' data-cid="'+id+'"'})}).join('')+'</div></div>'
   +'<div class="pcol opp"><div class="lab2">'+esc(oppName(P,m))+'</div>'+pvCard(P.oppPick,{w:z.sw,holo:0,cls:'rnd',tier:P.frame?frameOf(P.frame.opp).tier:null,badge:(P.mastery.opp||{})[P.oppPick]||1})+'</div></div>'
-  +'<div class="row bar pbar"><button id="qt">나가기</button><button class="pri confirm" id="ok"'+(done||sp.length!==2?' disabled':'')+(done?'':' data-lab="준비 완료"')+'>'+(done?'대기 중…':'준비 완료 ('+left(m.phaseDeadline)+'초 남음)')+'</button></div></div>';
+  +'<div class="row fbar pbar"><div class="fsub"><div id="spinfo">'+esc(desc||'스펠 2개를 고르세요')+'</div><div>'+esc((DECK_DESC[preset.style]||'')+' · 카드를 누르면 상세')+'</div></div><button id="qt" class="sec">나가기</button><button class="pri confirm" id="ok"'+(done||sp.length!==2?' disabled':'')+(done?'':' data-lab="준비 완료"')+'>'+(done?'대기 중…':'준비 완료 ('+left(m.phaseDeadline)+'초 남음)')+'</button></div></div>';
  $('app').innerHTML=h;
  document.querySelectorAll('[data-sp]').forEach(function(b){b.onclick=function(){var id=b.dataset.sp,i=S.load.spells.indexOf(id);if(i>=0)S.load.spells.splice(i,1);else{if(S.load.spells.length>=2)S.load.spells.shift();S.load.spells.push(id)}render()};
   b.onmouseenter=function(){var s=S.data.spells[b.dataset.sp];$('spinfo').textContent=s.name+': '+s.effect_text}});
  document.querySelectorAll('[data-pre]').forEach(function(b){b.onclick=function(){S.load.preset=Number(b.dataset.pre);render()}});
- $('ok').onclick=confirmLoad;$('qt').onclick=function(){quit();home()}}
+ $('ok').onclick=confirmLoad;$('qt').onclick=function(){quit();home()};frmBind()}
 function lastLoad(id){try{var x=JSON.parse(localStorage.getItem('play_load_'+id)||'null');if(x&&x.spells&&x.spells.length===2)return x}catch(e){}return {spells:['SP01','SP04'],preset:2}}
 function confirmLoad(){var P=S.st.prep;if(P.myLoadout||S.load.spells.length!==2)return;S.loadSelf=true;lsSet('play_load_'+P.myPick,JSON.stringify(S.load));send({type:'loadout',spells:S.load.spells,preset:S.load.preset});var b=$('ok');if(b){busy(b,'확정 중…')}}
 
@@ -1629,7 +1718,7 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
   :(m.timebankUsed||sub?'':'<button id="tb" class="b2" title="판당 1회 (T)">+15초</button>')+'<button class="b1 confirm'+(!sub&&tl>10&&(chosen.length||S.sel.spell||S.sel.active)?' go':'')+(!sub&&tl<=10?' red':'')+(!sub&&tl<=5&&tl>0?' beat':'')+'" id="ok"'+(sub?' disabled':' data-lab="확정"')+'>'+(sub?'확정됨':'확정 ('+tl+'초 남음)')+'</button>')+'<div class="cirs rz">'+rushCirc(b)+'</div></div>'
  +emoBub('me',P,X0,BB-208)+emoBub('opp',P,X1-127,BY)
  +(S.emoOpen?'<div class="emp4" style="left:'+(X0+40).toFixed(1)+'px;top:'+(L.Y0+40).toFixed(1)+'px">'+EMO_IDS.map(function(id){return '<button data-em="'+id+'" title="'+esc(EMO[id][1])+'">'+emoImg(id,'')+'</button>'}).join('')+'<small>남은 '+(S.emLeft==null?10:S.emLeft)+'회</small><button class="mute" id="emMute">상대 끄기</button></div>':'')
- +(S.menu&&!reveal?menu4().replace('class="menu m4"','class="menu m4" style="left:'+X0.toFixed(1)+'px;top:'+(L.Y0+40).toFixed(1)+'px"'):'')
+ 
  +'</div></div>';
  $('app').innerHTML=h;document.body.classList.toggle('rmo',!!S.rmo);
  if(!reveal)turnBanner(b);
@@ -1650,11 +1739,12 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
  $('act').onclick=function(){S.sel.active=!S.sel.active;sfx(S.sel.active?'place':'flip');render()};
  $('ok').onclick=function(){submitTurn()};if($('tb'))$('tb').onclick=function(){send({type:'timebank'});busy(this,'요청 중…')};
  $('menu').onclick=function(){var on=!S.menu;popClose('menu');S.menu=on;render()};
- if(S.menu){var cl=function(){S.menu=false;render()};$('mClose').onclick=cl;
+ if(S.menu&&!reveal)ppOpen({id:'m4',title:esc(T('set.title')),xid:'mClose',cls:'plst many',body:menuRows(true),onClose:function(){if(S.menu){S.menu=false;render()}}});else if($('m4')){var m4=$('m4');m4._close=null;m4.remove()}
+ if(S.menu&&!reveal){var cl=function(){S.menu=false;render()};$('mClose').onclick=cl;
   $('mSur').onclick=function(){S.menu=false;render();if(b.turn<4)return toast('항복은 4턴부터 할 수 있어요');ask('항복할까요? 패배로 끝나요.','항복',function(){send({type:'surrender'});busy($('ok'),'항복 처리 중…')})};
   $('mLeft').onclick=function(){S.lefty=!S.lefty;lsSet('play_lefty',S.lefty?'1':'');S.menu=false;render()};$('mHelp').onclick=function(){S.menu=false;lsSet(firstKey(),'{}');render();guide(true)};
   $('mSpd').onclick=function(){S.rspd=SPD_NEXT[S.rspd||'normal'];lsSet('play_rspd',S.rspd);render()};if($('mMan'))$('mMan').onclick=function(){S.manual=!S.manual;lsSet('play_manual',S.manual?'1':'');render()};
-  $('mSnd').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();render()};$('mVo').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');render()};if($('mHelpX'))$('mHelpX').onclick=function(){S.menu=false;render();helpOpen()};if($('mLang'))$('mLang').onclick=function(){langNext();render()};$('mMus').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();render()};$('mVib').onclick=function(){S.vibOff=!S.vibOff;lsSet('play_vib',S.vibOff?'0':'1');render()};
+  $('mSnd').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();render()};$('mVo').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');render()};if($('mHelpX'))$('mHelpX').onclick=function(){S.menu=false;render();helpOpen()};if($('mLang'))$('mLang').onclick=function(){langPop()};$('mMus').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();render()};$('mVib').onclick=function(){S.vibOff=!S.vibOff;lsSet('play_vib',S.vibOff?'0':'1');render()};
   $('mRmo').onclick=function(){S.rmo=!S.rmo;lsSet('play_rmo',S.rmo?'1':'0');render()};$('mSkm').onclick=function(){S.skm=S.skm==='over'?'full':'over';lsSet('play_skm',S.skm);render();skPreview(me.char)}}
  if(S.guideOn&&S.guideShow)S.guideShow();
  if(b.turn===1&&!sub&&S.guideTurn!==m.code+':1'&&(S.forceGuide||Number(lsGet('play_games_'+(lsGet('play_dev')||''))||0)<3)){S.guideTurn=m.code+':1';setTimeout(function(){guide(false)},300)}}
@@ -1701,7 +1791,7 @@ function skillCut(chr,sd,d,keep){var c=ch(chr),col=SKC[c.faction]||'rgba(107,122
  var end=function(){if(e.parentNode)e.remove()};e.querySelector('.sskip').onclick=function(ev){ev.stopPropagation();end();if(S.anim&&S.anim.adv)S.anim.adv()};if(keep){e.classList.add('pv');return}setTimeout(end,ms)}  /* keep = 설정 미리 보기: 1회 재생 후 마지막 장면에서 정지 */
 /* 설정의 스킬 연출 미리 보기: 닫기·바깥 탭까지 반복(끝나면 0.5초 쉬고 다시), 방식 전환은 바로 그 방식으로 이어서(기획지시 2026-11-06 스킬연출보기) */
 function skPreview(chr){skPrevStop();var pv=document.createElement('div');pv.id='skpv';pv.className='skpv';
- var lab=function(){return '<div class="skpb"><button data-m="full"'+(S.skm!=='over'?' class="on"':'')+'>풀화면</button><button data-m="over"'+(S.skm==='over'?' class="on"':'')+'>오버레이</button><button data-r="1">다시 보기 ↻</button><button class="skx" data-x="1">닫기 ✕</button></div>'};
+ var lab=function(){return '<div class="pph skph"><b>스킬 보기 · '+esc(ch(chr).active_name||ch(chr).name||'')+'</b><button class="ppx skx" data-x="1" aria-label="close">✕</button></div><div class="skpb"><button data-m="full" class="sec'+(S.skm!=='over'?' on':'')+'">풀화면</button><button data-m="over" class="sec'+(S.skm==='over'?' on':'')+'">오버레이</button><button data-r="1" class="pri">다시 보기 ↻</button></div>'};
  pv.innerHTML=lab();document.body.appendChild(pv);S.skPrev={chr:chr,t:0};
  /* 1회만 재생하고 마지막 장면에서 정지(스킬명·설명 유지), 배경 이펙트만 창이 열려 있는 동안 반복. 다시 보기를 눌러야 다시 1회(상세 01 2026-11-06 변경) */
  var run=function(){if(!S.skPrev)return;skillCut(chr,'me',2000,true)};
@@ -1733,23 +1823,22 @@ function pickCard(uid){var m=S.st,b=m.battle,me=b.me;if(me.mySubmission)return;v
  if(S.sel.cards.length>=(b.rules.cards_per_turn_max||3))return toast('전투카드는 한 턴에 3장까지(스펠·액티브는 따로 1개씩)');
  if(sumCost(me,S.sel.cards.concat([uid]))>me.energy){vib(30);return toast('에너지가 부족해요')}
  S.sel.cards.push(uid);sfx('place');render()}
-function submitTurn(force){var m=S.st;if(!m||m.phase!=='battle'||m.battle.me.mySubmission||S.anim||S.guideOn||document.querySelector('.dlg'))return;
+function submitTurn(force){var m=S.st;if(!m||m.phase!=='battle'||m.battle.me.mySubmission||S.anim||S.guideOn||document.querySelector('#dlg'))return;
  if(!force&&!S.sel.cards.length&&m.battle.me.energy>0)return ask('아무것도 내지 않고 확정할까요?','확정',function(){submitTurn(true)});
  send({type:'act',turn:m.battle.turn,cards:S.sel.cards,spell:S.sel.spell,active:S.sel.active});var ok=$('ok');if(ok){busy(ok,'확정 중…')}}
 
 /* ---------- 카드 상세(호버 0.2초 / 길게 누르기 0.35초, 상세 01) ---------- */
-function peekHide(){var o=$('peek');if(o)o.remove()}
-function peekShow(id){peekHide();if(battleOn())return cardModal(id);var k=card(id),p=phOf(id),w=Math.floor(Math.min(300,innerHeight*0.42*5/7,innerWidth*0.62)),d=document.createElement('div');d.id='peek';d.className='peek';
+function peekHide(){ppClose($('peek'))}
+function peekShow(id){peekHide();if(battleOn()||PK.pt!=='mouse')return cardModal(id);  /* 마우스 호버 미리보기만 툴팁형, 터치·탭은 카드 상세 팝업 */var k=card(id),p=phOf(id),w=Math.floor(Math.min(300,innerHeight*0.42*5/7,innerWidth*0.62)),d=document.createElement('div');d.id='peek';d.className='peek';
  d.innerHTML=bcCard(id,{w:w,mode:w>=257?'detail':'hand'})+'<div class="pinfo" style="width:'+Math.max(w,260)+'px"><b>'+esc(k.name)+'</b><div class="mu small">'+esc(KIND_KO[k.kind]||k.kind)+' · 비용 '+k.cost+' · 처리 단계 '+phLab(id)+(k.owner_character?' · '+esc(ch(k.owner_character).name)+' 전용':'')+'</div><p>'+esc(k.effect_text)+'</p><div class="aff">'+(AFF[k.kind]||'')+'</div></div>';document.body.appendChild(d)}
 var PK={t:0,lp:false,key:null};
-function cardModal(id){var k=card(id),H=innerHeight,cw=Math.round(Math.min(H*0.74*5/7,innerWidth*0.34)),d=document.createElement('div');d.id='peek';d.className='cdm bt4';d.style.setProperty('--k',Math.min(innerWidth/788,H/360).toFixed(4));
- d.innerHTML='<div class="cdw"><div class="cdl">'+bcCard(id,{w:cw,mode:'hand',face:true,fig:true})+'</div><div class="cdr"><small>'+esc((KIND_KO[k.kind]||k.kind)+' · 비용 E'+k.cost+' · 처리 단계 '+phLab(id)+(k.owner_character?' · '+ch(k.owner_character).name+' 전용':''))+'</small><b>'+esc(k.name)+'</b><p>'+esc(k.effect_text||'')+'</p><div class="aff">'+(AFF[k.kind]||'')+'</div></div></div><div class="cdx">화면을 누르면 닫혀요</div>';
- d.onclick=function(){peekHide()};document.body.appendChild(d)}
+/* 카드 상세 = 큰 팝업(600). 카드 높이는 팝업 본문 높이 안(안전 영역 90% − 머리줄 44 − 여백 32) */
+function cardModal(id,back){var k=card(id),u=S.zs||1,cw=Math.round(Math.min(200*u,(innerHeight*0.9-76*u)*5/7));
+ ppOpen({id:'peek',big:true,wcls:'cdm bt4',title:esc(k.name),body:'<div class="cdw"><div class="cdl">'+bcCard(id,{w:cw,mode:'hand',face:true,fig:true})+'</div><div class="cdr"><small>'+esc((KIND_KO[k.kind]||k.kind)+' · 비용 E'+k.cost+' · 처리 단계 '+phLab(id)+(k.owner_character?' · '+ch(k.owner_character).name+' 전용':''))+'</small><p>'+esc(k.effect_text||'')+'</p><div class="aff">'+(AFF[k.kind]||'')+'</div></div></div>',onClose:back||null})}
 /* 카드 상세·한 줄 설명: 호버 0.2초 / 길게 누르기 0.35초. 다시 그려져도 같은 대상이면 닫지 않음(효과연출 5: 누르는 동안 계속 표시) */
-function stModal(el){var L;try{L=JSON.parse(el.dataset.st)}catch(e){return}if(!L||!L.length)return;peekHide();var H=innerHeight,d=document.createElement('div');d.id='peek';d.className='cdm bt4 stm';d.style.setProperty('--k',Math.min(innerWidth/788,H/360).toFixed(4));
+function stModal(el){var L;try{L=JSON.parse(el.dataset.st)}catch(e){return}if(!L||!L.length)return;peekHide();
  var ic=function(x,c){return '<i class="sti'+(c||'')+'" style="--bc:'+x.c+(x.u?';background-image:url('+x.u+')':'')+'">'+(x.u?'':esc(x.c1))+'</i>'};
- d.innerHTML='<div class="cdw"><div class="cdl">'+ic(L[0],' big')+'</div><div class="cdr">'+L.map(function(x,i){return '<div class="stb">'+(L.length>1?ic(x):'')+'<div><small>'+esc((x.w==='me'?'나':'상대')+' · 상태'+(x.p?' · '+x.p:''))+'</small><b>'+esc(x.n)+'</b><p>'+esc(x.d||'설명 준비 중')+'</p></div></div>'}).join('')+'</div></div><div class="cdx">화면을 누르면 닫혀요</div>';
- d.onclick=function(){peekHide()};document.body.appendChild(d)}
+ ppOpen({id:'peek',big:true,wcls:'cdm bt4 stm',title:esc(L.length>1?L.map(function(x){return x.n}).join(' · '):L[0].n),body:'<div class="cdw"><div class="cdl">'+ic(L[0],' big')+'</div><div class="cdr">'+L.map(function(x,i){return '<div class="stb">'+(L.length>1?ic(x):'')+'<div><small>'+esc((x.w==='me'?'나':'상대')+' · 상태'+(x.p?' · '+x.p:''))+'</small><b>'+esc(x.n)+'</b><p>'+esc(x.d||'설명 준비 중')+'</p></div></div>'}).join('')+'</div></div>'})}
 function tipHide(){var o=$('tip');if(o)o.remove()}
 function tipShow(el){tipHide();var t=document.createElement('div');t.id='tip';t.className='tip';t.textContent=el.dataset.tip;document.body.appendChild(t);
  var r=el.getBoundingClientRect(),w=t.offsetWidth,h=t.offsetHeight,m=12,x=Math.min(innerWidth-w-m,Math.max(m,r.left+r.width/2-w/2)),y=r.top-h-6;if(y<m)y=r.bottom+6;if(y+h>innerHeight-m)y=Math.max(m,innerHeight-h-m);t.style.left=x+'px';t.style.top=y+'px'}
@@ -1757,10 +1846,10 @@ function infoEl(e){return e.target.closest&&e.target.closest('[data-cid],[data-t
 function infoKey(el){return el?(el.dataset.cid||'')+'|'+(el.dataset.tip||'')+'|'+(el.dataset.uid||el.id||el.dataset.bi||''):null}
 function infoShow(el){if(el.dataset.cid){if(S.wide&&$('wdet')&&S.st&&S.st.phase==='battle')wdetCard(el.dataset.cid);else peekShow(el.dataset.cid)}else tipShow(el)}
 function infoHide(){peekHide();tipHide()}
-document.addEventListener('pointerover',function(e){if(e.pointerType&&e.pointerType!=='mouse')return;if($('peek')&&$('peek').classList.contains('cdm'))return;var el=infoEl(e),k=infoKey(el);if(k===PK.key)return;if(el&&el.dataset.cid&&battleOn()){PK.key=k;clearTimeout(PK.t);tipHide();return}PK.key=k;clearTimeout(PK.t);infoHide();if(el)PK.t=setTimeout(function(){if(document.body.contains(el))infoShow(el)},200)});
+document.addEventListener('pointerover',function(e){PK.pt=e.pointerType||'mouse';if(e.pointerType&&e.pointerType!=='mouse')return;if($('peek')&&$('peek').classList.contains('cdm'))return;var el=infoEl(e),k=infoKey(el);if(k===PK.key)return;if(el&&el.dataset.cid&&battleOn()){PK.key=k;clearTimeout(PK.t);tipHide();return}PK.key=k;clearTimeout(PK.t);infoHide();if(el)PK.t=setTimeout(function(){if(document.body.contains(el))infoShow(el)},200)});
 /* 터치: 길게 누르기 0.35초 = 상세. 손가락이 8pt 넘게 움직이면(스와이프) 상세를 띄우지 않는다.
    스펠·덱 화면의 덱 카드는 짧게 탭해도 상세(스와이프는 무시). 상세는 다음 탭에서 닫힘 */
-document.addEventListener('pointerdown',function(e){if(!e.pointerType)return;var el=infoEl(e);if(e.pointerType==='mouse'&&!(el&&el.dataset.cid&&battleOn()))return;PK.lp=false;PK.mv=false;PK.x=e.clientX;PK.y=e.clientY;PK.at=Date.now();PK.el2=el;clearTimeout(PK.t);if(!el)return;
+document.addEventListener('pointerdown',function(e){if(!e.pointerType)return;PK.pt=e.pointerType;var el=infoEl(e);if(e.pointerType==='mouse'&&!(el&&el.dataset.cid&&battleOn()))return;PK.lp=false;PK.mv=false;PK.x=e.clientX;PK.y=e.clientY;PK.at=Date.now();PK.el2=el;clearTimeout(PK.t);if(!el)return;
  PK.t=setTimeout(function(){if(PK.mv)return;PK.lp=true;if(el.dataset.st&&battleOn())stModal(el);else infoShow(el);vib(10)},350)});
 document.addEventListener('pointermove',function(e){if(!e.pointerType||e.pointerType==='mouse'||PK.mv)return;if(Math.abs(e.clientX-PK.x)>8||Math.abs(e.clientY-PK.y)>8){PK.mv=true;clearTimeout(PK.t);if(PK.lp){PK.lp=false;infoHide()}}},{passive:true});
 ['pointerup','pointercancel'].forEach(function(n){document.addEventListener(n,function(e){if(!e.pointerType)return;clearTimeout(PK.t);if(e.pointerType==='mouse')return;
@@ -1776,7 +1865,7 @@ document.addEventListener('click',function(e){if(PK.lp){PK.lp=false;e.stopPropag
 /* 피해 계산 내역(효과연출 9): 공격력×계수×배율×방어 경감×치명×폭주×받는 배율 − 실드 */
 function calcShow(js){var c;try{c=JSON.parse(js)}catch(e){return}var f=function(n){return Math.round(n*100)/100};
  var rows=[['공격력',c.atk],['계수','×'+c.coef],['버프·약화 배율','×'+f(c.mult)],['방어 경감','×'+f(c.def)+' (100/(100+DEF))'],['치명',c.crit>1?'×'+f(c.crit):'없음'],['폭주',c.rush>1?'×'+f(c.rush):'없음'],['받는 피해 배율',c.recv!==1?'×'+f(c.recv):'없음']].concat(c.g&&c.g!==1?[['전역 피해 배율','×'+f(c.g)]]:[]).concat([['계산 피해',c.pre],['실드 흡수',c.abs||0],['HP 피해',c.v]]);
- var d=document.createElement('div');d.className='dlg';d.innerHTML='<div><b>피해 계산 내역</b><table class="calc">'+rows.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'}).join('')+'</table><button class="pri" id="cOk">닫기</button></div>';document.body.appendChild(d);d.querySelector('#cOk').onclick=function(){d.remove()}}
+ var d=ppOpen({id:'pcalc',title:'피해 계산 내역',body:'<table class="calc">'+rows.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'}).join('')+'</table>',btns:'<button class="pri" id="cOk">닫기</button>'});d.querySelector('#cOk').onclick=function(){ppClose(d)}}
 
 /* ---------- 효과 자막(기획지시 전투가독성 3): "누구 · 카드 이름: 결과" ---------- */
 function cn(id){return '<span class="cn" data-cid="'+id+'">'+esc(card(id).name)+'</span>'}
@@ -1951,15 +2040,15 @@ function stamp(el,t){if(!el)return;var s=document.createElement('div');s.classNa
 /* 결과(재배치 4): 1:1 분할. 왼쪽 50% = 전신 PNG의 카드 영역(3:4)만, 공용 어두운 배경, 폭을 꽉 채우고 위 맞춤(넘치는 아래는 잘림), 아래 35% 마스크. 오른쪽 50% = 데이터 */
 function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{},src=a.full;if(!src)return '';var f=safe(),k=Math.min(VW()/788,VH()/360),l=Math.max(0,Math.max(60*k,f.l)-f.l);return 'background-image:url('+src.url+');left:'+l.toFixed(1)+'px;top:'+(40*k).toFixed(1)+'px;width:'+(320*k).toFixed(1)+'px;height:'+(569*k).toFixed(1)+'px;right:auto;bottom:auto'}  /* 결과: 전신 PNG(시안 320×569, 사용자 요청 2026-11-06 원래대로) */
 function renderResult(m){var rk0=m.code+':'+((m.last&&m.last.id)||'');if(S.resSnd!==rk0){S.resSnd=rk0;var Lv=m.last||{},pv=(Lv.picks||[])[m.you],wv=Lv.outcome!=='draw'&&Lv.outcome!=='void'&&((Lv.outcome==='a')===(m.you===0));if(pv&&(Lv.reason==='hp'||Lv.reason==='turn_limit')&&Lv.outcome!=='draw'&&Lv.outcome!=='void')setTimeout(function(){voice(pv,wv?'WIN':'LOSE')},300);  /* 결과 진입(K.O. 연출 끝) 0.3초 뒤 내 캐릭터 WIN/LOSE, 항복·이탈은 없음(상세 01) */var L0=m.last||{},w0=L0.outcome!=='draw'&&L0.outcome!=='void'&&((L0.outcome==='a')===(m.you===0));sfx(L0.outcome==='draw'||L0.outcome==='void'?'turn':w0?'win':'lose')}var L=m.last||{},you=m.you,win=L.outcome!=='draw'&&L.outcome!=='void'&&((L.outcome==='a')===(you===0)),draw=L.outcome==='draw',mine=(L.picks||[])[you];
- var f=safe(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((VW()-f.l-f.r)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
+ var pp=prepPad(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((VW()-pp.l-pp.r-12)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
  var mode=m.mode,rk=L.rank&&L.rank[you],ec=L.econ&&L.econ[you];
- $('app').innerHTML='<div class="res3'+(win?' win':draw?' draw':' lose')+'"><div class="rl"><div class="rimg" style="'+(mine?artFill(mine,half):'')+'"></div></div>'
-  +'<div class="rr"><button class="ib rmenu" id="rmore" title="더보기">⋯</button><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(L.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[L.reason]||L.reason||''))+(mine?' · '+esc(ch(mine).name):'')+'</div>'
+ $('app').innerHTML='<div class="scr frm res3'+(win?' win':draw?' draw':' lose')+'" style="'+padCss(pp)+'">'+topBar(null,'',T('res.title'))+'<div class="rbody"><div class="rl"><div class="rimg" style="'+(mine?artFill(mine,half):'')+'"></div></div>'
+  +'<div class="rr"><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(L.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[L.reason]||L.reason||''))+(mine?' · '+esc(ch(mine).name):'')+'</div>'
   +'<div class="stats">'+stat('판 길이',(L.turn||0)+'턴')+stat('준 피해',st.dealt!=null?st.dealt:'-')+stat('받은 피해',st.taken!=null?st.taken:'-')+stat('실드로 막은 피해',st.blocked!=null?st.blocked:'-')+stat('남은 HP',Math.round(100*hp[0]/hp[1])+'%')+'</div>'
-  +'<div class="rew">'+(rk?'<div>RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+'</div>':'')+(ec&&ec.gold?'<div>골드 +'+ec.gold+'</div>':'')+(mode==='practice'?'<div class="mu small">AI 대전은 RP·숙련도 변화가 없어요(총괄 8장)</div>':'')+'</div>'
-  +'<div class="row" style="gap:8px"><button id="home">로비</button><button class="pri confirm" id="again">다시 하기 (Enter)</button></div></div></div>';
+  +'<div class="rew">'+(rk?'<div>RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+'</div>':'')+(ec&&ec.gold?'<div>골드 +'+ec.gold+'</div>':'')+'</div></div></div>'
+  +'<div class="row fbar"><div class="fsub">'+(mode==='practice'?'<div>AI 대전은 RP·숙련도 변화가 없어요(총괄 8장)</div>':'')+'</div><button id="home" class="sec">로비</button><button class="pri confirm" id="again">다시 하기 (Enter)</button></div></div>';frmBind();
  $('home').onclick=function(){quit();home()};$('again').onclick=function(){busy(this,'준비 중…');again()};
- $('rmore').onclick=function(){ask('신고 — 상대: '+(m.members[1-you]&&m.members[1-you].ai?'AI (신고 대상 아님)':'상대 플레이어')+'. 정식 신고는 상세 13 사유로 접수돼요(테스트 화면은 접수하지 않음).','닫기',function(){})}}
+ $('rmore').onclick=function(){ask('신고 — 상대: '+(m.members[1-you]&&m.members[1-you].ai?'AI (신고 대상 아님)':'상대 플레이어')+'. 정식 신고는 상세 13 사유로 접수돼요(테스트 화면은 접수하지 않음).','닫기',function(){},{one:true,title:'신고'})}}
 function again(){quit();var d=localStorage.getItem('play_dev');api('/v1/practice',{difficulty:S.diff,defaults:defs()}).then(function(j){S.st=null;S.load=null;connect(j.code)}).catch(function(){login(d).then(function(){return api('/v1/practice',{difficulty:S.diff,defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home(e.message)})})}
 
 /* ---------- 타이머·홀로·키 ---------- */
