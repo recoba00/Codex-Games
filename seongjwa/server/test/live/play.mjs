@@ -64,7 +64,7 @@ try {
     await page.waitForSelector(".toast");  // 아이디 없으면 시작 안 함
     await page.fill("#dev", `play-${vp.width}-${process.pid}`);
     await page.click("#play");
-    await page.waitForSelector("[data-pick]", { timeout: 15000 });
+    await page.waitForSelector("[data-pick]", { timeout: 25000 }).catch(async (e) => { console.log("START", vp.name, JSON.stringify(await page.evaluate(() => ({ q: document.querySelector("#qbox")?.textContent, toast: [...document.querySelectorAll(".toast")].map((t) => t.textContent), app: document.querySelector("#app")?.firstElementChild?.className, st: S.st && S.st.phase, tok: !!S.tok, room: sessionStorage.getItem("play_room") })))); throw e; });
     await noScroll(page, "픽");
     await page.screenshot({ path: `/tmp/play_pick_${vp.width}${vp.safe ? 's' : ''}.png` });
     const rowsTop = await page.$$eval("[data-pick]", (x) => x.map((e) => Math.round(e.getBoundingClientRect().top)));
