@@ -57,12 +57,13 @@ try {
     const errors = [];
     page.on("pageerror", (e) => { errors.push(String(e)); console.log("PAGEERR", String(e)); });
     await page.goto(`${API}/play`);
-    await page.waitForSelector("#go");
+    await page.waitForSelector("#lobby #play");  // 로비(Figma 로비 시안, 사용자 요청 2026-11-07)
     assert.equal(await page.inputValue("#dev"), "", "처음 열면 아이디를 묻는다");
-    await page.click("#go");
+    assert.equal(await page.getAttribute('[data-mode="ai"]', "class"), "on", "처음 모드는 AI 대전");
+    await page.click("#play");
     await page.waitForSelector(".toast");  // 아이디 없으면 시작 안 함
     await page.fill("#dev", `play-${vp.width}-${process.pid}`);
-    await page.click("#go");
+    await page.click("#play");
     await page.waitForSelector("[data-pick]", { timeout: 15000 });
     await noScroll(page, "픽");
     await page.screenshot({ path: `/tmp/play_pick_${vp.width}${vp.safe ? 's' : ''}.png` });
@@ -254,7 +255,7 @@ try {
     for (const [id, nick] of [[`pvpa${process.pid}`, `알파${process.pid % 1000}`], [`pvpb${process.pid}`, `베타${process.pid % 1000}`]]) {
       const c = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
       const pg = await c.newPage(); pg.on("pageerror", (e) => { throw e; });
-      await pg.goto(`${API}/play`); await pg.fill("#dev", id); await pg.fill("#nick", nick); await pg.click("#pvp");
+      await pg.goto(`${API}/play`); await pg.click('[data-mode="rank"]'); await pg.fill("#dev", id); await pg.fill("#nick", nick); await pg.click("#play");
       pages.push([pg, nick]);
     }
     for (const [pg] of pages) await pg.waitForSelector("[data-pick],[data-ban]", { timeout: 30000 });
