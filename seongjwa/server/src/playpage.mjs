@@ -1383,7 +1383,7 @@ function queueStart(d){var qb=$('qbox'),pv=$('play');if(S.qws){try{S.qws.send('{
    else if(m.type==='timeout'){toast('지금 접속한 상대가 없어요. 잠시 뒤 다시 하거나 AI 대전을 해 보세요')}};
   ws.onclose=function(){if(S.qws===ws){S.qws=null;if(!S.st)home()}}})
  .catch(function(e){S.qws=null;home(QERR[e.message]||('매칭 실패: '+e.message))})}
-function login(d){return api('/v1/auth/dev',{devId:d}).then(function(j){S.tok=j.accessToken})}
+function login(d){if(S.loginP&&S.loginD===d)return S.loginP;S.loginD=d;S.loginP=api('/v1/auth/dev',{devId:d}).then(function(j){S.tok=j.accessToken;S.loginP=null}).catch(function(e){S.loginP=null;throw e});return S.loginP}  /* 로비 자동 로그인과 플레이가 겹쳐도 한 번만(두 번째 로그인이 앞 세션을 끊지 않게) */
 function defs(){var l=lsGet('play_last'),ld=lastLoad(l);return {preferred:l?[l]:[],spells:ld.spells,preset:ld.preset}}
 function start(d){var pb=$('play');if(pb){pb.classList.add('busy');pb.querySelector('small').textContent='AI 대전 준비 중…'}(S.tok?Promise.resolve():login(d).then(ensureName)).then(function(){return api('/v1/practice',{defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home('시작 실패: '+e.message)})}  /* 난이도 선택 없음(사용자 요청 2026-11-07): 서버 기본 '보통' */
 function connect(code){sessionStorage.setItem('play_room',code);if(S.room!==code){S.room=code;S.emo={};S.emLeft=null;S.emoOpen=false;S.hlog={};S.lastOpp=null;S.pickedSelf=null;S.loadSelf=false;S.load=null;S.menu=false}api('/v1/rooms/'+code+'/ticket',{}).then(function(j){
