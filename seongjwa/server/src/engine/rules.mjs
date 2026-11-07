@@ -8,7 +8,7 @@ export const RULE_DEFAULTS = Object.freeze({
   rush_dmg_step: 0.5,  // 시트 설정값 기준(43차, 라이브 v38 = 0.5). 데이터에 값이 있으면 그 값을 씀
   rush_heal_cut: 0.5,
   crit_mult: 1.5,
-  dmg_global_mult: 1,        // 전역 피해 배율(시트 설정값, 기획답변 42차): 공격·반격·액티브 피해 최종값에 곱함. 작열 틱은 제외
+  dmg_global_mult: 1.3,      // 전역 피해 배율(시트 설정값, 기획답변 42차·82차 대체값 1.3): 공격·반격·액티브 피해 최종값에 곱함. 작열 틱은 제외
   reconnect_grace_sec: 60,
   reveal_max_sec: 20,        // 공개 연출 상한(총괄 6장, 2026-11-01 10→20초 가안). 양쪽이 연출을 끝내면 바로 다음 선택
   rush_siren_sec: 8,         // 폭주 턴 선택 단계 사이렌 간격(상세 01, 가안 8, 시트 설정값 추가 대기)
@@ -64,14 +64,14 @@ export const CARD_PARAM_DEFAULTS = Object.freeze({
 });
 
 export const CHARACTER_PARAM_DEFAULTS = Object.freeze({
-  AU: { passiveShieldBonus: 0.2, passiveCarry: 0.5, activeMult: 1.5 },
-  PY: { passiveAtkPer10: 0.04, activeTurns: 2, activeTakenUp: 0.15, activeHits: 2, activeHitMult: 1 },  // 업화: 공격 카드 타수×activeHits, 피해×activeHitMult
+  AU: { passiveShieldBonus: 0.1, passiveCarry: 0.25, activeMult: 1.2 },  // 대체값 = 라이브 v38 시트 `캐릭터`(기획답변 82차)
+  PY: { passiveAtkPer10: 0.02, activeTurns: 2, activeTakenUp: 0.25, activeHits: 1, activeHitMult: 1.3 },  // 업화: 공격 카드 타수×activeHits, 피해×activeHitMult
   IG: { passiveChance: 0.25, activeMult: 2 },
-  SE: { passiveRegen: 0.03, passiveShieldCap: 0.1, activeLookback: 2 },
-  SL: { passiveFreeCards: 1, activeNoCarryTurns: 1 },  // 순풍: 매 턴 처음 내는 1E 카드 N장 0E / 회오리: 상대 이월 0 N턴
+  SE: { passiveRegen: 0.02, passiveShieldCap: 0.1, activeLookback: 2 },
+  SL: { passiveFreeCards: 2, activeNoCarryTurns: 1 },  // 순풍: 매 턴 처음 내는 1E 카드 N장 0E / 회오리: 상대 이월 0 N턴
   TE: { passiveFlood: 0.2, passiveEbb: 0.2, activeTurns: 2 },
-  UM: { passiveCritBonus: 15, passiveHpBelow: 0.5, activePct: 0.35 },
-  SI: { passiveDraw: 1, activeEnergyDown: 1, activeSeal: 1 },
+  UM: { passiveCritBonus: 15, passiveHpBelow: 0.5, activePct: 0.45 },
+  SI: { passiveDraw: 2, activeEnergyDown: 1, activeSeal: 1 },
   MO: { passiveReduce: 0.15, activePerDebuff: 0.06, activeMaxDebuffs: 5 }  // 영혼 수확 6% (기획답변 9차, 총괄 4장)
 });
 

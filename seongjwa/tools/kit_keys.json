@@ -1,22 +1,22 @@
 {
   "AU": {
     "passive": {
-      "passive_shield_bonus": 0.2,
-      "passive_carry": 0.5
+      "passive_shield_bonus": 0.1,
+      "passive_carry": 0.25
     },
     "active": {
-      "active_mult": 1.5
+      "active_mult": 1.2
     }
   },
   "PY": {
     "passive": {
-      "passive_atk_per10": 0.04
+      "passive_atk_per10": 0.02
     },
     "active": {
       "active_turns": 2,
-      "active_taken_up": 0.15,
-      "active_hits": 2,
-      "active_hit_mult": 1
+      "active_taken_up": 0.25,
+      "active_hits": 1,
+      "active_hit_mult": 1.3
     }
   },
   "IG": {
@@ -29,7 +29,7 @@
   },
   "SE": {
     "passive": {
-      "passive_regen": 0.03,
+      "passive_regen": 0.02,
       "passive_shield_cap": 0.1
     },
     "active": {
@@ -38,7 +38,7 @@
   },
   "SL": {
     "passive": {
-      "passive_free_cards": 1
+      "passive_free_cards": 2
     },
     "active": {
       "active_no_carry_turns": 1
@@ -59,12 +59,12 @@
       "passive_hp_below": 0.5
     },
     "active": {
-      "active_pct": 0.35
+      "active_pct": 0.45
     }
   },
   "SI": {
     "passive": {
-      "passive_draw": 1
+      "passive_draw": 2
     },
     "active": {
       "active_energy_down": 1,

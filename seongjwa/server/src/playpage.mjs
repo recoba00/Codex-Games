@@ -1822,7 +1822,7 @@ function bindLog(){document.querySelectorAll('[data-lt]').forEach(function(b){b.
 function refreshLog(){var wl=$('wlog');if(wl){wl.innerHTML=logHtml();bindLog();return}var p=$('logp');if(!S.showLog){if(p)p.remove();return}if(!p){p=document.createElement('div');p.id='logp';p.className='log';if(!$('bt'))return;($('stg')||$('bt')).appendChild(p)}p.innerHTML=logHtml()+($('stg')?'<button class="lcl" id="lclose">닫기</button>':'');bindLog();if($('lclose'))$('lclose').onclick=function(){S.showLog=false;refreshLog();var lb=$('logb');if(lb)lb.classList.remove('on')}}
 
 /* ---------- 공개 연출(기획지시 효과연출): 행동마다 ① 가운데 확대 0.5초 ② 슬롯 → 대상 프로필 빛 0.4초 ③ 프로필 결과 0.3초.
-   행동 7개 이상이면 확대 생략(행동당 약 0.6초). 턴당 상한 10초(총괄 6장), 2배속은 절반. 끝나거나 건너뛰면 서버에 revealed → 양쪽 다 끝나면 바로 다음 선택 ---------- */
+   행동 7개 이상이면 확대 생략(행동당 약 0.6초). 턴당 상한 reveal_max_sec(시트 설정값, 20초), 2배속은 절반. 끝나거나 건너뛰면 서버에 revealed → 양쪽 다 끝나면 바로 다음 선택 ---------- */
 function firstKey(){return 'play_first_'+(lsGet('play_dev')||'')}
 function revealCells(e){var a=e.cards.map(function(id){return {k:card(id).kind,id:id,ord:phOf(id)}});if(e.spell)a.push({k:'spell',id:e.spell,ord:-1});if(e.active)a.push({k:'active',id:'',ord:3.5});return sortCells(a)}
 function kindOf(g){return g.k==='card'||g.k==='void'?card(g.id).kind:g.k==='counter'?'counter':g.k==='spell'?'spell':g.k==='active'?'active':'tick'}

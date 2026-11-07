@@ -17,7 +17,7 @@ import { cupRewardCfg } from "./cup.mjs";
 import { masteryDbCfg, masteryTiers } from "./mastery.mjs";
 import { frameOf, masterTierNo } from "./badges.mjs";
 
-export const PREP = Object.freeze({ ban_sec: 10, pick_sec: 15, loadout_sec: 15, grace_ms: 500 });
+export const PREP = Object.freeze({ ban_sec: 30, pick_sec: 30, loadout_sec: 30, grace_ms: 500 });  // 대체값 = 시트 설정값 v38(기획답변 82차)
 const JOIN_GRACE_MS = 15000;  // 매칭 뒤 접속까지 기다려 주는 최대 시간(한 명이 끝내 안 들어오면 이 뒤로 시간이 흐름)
 const LOBBY_TTL_MS = 30 * 60 * 1000;
 const TICKET_TTL_MS = 45 * 1000;
@@ -494,10 +494,10 @@ export class FriendRoom extends DurableObject {
     this.openTurn(now);
   }
 
-  // reveal: 직전 턴 공개 연출 시간(총괄 6장 상한 10초)을 선택 시간 앞에 둔다. 양쪽이 연출을 끝내거나 건너뛰면(revealed) 바로 선택 시작(기획지시 효과연출)
+  // reveal: 직전 턴 공개 연출 시간(상한 reveal_max_sec, 시트 설정값 20초)을 선택 시간 앞에 둔다. 양쪽이 연출을 끝내거나 건너뛰면(revealed) 바로 선택 시작(기획지시 효과연출)
   openTurn(now, reveal = false) {
     const g = this.room.game;
-    const rv = reveal ? Math.round(Number(g.battle.rules.reveal_max_sec ?? 10) * 1000) : 0;
+    const rv = reveal ? Math.round(Number(g.battle.rules.reveal_max_sec ?? 20) * 1000) : 0;
     g.revealUntil = now + rv;
     g.revealDone = [0, 1].map((s) => !rv || Boolean(this.room.members[s]?.ai) || !this.connected(s));
     g.turnAt = now + rv;
