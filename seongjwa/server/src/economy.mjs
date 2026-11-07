@@ -20,6 +20,27 @@ export const ECON_DEFAULTS = Object.freeze({
   econ_reset_hour_kst: 5           // 매일 05:00, 주간은 월요일 05:00
 });
 
+// 가격 기준(시트 `경제` B23~B32, 수치패치_v39·기획지시 2026-11-07 캐릭터입수·가격). 시트 E열에 같은 키를 넣으면 그 값을 쓴다.
+// 실제 판매 가격은 BO 판매 설정(shop_offers)이 정하고, 이 값은 BO 판매 등록 때 종류별 기본값으로 채운다.
+export const PRICE_REF = Object.freeze({
+  price_game_krw: 9900,            // 본편(Steam) B32
+  price_skin_krw: 4900,            // 일반 스킨 B23
+  price_skin_premium_krw: 9900,    // 고급(홀로 2) B24
+  price_skin_limited_krw: 14900,   // 한정 B25
+  price_holo_krw: 4900,            // 홀로 업그레이드 B26
+  price_cardback_krw: 2900,        // 카드 뒷면 B27 (또는 골드)
+  price_emote_krw: 1500,           // 감정표현 B28 (또는 골드)
+  price_cardback_gold: 6000,
+  price_emote_gold: 3000,
+  char_price_gold: 9000,           // 로테이션 3명(이그니스·테티스·실피) 골드 구매(가정)
+  char_new_price_gold: 15000       // 출시 후 신규 캐릭터(가정)
+});
+export function priceRef(settings = {}) {
+  const out = {};
+  for (const [k, v] of Object.entries(PRICE_REF)) { const s = settings?.[k]; const n = Number(s && typeof s === "object" ? s.value : s); out[k] = Number.isFinite(n) && n > 0 ? n : v; }
+  return out;
+}
+
 // 첫 승 배율(시트 랭크보상): 티어 이름 앞부분으로 찾는다
 export const FIRST_WIN_MULT = Object.freeze({ "브론즈": 1.0, "실버": 1.1, "골드": 1.2, "플래티넘": 1.3, "다이아": 1.4, "마스터": 1.5, "레전드": 1.5 });
 const TIER_WORD = Object.freeze({ bronze: "브론즈", silver: "실버", gold: "골드", platinum: "플래티넘", diamond: "다이아", master: "마스터" });

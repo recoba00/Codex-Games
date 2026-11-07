@@ -8,6 +8,7 @@ import { readXlsx } from "./xlsx.mjs";
 import { pinLive } from "../gamedata.mjs";
 import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
 import { offerRule } from "../shop-rules.mjs";
+import { priceRef } from "../economy.mjs";
 import { cupRewardCfg, cupWindow } from "../cup.mjs";
 import { ART, LINE_SLOTS, MEDIA, SLOTS, artKey, assetPath, checkFaceOn, checkMedia, checkUpload, dropAssetCache, mediaInfo, publicBase, shapeAssets, slotKey, slotOf, storageDelete, storagePut, webpInfo } from "../assets.mjs";
 
@@ -303,7 +304,7 @@ export async function handleBo(request, env, url) {
       const rows = await rpc(env, "asset_list", {});
       const stat = (c) => ({ hp: c.hp, atk: c.atk, def: c.def, spd: c.spd, crit: c.crit });
       return json({ ok: true, live: version, editable: (PERMS.data_edit ?? []).includes(st.role), base: publicBase(env),
-        spec: { art: ART, slots: SLOTS, lineSlots: LINE_SLOTS, media: MEDIA, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), faceMaxKb: Number(live?.settings?.asset_face_max_kb ?? 100), cardMaxKb: Number(live?.settings?.asset_card_max_kb ?? 300) },
+        spec: { art: ART, slots: SLOTS, lineSlots: LINE_SLOTS, media: MEDIA, fullMaxKb: Number(live?.settings?.asset_full_max_kb ?? 1024), cardMaxKb: Number(live?.settings?.asset_card_max_kb ?? 300) },
         characters: Object.entries(live?.characters ?? {}).map(([id, c]) => ({ id, name: c.name, faction: c.faction, stats: stat(c) })),
         cards: Object.fromEntries(Object.entries(live?.cards ?? {}).map(([id, c]) => [id, { name: c.name, kind: c.kind, cost: c.cost, phase: c.phase, owner: c.owner_character ?? null, text: c.effect_text ?? "" }])),  // 카드 일러스트 슬롯 표시(기획지시 카드명표시)
         assets: { slots: shapeAssets(rows).slots }, art: shapeAssets(rows).art, prev: shapeAssets(rows, "prev"), meta: Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, { at: r.at, by: r.by, hasPrev: Boolean(r.prev) }])),
@@ -347,8 +348,8 @@ export async function handleBo(request, env, url) {
       await rpc(env, "bo_asset_put", { p_staff: st.id, p_key: kind === "slot" ? slotKey(slot.id) : artKey(ch, skin, kind), p_value: value,
         p_action: kind === "slot" ? "슬롯 파일 교체" : kind === "combined" ? "합본 이미지 교체(카드 그림)" : `캐릭터 이미지 교체(${kind})`, p_detail: { path, bytes: bytes.length, w: info.w, h: info.h } });
       dropAssetCache();
-      const capKb = ["full", "combined"].includes(kind) ? Number(live?.settings?.asset_full_max_kb ?? 1024)
-        : slot?.id.startsWith("CARD_ART_") ? Number(live?.settings?.asset_card_max_kb ?? 300) : null;  // 카드 일러스트 800×1120은 전신보다 작아 별도 키(기본 300KB, 경고만)
+      const capKb = kind === "full" ? Number(live?.settings?.asset_full_max_kb ?? 1024)
+        : (kind === "combined" || slot?.id.startsWith("CARD_ART_")) ? Number(live?.settings?.asset_card_max_kb ?? 300) : null;  // 합본 800×1120 WebP·카드 일러스트 = asset_card_max_kb(기획답변 87차, 얼굴 키 폐기)  // 카드 일러스트 800×1120은 전신보다 작아 별도 키(기본 300KB, 경고만)
       const warnings = capKb && bytes.length > capKb * 1024 ? [`${kind} ${Math.round(bytes.length / 1024)}KB — 목표 ${capKb}KB 초과(상세 14)`] : [];
       return json({ ok: true, path, url: publicBase(env) + path, ...value, warnings });
     }
@@ -556,7 +557,7 @@ export async function handleBo(request, env, url) {
     }
 
     // ---------- 상점·배너·공지·우편 ----------
-    case "GET /shop": { const st = await staffOf(request, env); allow(st, "shop"); return json({ ok: true, ...(await rpc(env, "bo_catalog", {})) }); }
+    case "GET /shop": { const st = await staffOf(request, env); allow(st, "shop"); const { snapshot: live } = await pinLive(env).catch(() => ({ snapshot: null })); return json({ ok: true, ...(await rpc(env, "bo_catalog", {})), priceRef: priceRef(live?.settings ?? {}) }); }
     case "POST /shop/item": {
       const st = await staffOf(request, env); allow(st, "shop");
       const it = await body(request);
