@@ -186,7 +186,7 @@ try {
       assert.ok(ko, "K.O. 쓰러진 프로필·표기");  // 화면 갱신(턴 시작)과 겹칠 수 있어 같은 틱에서 확인
       await sleep(500); await page.screenshot({ path: `/tmp/play_ko_${vp.width}.png` });
       // 상태 아이콘 탭 = 카드 상세와 같은 틀(사용자 요청 2026-11-06)
-      await page.evaluate(() => { const i = document.createElement("i"); i.className = "bf"; i.id = "tstbf"; i.dataset.st = JSON.stringify([{ n: "작열 ×2", p: "2턴 남음", d: STDESC.burn, c: "#e5533d", u: "", c1: "작", w: "opp" }, { n: "표식", p: "이번 턴", d: STDESC.mark, c: "#c58bff", u: "", c1: "표", w: "opp" }]); document.body.appendChild(i); stModal(i); });
+      await page.evaluate(() => { const i = document.createElement("i"); i.className = "bf"; i.id = "tstbf"; i.dataset.st = JSON.stringify([{ n: "작열 ×2", p: "2턴 남음", d: stDoc("burn")[1], c: "#e5533d", u: "", c1: "작", w: "opp" }, { n: "표식", p: "이번 턴", d: stDoc("mark")[1], c: "#c58bff", u: "", c1: "표", w: "opp" }]); document.body.appendChild(i); stModal(i); });
       assert.ok(await page.$("#peek.stm .sti.big"), "상태 상세 창");
       await sleep(450); await page.screenshot({ path: `/tmp/play_st_${vp.width}.png` });
       await page.evaluate(() => { peekHide(); document.getElementById("tstbf")?.remove(); });
@@ -195,8 +195,14 @@ try {
     { // 다국어 1차(기획지시 2026-11-07): 기기 언어로 시작, 연출 라벨 한/영 번역표, 폭주 배너 별 장식 없음
       const lg = await page.evaluate(() => ({ lang: S.lang, chip: T("ph.1"), turn: T("bn.turn"), rush: T("bn.rush"), shield: T("lb.shield", { n: 12 }), html: document.documentElement.lang }));
       if (vp.touch) assert.deepEqual([lg.lang, lg.chip, lg.turn, lg.rush, lg.shield], ["ko", "보호", "턴", "폭주 시작", "실드 +12"]);
-      else assert.deepEqual([lg.lang, lg.chip, lg.turn, lg.rush, lg.shield], ["en", "GUARD", "Turn", "RAMPAGE", "SHIELD +12"]);
+      else assert.deepEqual([lg.lang, lg.chip, lg.turn, lg.rush, lg.shield], ["en", "GRD", "Turn", "RAMPAGE", "SHIELD +12"]);
       assert.equal(lg.html, lg.lang);
+      // 상단 알약 약어(기획지시 2026-11-07 알약약어): 한 2글자·영 3글자, 칸 폭 고정, 글자가 칸·숫자 뱃지와 겹치지 않음
+      const pl = await page.evaluate(() => [...document.querySelectorAll(".kp[data-k]")].map((e) => { const tn = [...e.childNodes].find((n) => n.nodeType === 3), rg = document.createRange(); rg.selectNodeContents(tn); const t = rg.getBoundingClientRect(), r = e.getBoundingClientRect();
+        const hit = [...e.querySelectorAll("em")].some((m) => { const b = m.getBoundingClientRect(); return b.left < t.right && b.right > t.left && b.top < t.bottom && b.bottom > t.top; });
+        return { tx: tn.textContent, w: Math.round(r.width), fit: t.left >= r.left - 0.5 && t.right <= r.right + 0.5, hit }; }));
+      assert.deepEqual(pl.map((x) => x.tx), vp.touch ? ["스펠", "면역", "방어", "반격", "침묵", "방해", "스킬", "공격"] : ["SPL", "IMM", "SHD", "CTR", "SIL", "DIS", "SKL", "ATK"]);
+      assert.equal(new Set(pl.map((x) => x.w)).size, 1, "알약 폭 고정"); assert.ok(pl.every((x) => x.fit && !x.hit), "알약 글자 겹침 " + JSON.stringify(pl));
       assert.ok(!(await page.content()).includes("★"), "별 장식 없음");
       // 설정 > 도움말: 목록 + 내용, 카드 도감(서버 데이터) → 카드 상세, 화면 짚어 보기(Coach)
       await page.evaluate(() => helpOpen("cards"));
