@@ -289,10 +289,10 @@ function beginTurn(state) {
 
 // ---------- 제출 (총괄 6장: 카드 최대 3장, 스펠 1개, 액티브) ----------
 export function cardCost(state, p, cardIds) {
-  let free = p.char === "SL" ? (p.cp?.passiveFreeCards ?? 1) : 0;
+  let free = p.char === "SL" ? (p.cp?.passiveFreeCards ?? 2) : 0;  // 순풍 N장(시트 `캐릭터` passive_free_cards, 55차 2장)
   return cardIds.map((id) => {
     const c = state.cards[id];
-    if (free > 0 && c.cost === 1) { free -= 1; return 0; }  // 순풍: 매 턴 처음 내는 1E 카드 0
+    if (free > 0 && c.cost === 1) { free -= 1; return 0; }  // 순풍: 매 턴 고른 순서대로 첫 1E 카드 N장 0
     return c.cost;
   });
 }
@@ -712,7 +712,7 @@ export function view(state, seat) {
     ...(mine ? {
       // 비용은 시트 `전투카드` 기준(기획지시 전투가독성 4). 실피 순풍(매 턴 처음 내는 1E 카드 0)은 freeOneCost로 따로 알려 화면이 선택 순서대로 계산
       hand: p.hand.map((c) => ({ uid: c.uid, id: c.id, cost: state.cards[c.id].cost, sealed: p.sealed.includes(c.uid) })),
-      freeOneCost: p.char === "SL" ? (p.cp?.passiveFreeCards ?? 1) : 0,
+      freeOneCost: p.char === "SL" ? (p.cp?.passiveFreeCards ?? 2) : 0,
       revealed: p.revealed, mySubmission: p.submitted ? { cards: p.submitted.cards, spell: p.submitted.spell, active: p.submitted.active } : null
     } : {})
   });

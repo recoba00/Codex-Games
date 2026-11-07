@@ -65,6 +65,14 @@ test("실피 순풍: 매 턴 첫 1E 카드는 에너지 0", () => {
   submit(st, 0, { cards: [a, b, c] });  // 1턴 에너지 2로 1E 3장 가능
 });
 
+test("실피 순풍: passive_free_cards=2(시트 현행)면 고른 순서대로 첫 1E 2장이 0, AI 계산도 같은 함수", () => {
+  const st = battle("SL", "AU");
+  st.players[0].cp.passiveFreeCards = 2;
+  assert.deepEqual(cardCost(st, st.players[0], ["C01", "C05", "C01", "C02"]), [0, 0, 1, 2]);
+  assert.deepEqual(cardCost(st, st.players[0], ["C02", "C01", "C01"]), [2, 0, 0]);
+  assert.equal(view(st, 0).me.freeOneCost, 2);
+});
+
 test("반격: 상대 공격 1장 무효 + 반격 피해, 상대가 공격 안 하면 헛방", () => {
   const st = battle("AU", "UM");
   st.players[0].energy = 5; st.players[1].energy = 5;

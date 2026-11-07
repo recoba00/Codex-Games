@@ -1049,6 +1049,7 @@ button.sec{background:transparent;border:1px solid #4152b5;color:#f4f6ff}
 .skpv .skpb{top:auto;bottom:max(16px,env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));gap:8px;z-index:2}
 .skpv .skpb button{height:40px;min-width:96px;border-radius:8px;font-size:12px;padding:0 16px}
 .skpv .skpb button.sec{background:rgba(15,19,40,.85);border:1px solid #4152b5;color:#f4f6ff}.skpv .skpb button.sec.on{background:#2b5fd0;border-color:#2b5fd0}
+.bt4 .eng{position:relative}.bt4 .sfree{position:absolute;bottom:calc(100% + 4px);right:0;white-space:nowrap;font-style:normal;font-size:10px;font-weight:700;line-height:16px;padding:0 6px;border-radius:8px;background:rgba(43,95,208,.9);color:#fff;pointer-events:none}.bt4 .sfree.out{background:rgba(60,66,96,.85);color:#c8cbe0}
 .tip{border-radius:8px;width:calc(220px*var(--zs,1));max-width:min(80vw,calc(240px*var(--zs,1)));font-size:min(16px,calc(12px*var(--zs,1)))}  /* 툴팁: 최대 폭 240pt·글자 상한 16(전투 포함, 84차 ⑤) */
 .fic{position:absolute;display:flex;align-items:center;z-index:5}.fic .ibh{position:relative;width:var(--s);height:var(--s);padding:0;border-radius:8px;background:rgba(20,27,74,.74);border:1px solid #1e2866;display:grid;place-items:center;color:#f4f6ff;font-weight:800;font-size:calc(var(--s)*.5)}.fic .ibh::after{content:'';position:absolute;inset:min(0px,calc((var(--s) - 44px)/2))}.fic .ibh svg{width:calc(var(--s)*.75);height:calc(var(--s)*.75)}
 @media (max-height:500px){.plst .ppb{display:grid;grid-template-columns:1fr 1fr;column-gap:calc(16*var(--u));align-content:start}.plst .pprow:last-child{border-bottom:1px solid rgba(255,255,255,.08)}.ppw.plst.many{width:calc(600*var(--u))}.plst.many .ppb{grid-template-columns:1fr 1fr 1fr}}  /* 휴대폰: 설정 줄 44 유지, 여러 열로 본문 스크롤 없이 */
@@ -1075,7 +1076,7 @@ var I18N={
   'lb.immune2':'IMMUNE 2T','lb.cleanse':'IMMUNE · CLEANSE','lb.atkUp':'ATK +{n}%','lb.shieldPct':'SHIELD +{n}%','lb.healUp':'HEAL +{n}% · 2T','lb.spd':'SPD +{n}',
   'lb.handFull':'HAND FULL','lb.block':'SHIELD BLOCK',
   'bn.reveal':'REVEAL!','bn.ko':'K.O.','bn.turn':'Turn','bn.rush':'RAMPAGE','bn.rushNext':'Rampage next turn','bn.rushPct':'ALL DAMAGE +{n}%','bn.last':'FINAL TURN',
-  'set.lang':'Language','res.title':'Result','set.title':'Settings','pp.ok':'OK','pp.cancel':'Cancel','pp.confirm':'Confirm',
+  'set.lang':'Language','sf.all':'Tailwind: {n}× 1E free','sf.left':'Tailwind: {n} left','sf.tip':'Tailwind: your first {n} 1E cards each turn cost 0 (in pick order)','res.title':'Result','set.title':'Settings','pp.ok':'OK','pp.cancel':'Cancel','pp.confirm':'Confirm',
   'kind.attack':'Deals damage. Shields absorb it first; the rest hits HP','kind.defense':'Creates a shield that blocks damage this turn','kind.counter':'Voids one enemy attack and strikes back','kind.silence':"Cuts off the enemy's skills and active",'kind.immune':"Blocks silence and debuffs. Doesn't stop damage",'kind.disrupt':'Applies debuffs like Weaken or Mark','kind.skill':'Support effects: heal, draw, gauge',
   'help.view':"Your side is bottom-left, the opponent's top-right. Pick cards from your hand and confirm; both sides reveal at once",
   'help.order':"Cards resolve by type: 0 Spell → 1 Guard → 2 Disrupt → 3 Skill → 4 Attack → 5 End. Pick order doesn't matter; within a step, higher SPD shows first",
@@ -1092,7 +1093,7 @@ var I18N={
   'lb.immune2':'면역 2턴','lb.cleanse':'면역 · 해제','lb.atkUp':'공격 +{n}%','lb.shieldPct':'실드 +{n}%','lb.healUp':'회복 +{n}% · 2턴','lb.spd':'SPD +{n}',
   'lb.handFull':'손패 가득','lb.block':'실드가 막음',
   'bn.reveal':'공개!','bn.ko':'K.O.','bn.turn':'턴','bn.rush':'폭주 시작','bn.rushNext':'다음 턴부터 폭주','bn.rushPct':'모든 피해 +{n}%','bn.last':'마지막 턴',
-  'set.lang':'언어','res.title':'결과','set.title':'설정','pp.ok':'확인','pp.cancel':'취소','pp.confirm':'확인',
+  'set.lang':'언어','sf.all':'순풍 1E {n}장 무료','sf.left':'순풍 {n}장 남음','sf.tip':'순풍: 매 턴 고른 순서대로 첫 1E 카드 {n}장 비용 0','res.title':'결과','set.title':'설정','pp.ok':'확인','pp.cancel':'취소','pp.confirm':'확인',
   'kind.attack':'상대에게 피해를 줘요. 실드가 먼저 막고, 남은 만큼 HP가 줄어요','kind.defense':'이번 턴 받는 피해를 막는 실드를 만들어요','kind.counter':'상대 공격 1장을 무효로 하고 되돌려 줘요','kind.silence':'상대의 스킬·액티브를 끊어요','kind.immune':'침묵과 디버프에 걸리지 않아요. 피해는 못 막아요','kind.disrupt':'상대에게 약화·표식 같은 불리한 효과를 걸어요','kind.skill':'회복·드로우·게이지처럼 나를 돕는 효과예요',
   'help.view':'내 영역은 왼쪽 아래, 상대는 오른쪽 위예요. 손패에서 카드를 골라 확정을 누르면 양쪽이 동시에 공개돼요',
   'help.order':'카드는 종류별 단계 순서로 처리돼요: 0 스펠 → 1 보호 → 2 방해 → 3 스킬 → 4 공격 → 5 종료. 고른 순서와는 상관없고, 같은 단계에서는 속도(SPD)가 높은 쪽이 먼저 보여요',
@@ -1402,6 +1403,8 @@ function lastLoad(id){try{var x=JSON.parse(localStorage.getItem('play_load_'+id)
 function confirmLoad(){var P=S.st.prep;if(P.myLoadout||S.load.spells.length!==2)return;S.loadSelf=true;lsSet('play_load_'+P.myPick,JSON.stringify(S.load));send({type:'loadout',spells:S.load.spells,preset:S.load.preset});var b=$('ok');if(b){busy(b,'확정 중…')}}
 
 /* ---------- 전투 ---------- */
+/* 순풍 남은 장수 표시(기획답변 85-86차): 고른 순서대로 1E 카드가 무료 칸을 씀 */
+function sfreeTag(me,uids){var n=me.freeOneCost||0,u=0;uids.forEach(function(x){var c=me.hand.find(function(h){return h.uid===x});if(c&&c.cost===1&&u<n)u++});var l=n-u;return '<i class="sfree'+(l?'':' out')+'">'+esc(l===n?T('sf.all',{n:n}):T('sf.left',{n:l}))+'</i>'}
 function effCosts(me,uids){var free=me.freeOneCost||0;return uids.map(function(u){var c=me.hand.find(function(x){return x.uid===u});if(!c)return 0;if(free>0&&c.cost===1){free--;return 0}return c.cost})}
 function sumCost(me,uids){return effCosts(me,uids).reduce(function(a,b){return a+b},0)}
 function phOf(id){var p=card(id).phase;return p==null?4:Number(p)}
@@ -1733,7 +1736,7 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
  +'<div class="hand" style="'+P(CX,BB-157,CW,109)+';--ov:'+ov.toFixed(1)+'px">'+hand.map(function(c,i){var picked=chosen.indexOf(c.uid)>=0,sb=blockSkill&&card(c.id).kind==='skill',cant=!picked&&sumCost(me,chosen.concat([c.uid]))>me.energy,cls=picked?'picked':(c.sealed||sb)?'lock':cant?'cant':full?'dim':(reveal||sub)?'':'can';
   return bcCard(c.id,{w:72,mode:'hand',face:true,fig:true,cls:cls,attr:' data-uid="'+c.uid+'" data-i="'+i+'" data-cid="'+c.id+'"',extra:sb&&!picked?'<span class="lockt">이번 턴 사용 불가</span>':''})}).join('')+'</div>'
  +'<div class="brow ctl" style="'+P(CX,BB-40,CW,40)+'"><div class="cirs">'+actCirc(me,true,sub,reveal)+spCirc(me,true,sub)
- +'<span class="cir en eng" data-tip="'+esc('내 에너지 '+(me.energy-used)+'/'+me.energy+' — 고른 카드 비용만큼 줄어요'+(me.freeOneCost?' · 순풍: 매 턴 처음 내는 1E 카드 비용 0':''))+'">E'+(me.energy-used)+'</span></div>'
+ +'<span class="cir en eng" data-tip="'+esc('내 에너지 '+(me.energy-used)+'/'+me.energy+' — 고른 카드 비용만큼 줄어요'+(me.freeOneCost?' · '+T('sf.tip',{n:me.freeOneCost}):''))+'">E'+(me.energy-used)+(me.freeOneCost?sfreeTag(me,chosen):'')+'</span></div>'
  +(reveal?'<button id="spd" class="b2" title="연출 속도">'+SPD_LAB[S.rspd||'normal']+'</button><button class="b1 confirm skip" id="skip">건너뛰기 ▶▶</button>'
   :(m.timebankUsed||sub?'':'<button id="tb" class="b2" title="판당 1회 (T)">+15초</button>')+'<button class="b1 confirm'+(!sub&&tl>10&&(chosen.length||S.sel.spell||S.sel.active)?' go':'')+(!sub&&tl<=10?' red':'')+(!sub&&tl<=5&&tl>0?' beat':'')+'" id="ok"'+(sub?' disabled':' data-lab="확정"')+'>'+(sub?'확정됨':'확정 ('+tl+'초 남음)')+'</button>')+'<div class="cirs rz">'+rushCirc(b)+'</div></div>'
  +emoBub('me',P,X0,BB-208)+emoBub('opp',P,X1-127,BY)
