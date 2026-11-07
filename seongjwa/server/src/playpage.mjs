@@ -983,13 +983,13 @@ html[lang=ko] .bt4 .float.fx.crit::before{content:"치명!"}
 @media (max-height:440px){.help nav button{min-height:30px;padding:5px 8px;font-size:12px}}
 
 /* ===== 공통 화면 틀·팝업·데스크톱 크기(기획지시 2026-11-07 밴픽스펠덱정돈, 상세 01 1~4절) ===== */
-.frm .top{height:40px;min-height:40px;margin:0 0 12px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.frm .top{height:var(--hdr,40px);min-height:var(--hdr,40px);margin:0 0 var(--sec,12px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
 .frm .top .tl{display:flex;align-items:center;gap:8px;min-width:0}.frm .top .tl>.mu{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .frm .top .chips{gap:4px;flex:none}.frm .top .chip{font-size:10px;padding:3px 8px}
 .frm .top .timer{font-size:14px;font-weight:800;min-width:44px;text-align:center}
 .frm .top .tr{display:flex;justify-content:flex-end;gap:4px}
 .ib44{width:44px;height:44px;margin:-2px 0;border:0;border-radius:8px;background:none;display:grid;place-items:center;color:#f4f6ff;font-size:18px;font-weight:800;padding:0}.ib44:hover{background:rgba(65,82,181,.25)}.ib44 svg{width:22px;height:22px}
-.frm .fbar,.frm.pk3 .pbar,.frm .pbar{height:48px;min-height:48px;margin:12px 0 0;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap}
+.frm .fbar,.frm.pk3 .pbar,.frm .pbar{height:var(--ftr,48px);min-height:var(--ftr,48px);margin:var(--sec,12px) 0 0;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap}
 .frm .fsub{flex:1;min-width:0;height:28px;font-size:10px;line-height:14px;color:var(--mu);overflow:hidden;padding:0;background:none!important;border:0!important;border-radius:0}
 .frm .fsub div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.frm .fsub b{color:#f4f6ff}
 .frm .fbar button{height:40px;padding:0 16px;font-size:12px;border-radius:8px;flex:none}
@@ -997,16 +997,21 @@ html[lang=ko] .bt4 .float.fx.crit::before{content:"치명!"}
 button.sec{background:transparent;border:1px solid #4152b5;color:#f4f6ff}
 .frm .pk3b{align-items:center}
 .frm .pcol{height:var(--ch);justify-content:space-between;gap:8px}.frm .pcol.me,.frm .pcol.opp{justify-content:space-between}
-.frm .pmid{height:var(--ch);gap:0}.frm .plist{padding:4px}
+.frm .pmid{height:var(--ch);gap:0}.frm .plist{padding:4px;gap:var(--cg,8px)}.frm .pcol{align-items:center}
 .frm .lab2,.frm.pk3 .lab2{font-size:12px;line-height:18px;padding:0 12px}
-.frm .sprow{gap:8px}.frm .deck2.two{gap:8px}.frm .top .chip{padding:4px 8px}
+.frm .sprow{gap:var(--cg,8px)}.frm .deck2.two{gap:var(--cg,8px)}.frm .top .chip{padding:4px 8px}
 #help nav{gap:4px}#help nav button{padding:8px 12px}#help .hst>div{padding:8px 0}#help .hord li{padding:4px 0}
-.frm .rcol2{height:var(--ch);justify-content:space-between;gap:12px;margin:0}
+.frm .rcol2{height:var(--ch);justify-content:space-between;gap:var(--sec,12px);margin:0}
 .frm .spb2{height:var(--sph);justify-content:center}
 .frm .tabs{height:32px;gap:8px}.frm .tabs .tab2{height:32px;padding:0 12px;font-size:12px}
 .frm.res3{display:flex;grid-template-columns:none;background:#0b0d1a}
-.frm .rbody{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.frm .rimg{inset:0}
+.frm .rbody{flex:1;min-height:0;display:grid;grid-template-columns:45% 1fr;gap:var(--g,12px);position:relative;z-index:2}
+.frm.res3 .top,.frm.res3 .fbar{position:relative;z-index:2}
+.frm.res3 .rl{position:absolute;top:0;bottom:0;overflow:hidden;z-index:1}
+.frm.res3 .rimg{position:absolute;left:0;right:0;bottom:0;height:auto;background:center top/cover no-repeat}  /* 영역(위~화면 아래)을 덮고 위에서부터 보임(얼굴 우선) */
+.rgrad{position:absolute;left:0;right:0;bottom:0;height:35%;background:linear-gradient(to top,rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;text-align:center;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);box-sizing:border-box}
+.rgrad .rp1{font-size:24px;font-weight:800;line-height:1.2}.rgrad .rp1.up{color:#ffd76b}.rgrad .rp1.down{color:#ffb3b3}
+.rgrad .rp2{font-size:12px}.rgrad .rp3{font-size:11px;color:#dfe3f5}
 .frm .rr{padding:0 0 0 16px;justify-content:center;gap:12px;min-height:0}
 .frm .stats .st small{font-size:10px}.frm .stats .st b{font-size:14px}.frm .stats{gap:8px}.frm .stats .st{padding:4px 12px;border-radius:8px}.frm .rew{font-size:12px;gap:4px}
 /* 공통 팝업 Popup */
@@ -1312,7 +1317,7 @@ function render(){applyZoom();musicSync();var m=S.st;if(!m)return home();if(m.ph
  $('app').innerHTML='<div class="scr home"><div class="mu">준비 중…</div></div>'}
 function stepChips(cur){return '<div class="chips">'+[['pick','픽'],['loadout','스펠·덱'],['battle','전투']].map(function(x){return '<span class="chip'+(x[0]===cur||(cur==='ban'&&x[0]==='pick')?' on':'')+'">'+x[1]+'</span>'}).join('')+'</div>'}
 /* ⚙·? = 전투 상단 바의 ⚙·💬와 같은 좌표·크기(기획답변 84차 ④, lay4와 같은 계산). 터치 영역 44 */
-function hdrPos(){var W=VW(),H=VH(),f=safe(),sl=Math.max(60,f.l),sr=Math.max(60,f.r),st=Math.max(0,f.t),sb=Math.max(16,f.b),k=Math.max(0.6,Math.min((W-sl-sr)/668,(H-st-sb)/344));return {x:sl,y:st+4*k,s:32*k,g:8*k}}
+function hdrPos(){if(S.dsk){var q=prepPad(),sz=34;return {x:q.l+8,y:q.t+(q.hdr-sz)/2,s:sz,g:8}}var W=VW(),H=VH(),f=safe(),sl=Math.max(60,f.l),sr=Math.max(60,f.r),st=Math.max(0,f.t),sb=Math.max(16,f.b),k=Math.max(0.6,Math.min((W-sl-sr)/668,(H-st-sb)/344));return {x:sl,y:st+4*k,s:32*k,g:8*k}}
 function topBar(m,label,extra){var h=hdrPos(),p=prepPad(),pl=Math.max(0,Math.ceil(h.x+2*h.s+h.g+8-p.l));
  return '<div class="fic" style="left:'+h.x.toFixed(1)+'px;top:'+h.y.toFixed(1)+'px;--s:'+h.s.toFixed(1)+'px;gap:'+h.g.toFixed(1)+'px"><button class="ibh" id="fSet" title="설정">'+SVG_GEAR+'</button><button class="ibh" id="fHelp" title="도움말">?</button></div>'
   +'<div class="top"><div class="tl" style="padding-left:'+pl+'px">'+(m?stepChips(m.phase):'<div class="chips"><span class="chip on">'+esc(extra||'')+'</span></div>')+'<span class="mu">'+esc(label)+'</span></div><div class="timer" id="tm"></div><div class="tr">'+(m?'':'<button class="ib44" id="rmore" title="신고">⋯</button>')+'</div></div>'}
@@ -1328,23 +1333,31 @@ function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.h
 /* 화면 배율(상세 01 2026-11-07 4절): s_base = min(폭/844, 높이/390). 데스크톱(안쪽 폭 ≥1180 & 높이 ≥600)은 절반만 따라 커지고 상한 1.3,
    휴대폰·태블릿은 기존 값 그대로. 콘텐츠 최대 폭 960(prepPad) */
 function bigScale(){var W=innerWidth,H=innerHeight,w=window.__SAFE||{},sb=Math.min(W/844,H/390),s=1;S.dsk=(W-(w.l||0)-(w.r||0))>=1180&&H>=600;
- if(S.dsk)s=Math.min(1.3,1+(sb-1)*0.5);else if(H<=500&&W>H)s=Math.max(1,Math.min(1.25,H/390,W/760));else if(H>=700&&W>H)s=Math.max(1,Math.min(H/800,W/1000));return Math.round(s*1000)/1000}
+ if(S.dsk)s=Math.min(1.15,sb);else if(H<=500&&W>H)s=Math.max(1,Math.min(1.25,H/390,W/760));else if(H>=700&&W>H)s=Math.max(1,Math.min(H/800,W/1000));return Math.round(s*1000)/1000}
 function VW(){return innerWidth/(S.zs||1)}function VH(){return innerHeight/(S.zs||1)}
 function applyZoom(){var z=bigScale(),a=$('app'),ch=S.zs!==z,de=document.documentElement;S.zs=z;de.style.setProperty('--zs',z);de.classList.toggle('dsk',!!S.dsk);if(ch)applySafe();if(!a)return;if(z!==1){a.style.width=(innerWidth/z)+'px';a.style.height=(innerHeight/z)+'px';a.style.right='auto';a.style.bottom='auto';a.style.transform='scale('+z+')';a.style.transformOrigin='0 0'}else{a.style.width='';a.style.height='';a.style.right='';a.style.bottom='';a.style.transform='';a.style.transformOrigin=''}}
-function prepPad(){var f=safe(),short=VH()<=500,W=VW(),x=S.dsk&&W>960?(W-960)/2:0;return {t:Math.max(8,f.t),r:f.r+14+x,b:Math.max(8,f.b),l:f.l+14+x,short:short}}  /* 공통 틀(상세 01 2026-11-07 1절): 좌우 14·위아래 8(안전 영역이 크면 그만큼), 데스크톱 콘텐츠 최대 폭 960 가운데 */
+/* 데스크톱 유동 레이아웃(상세 01 2026-11-07 12시): clamp(최소, 창 비례, 최대)를 실제 px로 구한 뒤 논리 px(÷s)로 */
+function dskL(){var W=innerWidth,H=innerHeight,z=S.zs||1,c=function(a,v,b){return Math.max(a,Math.min(b,v))},sd=c(16,W*.04,96);if(W-2*sd>1600)sd=(W-1600)/2;
+ return {hdr:c(44,H*.075,84)/z,ftr:c(52,H*.085,92)/z,side:sd/z,g:c(12,W*.012,28)/z,cg:c(8,W*.008,16)/z,sec:c(12,H*.018,24)/z}}
+function prepPad(){var f=safe(),short=VH()<=500;if(S.dsk){var d=dskL(),o=8/(S.zs||1);return {t:Math.max(o,f.t),b:Math.max(o,f.b),l:f.l+d.side,r:f.r+d.side,short:false,hdr:d.hdr,ftr:d.ftr,sec:d.sec,g:d.g,cg:d.cg}}
+ return {t:Math.max(8,f.t),r:f.r+14,b:Math.max(8,f.b),l:f.l+14,short:short,hdr:40,ftr:48,sec:12,g:12,cg:8}}  /* 휴대폰: 좌우 14·위아래 8, 위 줄 40·아래 줄 48·섹션 12·단 12·카드 8(84차) */
+function frmVars(p){return ';--hdr:'+p.hdr.toFixed(1)+'px;--ftr:'+p.ftr.toFixed(1)+'px;--sec:'+p.sec.toFixed(1)+'px;--cg:'+p.cg.toFixed(1)+'px'}
 function padCss(p){return 'padding:'+p.t+'px '+p.r+'px '+p.b+'px '+p.l+'px'}
 /* 공통 틀: 위 줄 40 + 12 + 본문 + 12 + 아래 줄 48. 세 단의 위·아래 끝선 = 본문 안 가운데 같은 높이(--ch). 데스크톱 목록 카드 83·선택 카드 190pt 이내 */
-function pickLay(n){var W=VW(),H=VH(),p=prepPad(),gap=12,g8=8,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
- var bodyH=H-p.t-p.b-40-12-12-48,rowsFit=function(cols,w){var r=Math.ceil(n/cols);return r*(w*1.4+4)+(r-1)*g8+8};
- var cap=S.dsk?83:170,cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor(((bodyH-8-g8)/2-4)/1.4),cw=Math.min(wW,wH,cap);
+function pickLay(n){var W=VW(),H=VH(),p=prepPad(),gap=p.g,g8=p.cg,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side,z=S.zs||1;
+ var bodyH=H-p.t-p.b-p.hdr-p.ftr-2*p.sec,rowsFit=function(cols,w){var r=Math.ceil(n/cols);return r*(w*1.4+4)+(r-1)*g8+8};
+ /* 데스크톱: 목록 카드 = min(5열 폭, 2줄이 본문 70% 이내, 150pt), 선택·? = min(단 폭−2×8, 260pt, 본문 높이). 상한 뒤 남는 공간은 마진·간격 */
+ var cap=S.dsk?150/z:170,cols=5,wW=Math.floor((cen-8-(cols-1)*g8)/cols)-4,wH=Math.floor((((S.dsk?bodyH*0.7:bodyH)-8-g8)/2-4)/1.4),cw=Math.min(wW,wH,cap);
  if(cw<72){cols=4;cw=Math.min(Math.floor((cen-8-3*g8)/4)-4,cap)}
- var scroll=rowsFit(cols,cw)>bodyH+1,chH=scroll?bodyH:Math.min(bodyH,Math.ceil(rowsFit(cols,cw))),sw=Math.floor(Math.min(side,(chH-26)/1.4,S.dsk?190/(S.zs||1):1e9));
+ var rf=Math.ceil(rowsFit(cols,cw)),scroll=rf>bodyH+1,sw,chH;
+ if(S.dsk){sw=Math.floor(Math.min(side-16,260/z,(bodyH-26)/1.4));chH=scroll?bodyH:Math.min(bodyH,Math.max(rf,Math.ceil(sw*1.4+26)))}
+ else{chH=scroll?bodyH:Math.min(bodyH,rf);sw=Math.floor(Math.min(side,(chH-26)/1.4))}
  return {p:p,gap:gap,side:side,cen:cen,cw:cw,cols:cols,listH:chH,chH:chH,sw:sw,short:p.short,scroll:scroll}}
 function renderPick(m){var P=m.prep,ban=m.phase==='ban',z=pickLay(P.characters.length),done=ban?!!P.myBan:!!P.myPick;
  var cur=ban?(P.myBan||S.banSel):(P.myPick||(S.pickSel&&P.banned.indexOf(S.pickSel)<0?S.pickSel:null));if(cur&&P.characters.indexOf(cur)<0)cur=null;
  var c=cur?ch(cur):null,badge=function(id){return (P.mastery.mine||{})[id]||1};
  var mine=cur?pvCard(cur,{w:z.sw,holo:0,badge:ban?1:badge(cur),tier:P.frame?frameOf(P.frame.mine).tier:null,cls:'rnd'+(ban?' ban':'')}):'<div class="emp" style="width:'+z.sw+'px">'+(ban?'밴할 캐릭터':'선택 전')+'</div>';
- var h='<div class="scr pk3 frm" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--ch:'+z.chH+'px">'+topBar(m,done?(ban?'밴 완료':'선택 완료')+' · 상대 '+((ban?P.oppBanDone:P.oppPickDone)?'완료':'선택 중'):(ban?'상대가 못 쓰게 할 캐릭터를 고르세요':'캐릭터를 고르고 확정하세요 (동시·비공개)'))
+ var h='<div class="scr pk3 frm" style="'+padCss(z.p)+frmVars(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--ch:'+z.chH+'px">'+topBar(m,done?(ban?'밴 완료':'선택 완료')+' · 상대 '+((ban?P.oppBanDone:P.oppPickDone)?'완료':'선택 중'):(ban?'상대가 못 쓰게 할 캐릭터를 고르세요':'캐릭터를 고르고 확정하세요 (동시·비공개)'))
   +'<div class="pk3b"><div class="pcol me"><div class="lab2">'+esc(myName(P))+(ban?' · 내 밴':'')+'</div>'+mine+'</div>'  /* 카드 안에 이름이 있어 아래 이름 삭제(기획지시 2026-11-06 이름중복) */
   +'<div class="pmid"><div class="plist c'+z.cols+(z.scroll?' scr2':'')+'" id="plist" style="--pw:'+(z.cw+4)+'px">'+P.characters.map(function(id){var x=ch(id),bn=!ban&&P.banned.indexOf(id)>=0;
    return '<div class="pk'+(cur===id?' sel':'')+(bn?' off':'')+'" data-pick="'+id+'">'+pvCard(id,{w:z.cw,holo:0,badge:badge(id),sub:x.role||'',cls:'rnd'+(bn?' ban':'')})+'<i class="ck">✓</i></div>'}).join('')+'</div>'
@@ -1360,9 +1373,11 @@ function confirmPick(){var m=S.st;if(!m||(m.phase!=='pick'&&m.phase!=='ban'))ret
  var id=S.pickSel;if(P.myPick||!id||P.banned.indexOf(id)>=0)return;S.pickedSelf=id;lsSet('play_last',id);send({type:'pick',characterId:id});var b=$('pok');if(b){busy(b,'확정 중…')}}
 /* 스펠·덱(재배치 3): 왼쪽 상대(위)·나(아래) 같은 크기, 오른쪽 스펠 8종 한 줄(링+체크, 2개) + 설명 한 줄 + 덱 탭 + 덱 12장 한 줄(이름 없이, 길게 누르면 상세). 폭 44 미만이면 6×2 */
 /* 스펠·덱(사용자 요청 2026-11-01): 픽 화면과 같은 틀 — 왼쪽 아래 나, 오른쪽 위 상대(19% 열), 가운데 스펠 8종 + 설명 + 덱 탭 + 덱 12장 두 줄(6×2) */
-function loLay(){var W=VW(),H=VH(),p=prepPad(),gap=12,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side;
- var bodyH=H-p.t-p.b-40-12-12-48,spH=p.short?68:80,tabsH=32,dw=Math.floor(Math.min((cen-5*8)/6,(bodyH-spH-tabsH-24-8)/2/1.4,S.dsk?80:96));  /* 스펠 줄·덱 탭·덱 카드 줄 사이 12, 설명은 아래 줄 보조 텍스트 */
- var chH=S.dsk?Math.min(bodyH,Math.ceil(spH+tabsH+24+2*dw*1.4+8)):bodyH,sw=Math.floor(Math.min(side,(chH-26)/1.4,S.dsk?190/(S.zs||1):1e9));
+function loLay(){var W=VW(),H=VH(),p=prepPad(),gap=p.g,inner=W-p.l-p.r-2*gap,side=Math.round(inner*0.19),cen=inner-2*side,z=S.zs||1,cg=p.cg,sec=p.sec;
+ var bodyH=H-p.t-p.b-p.hdr-p.ftr-2*sec,spH=p.short?68:80,tabsH=32,dw=Math.floor(Math.min((cen-5*cg)/6,(bodyH-spH-tabsH-2*sec-cg)/2/1.4,S.dsk?120/z:96));  /* 스펠 줄·덱 탭·덱 카드 줄 사이 = 섹션 간격, 덱 카드 상한 120pt */
+ var sw,chH,ct=Math.ceil(spH+tabsH+2*sec+2*dw*1.4+cg);
+ if(S.dsk){sw=Math.floor(Math.min(side-16,260/z,(bodyH-26)/1.4));chH=Math.min(bodyH,Math.max(ct,Math.ceil(sw*1.4+26)))}
+ else{chH=bodyH;sw=Math.floor(Math.min(side,(chH-26)/1.4))}
  return {p:p,gap:gap,side:side,cen:cen,sw:sw,dw:dw,two:true,short:p.short,spH:spH,chH:chH}}
 var DECK_DESC={aggro:'먼저 크게 때려요',balance:'공격·방어를 고루',defense:'막고 버티며 이겨요',variant:'받아치며 흐름을 뺏어요'};  // 덱 설명 한 줄(기획답변 46차: 12자 안팎 제안)
 var STYLE_KO={aggro:'공세',balance:'균형',defense:'수비',variant:'변칙'};
@@ -1370,7 +1385,7 @@ function renderLoadout(m){var P=m.prep,z=loLay();S.load=S.load||lastLoad(P.myPic
  var preset=(S.data.presets[P.myPick]||[]).find(function(x){return x.slot===L.preset})||{cards:[]};
  var own=Object.keys(S.data.cards).filter(function(id){return S.data.cards[id].owner_character===P.myPick}).sort(),deck=preset.cards.concat(own);  // 덱 12장 = 프리셋 10 + 전용 2(엔진 buildDeck)
  var sp=L.spells,desc=sp.map(function(id){return sname(id)+': '+((S.data.spells[id]||{}).effect_text||'')}).join(' / ');
- var h='<div class="scr lo3 pk3 frm" style="'+padCss(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--ch:'+z.chH+'px;--sph:'+z.spH+'px">'+topBar(m,done?'준비 완료 · 상대 '+(P.oppLoadoutDone?'완료':'선택 중'):'스펠 2개와 덱을 고르세요')
+ var h='<div class="scr lo3 pk3 frm" style="'+padCss(z.p)+frmVars(z.p)+';--side:'+z.side+'px;--cen:'+z.cen+'px;--g:'+z.gap+'px;--ch:'+z.chH+'px;--sph:'+z.spH+'px">'+topBar(m,done?'준비 완료 · 상대 '+(P.oppLoadoutDone?'완료':'선택 중'):'스펠 2개와 덱을 고르세요')
   +'<div class="pk3b"><div class="pcol me"><div class="lab2">'+esc(myName(P))+'</div>'+pvCard(P.myPick,{w:z.sw,holo:0,cls:'rnd',tier:P.frame?frameOf(P.frame.mine).tier:null,badge:(P.mastery.mine||{})[P.myPick]||1})+'</div>'
   +'<div class="rcol2"><div class="sprow">'+Object.keys(S.data.spells).map(function(id){var s=S.data.spells[id],ic=S.A.slots['SPELL_'+id],on=sp.indexOf(id)>=0;
    return '<button class="spb2'+(on?' on':'')+'" data-sp="'+id+'"'+(done?' disabled':'')+' data-tip="'+esc(s.name+' · 쿨다운 '+s.cooldown+'턴 — '+(s.effect_text||''))+'"><i style="'+(ic?'background-image:url('+ic.url+')':'')+'">'+(ic?'':esc(s.name.slice(0,1)))+'</i><b>'+esc(s.name)+'</b><small>쿨 '+s.cooldown+'</small>'+(on?'<em>✓</em>':'')+'</button>'}).join('')+'</div>'
@@ -2045,15 +2060,28 @@ function stamp(el,t){if(!el)return;var s=document.createElement('div');s.classNa
 /* 결과(재배치 4): 1:1 분할. 왼쪽 50% = 전신 PNG의 카드 영역(3:4)만, 공용 어두운 배경, 폭을 꽉 채우고 위 맞춤(넘치는 아래는 잘림), 아래 35% 마스크. 오른쪽 50% = 데이터 */
 function artFill(id,w){var a=((S.A.art||{})[id]||{})['000']||{},src=a.full;if(!src)return '';var f=safe(),k=Math.min(VW()/788,VH()/360),l=Math.max(0,Math.max(60*k,f.l)-f.l);return 'background-image:url('+src.url+');left:'+l.toFixed(1)+'px;top:'+(40*k).toFixed(1)+'px;width:'+(320*k).toFixed(1)+'px;height:'+(569*k).toFixed(1)+'px;right:auto;bottom:auto'}  /* 결과: 전신 PNG(시안 320×569, 사용자 요청 2026-11-06 원래대로) */
 function renderResult(m){var rk0=m.code+':'+((m.last&&m.last.id)||'');if(S.resSnd!==rk0){S.resSnd=rk0;var Lv=m.last||{},pv=(Lv.picks||[])[m.you],wv=Lv.outcome!=='draw'&&Lv.outcome!=='void'&&((Lv.outcome==='a')===(m.you===0));if(pv&&(Lv.reason==='hp'||Lv.reason==='turn_limit')&&Lv.outcome!=='draw'&&Lv.outcome!=='void')setTimeout(function(){voice(pv,wv?'WIN':'LOSE')},300);  /* 결과 진입(K.O. 연출 끝) 0.3초 뒤 내 캐릭터 WIN/LOSE, 항복·이탈은 없음(상세 01) */var L0=m.last||{},w0=L0.outcome!=='draw'&&L0.outcome!=='void'&&((L0.outcome==='a')===(m.you===0));sfx(L0.outcome==='draw'||L0.outcome==='void'?'turn':w0?'win':'lose')}var L=m.last||{},you=m.you,win=L.outcome!=='draw'&&L.outcome!=='void'&&((L.outcome==='a')===(you===0)),draw=L.outcome==='draw',mine=(L.picks||[])[you];
- var pp=prepPad(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],half=Math.floor((VW()-pp.l-pp.r-12)/2),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
+ var pp=prepPad(),st=(L.stats||[])[you]||{},hp=(L.hp||[])[you]||[0,1],cw0=VW()-pp.l-pp.r,aw=Math.round(cw0*0.45),stat=function(lab,v){return '<div class="st"><small>'+lab+'</small><b>'+v+'</b></div>'};
  var mode=m.mode,rk=L.rank&&L.rank[you],ec=L.econ&&L.econ[you];
- $('app').innerHTML='<div class="scr frm res3'+(win?' win':draw?' draw':' lose')+'" style="'+padCss(pp)+'">'+topBar(null,'',T('res.title'))+'<div class="rbody"><div class="rl"><div class="rimg" style="'+(mine?artFill(mine,half):'')+'"></div></div>'
+ /* 결과(상세 01 2026-11-07 결과 화면 정리): 전신 9:16은 콘텐츠 왼쪽 45%·화면 위부터 아래까지(줄 뒤 겹침), 위에서부터 보임. 하단 35% 검정 그라데이션 위에 RP 3줄 */
+ var ad=((S.A.art||{})[mine]||{})['000']||{},rpb=resRp(mode,rk,ec);
+ $('app').innerHTML='<div class="scr frm res3'+(win?' win':draw?' draw':' lose')+'" style="'+padCss(pp)+frmVars(pp)+';--g:'+pp.g.toFixed(1)+'px">'
+  +'<div class="rl" style="left:'+pp.l.toFixed(1)+'px;width:'+aw+'px"><div class="rimg" style="top:'+pp.t.toFixed(1)+'px'+(ad.full?';background-image:url('+ad.full.url+')':'')+'"></div><div class="rgrad" style="padding-bottom:'+(pp.b+pp.ftr+pp.sec).toFixed(1)+'px">'+rpb+'</div></div>'
+  +topBar(null,'',T('res.title'))+'<div class="rbody"><div></div>'
   +'<div class="rr"><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(L.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[L.reason]||L.reason||''))+(mine?' · '+esc(ch(mine).name):'')+'</div>'
   +'<div class="stats">'+stat('판 길이',(L.turn||0)+'턴')+stat('준 피해',st.dealt!=null?st.dealt:'-')+stat('받은 피해',st.taken!=null?st.taken:'-')+stat('실드로 막은 피해',st.blocked!=null?st.blocked:'-')+stat('남은 HP',Math.round(100*hp[0]/hp[1])+'%')+'</div>'
-  +'<div class="rew">'+(rk?'<div>RP '+(rk.rpDelta>=0?'+':'')+rk.rpDelta+' → '+rk.rp+'</div>':'')+(ec&&ec.gold?'<div>골드 +'+ec.gold+'</div>':'')+'</div></div></div>'
-  +'<div class="row fbar"><div class="fsub">'+(mode==='practice'?'<div>AI 대전은 RP·숙련도 변화가 없어요(총괄 8장)</div>':'')+'</div><button id="home" class="sec">로비</button><button class="pri confirm" id="again">다시 하기 (Enter)</button></div></div>';frmBind();
+  +'</div></div>'
+  +'<div class="row fbar"><div class="fsub"></div><button id="home" class="sec">로비</button><button class="pri confirm" id="again">다시 하기 (Enter)</button></div></div>';frmBind();
  $('home').onclick=function(){quit();home()};$('again').onclick=function(){busy(this,'준비 중…');again()};
  $('rmore').onclick=function(){ask('신고 — 상대: '+(m.members[1-you]&&m.members[1-you].ai?'AI (신고 대상 아님)':'상대 플레이어')+'. 정식 신고는 상세 13 사유로 접수돼요(테스트 화면은 접수하지 않음).','닫기',function(){},{one:true,title:'신고'})}}
+/* RP 3줄: 1줄 ±N RP(24, 증가 금색·감소 옅은 붉은색), 2줄 티어 변화·진행(12), 3줄 연승·보너스 등(11) */
+function tierAt(rp){var t=(((S.data||{}).tables||{}).rank_tiers||{}).tiers||[],r=null;t.forEach(function(x){if(rp>=(x.rp_start||0)&&(!r||x.no>r.no))r=x});return r}
+function resRp(mode,rk,ec){var l1='',l2='',l3=[],c='';
+ if(mode==='practice'){l1='±0 RP';l2='AI 대전';l3.push('RP·숙련도 변화 없음')}
+ else if(rk){var d=rk.rpDelta||0,ta=tierAt(rk.rp),tb=tierAt(rk.rp-d);l1=(d>0?'+':d<0?'−':'±')+Math.abs(d)+' RP';c=d>0?' up':d<0?' down':'';
+  l2=(ta&&tb&&ta.no!==tb.no?tb.name+' → '+ta.name+(ta.no>tb.no?' 승급':' 강등'):(ta?ta.name:''))+' · '+rk.rp+' RP';
+  if(rk.streak>=2)l3.push(rk.streak+'연승');if(rk.bonus)l3.push('연승 보너스 +'+rk.bonus);if(rk.aiCapped)l3.push('AI 판 RP 일일 상한')}
+ if(ec&&ec.gold)l3.push('골드 +'+ec.gold);
+ return (l1?'<div class="rp1'+c+'">'+esc(l1)+'</div>':'')+(l2?'<div class="rp2">'+esc(l2)+'</div>':'')+(l3.length?'<div class="rp3">'+esc(l3.join(' · '))+'</div>':'')}
 function again(){quit();var d=localStorage.getItem('play_dev');api('/v1/practice',{difficulty:S.diff,defaults:defs()}).then(function(j){S.st=null;S.load=null;connect(j.code)}).catch(function(){login(d).then(function(){return api('/v1/practice',{difficulty:S.diff,defaults:defs()})}).then(function(j){connect(j.code)}).catch(function(e){home(e.message)})})}
 
 /* ---------- 타이머·홀로·키 ---------- */

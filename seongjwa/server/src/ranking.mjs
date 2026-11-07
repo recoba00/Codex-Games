@@ -37,7 +37,7 @@ export async function settleMatch(env, data, { matchId, seasonId, mode, players 
           p_rp: res.rp, p_tier: res.tier, p_state: res.state, p_mmr_delta: res.mmrDelta,
           p_event: { kind, mode, rp_delta: res.rpDelta, detail: res.detail }
         });
-        out.push({ acc: p.acc, result: kind, netExempt: Boolean(res.detail.netExempt), rpDelta: res.rpDelta, rp: res.rp, tier: res.tier, duplicate: status === "duplicate" });
+        out.push({ acc: p.acc, result: kind, netExempt: Boolean(res.detail.netExempt), rpDelta: res.rpDelta, rp: res.rp, streak: res.state?.streak ?? 0, bonus: res.detail?.streakBonus ?? 0, aiCapped: Boolean(res.detail?.aiCapped), tier: res.tier, duplicate: status === "duplicate" });
         break;
       } catch (error) {
         if (error.message !== "rank_conflict" || attempt === 2) throw error;  // 버전 충돌 → 다시 읽고 재계산
