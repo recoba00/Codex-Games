@@ -1062,7 +1062,7 @@ html.dsk .frm .top .tl>.mu,html.dsk .frm .top .chip{font-size:calc(12px / var(--
 .lprof span{display:flex;flex-direction:column;min-width:0}.lprof small{display:flex;align-items:center;gap:4px;font-size:10px;color:#ffd97a}.lprof b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lav{width:36px;height:36px;flex:none;border-radius:50%;border:2px solid #4152b5;background:#1a2150 50% 6%/260% auto no-repeat}.lav.sm{width:28px;height:28px}
 .lemb{display:inline-block;width:14px;height:14px;background:center/contain no-repeat;vertical-align:middle}
-.lbnav{display:flex;gap:4px}.lbnav button{position:relative;background:none;border:0;color:#c8cfee;font-size:14px;font-weight:700;padding:0 12px;height:36px;border-radius:8px;transition:background .12s,color .12s}.lbnav button:hover{background:rgba(65,82,181,.25);color:#fff}.lbnav button:active{background:rgba(65,82,181,.45)}.lbnav button.on{color:#ffd97a}.lbnav button.on::after{content:'';position:absolute;left:12px;right:12px;bottom:2px;height:2px;border-radius:1px;background:#ffd97a}  /* 상단 메뉴: 현재 화면(금색 밑줄)·호버·눌림(89차)*/
+.lbnav{display:flex;gap:4px}.lbnav button{position:relative;background:none;border:0;color:#c8cfee;font-size:14px;font-weight:700;padding:0 12px;height:36px;border-radius:8px;transition:background .12s,color .12s}.lbnav button:hover{background:rgba(65,82,181,.25);color:#fff}.lbnav button:active{background:rgba(65,82,181,.45)}.lbnav button.on{color:#ffd97a;border:0;background:none;box-shadow:none}.lbnav button.on::after{content:'';position:absolute;left:12px;right:12px;bottom:2px;height:2px;border-radius:1px;background:#ffd97a}  /* 상단 메뉴: 현재 화면(금색 밑줄)·호버·눌림(89차)*/
 .lgo{background:linear-gradient(180deg,#ffcf55,#f0a92a);border:1px solid #ffe08a;color:#1a1305;font-weight:800}.lgo:hover{filter:brightness(1.08)}  /* 받을 수 있는 미션 = 골드 강조 */
 .lright{display:flex;align-items:center;gap:8px;justify-self:end}
 .lgold{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid #2a3470;border-radius:8px;background:rgba(15,19,40,.8);font-weight:800;font-size:13px;color:#ffd97a}.lgold i{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe7a0,#d9962a)}
@@ -1109,6 +1109,7 @@ html.dsk .frm .top .tl>.mu,html.dsk .frm .top .chip{font-size:calc(12px / var(--
 .lacct label{display:flex;align-items:center;gap:8px;font-size:12px}.lacct input{flex:1;min-width:0;height:30px}.lb.mob .lacct{gap:6px;padding:10px 12px}.lb.mob .lacct>small.mu{display:none}.lacct input{background:rgba(0,0,0,.35);border:1px solid #2a3470;border-radius:6px;color:#f4f6ff;padding:0 8px}
 .lrepg{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}.lrepg button{padding:2px;border:2px solid transparent;border-radius:10px;background:none}.lrepg button.on{border-color:#6f86ff}
 .lb.mob .lbc{gap:8px}.lb.mob .lrank .lsub{font-size:10px}.lb.dsk{padding-bottom:max(var(--sec,12px),var(--sb,0px))!important}
+.lonl{display:flex;align-items:center;gap:4px;font-size:11px;color:#9aa4d6;white-space:nowrap}.lonl i{width:6px;height:6px;border-radius:50%;background:#3ddc84;box-shadow:0 0 6px #3ddc84}.lonl b{color:#e6ebff;font-weight:700}
 .lhint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:5;max-width:90%}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
@@ -1302,6 +1303,10 @@ setInterval(netBar,1000);
    채팅 칸은 넣지 않음(상세 05 "채팅은 넣지 않는다"). 사용자 요청 2026-11-07 ===== */
 var TIER_SLOT={'브론즈':'BRONZE','실버':'SILVER','골드':'GOLD','플래티넘':'PLATINUM','다이아':'DIAMOND','마스터':'MASTER','레전드':'LEGEND'};
 function soon(){toast('준비 중이에요')}
+/* 실시간 접속자 수(최근 2분 접속 신호): 로비에서 30초마다 갱신. 접속 신호는 로그인 중이면 1분마다(로비·전투 모두) */
+function lobOnline(){if(S.onlAt&&Date.now()-S.onlAt<25000)return;S.onlAt=Date.now();fetch('/v1/online').then(function(r){return r.json()}).then(function(j){if(j&&j.ok){S.onl=j.count;var e=$('lOnl');if(e)e.textContent=Number(j.count).toLocaleString()}}).catch(function(){})}
+setInterval(function(){if($('lobby'))lobOnline()},30000);
+setInterval(function(){if(S.tok&&!document.hidden)api('/v1/presence',{}).catch(function(){})},60000);
 function lobChar(){var ids=Object.keys((S.data||{}).characters||{}),r=lsGet('play_rep')||lsGet('play_last');return ids.indexOf(r)>=0?r:ids[0]}
 function lobArt(id){var a=((S.A.art||{})[id]||{})['000']||{};return a.full?a.full.url:''}
 function tierEmb(name){var k=TIER_SLOT[String(name||'').split(' ')[0]],u=k&&S.A.slots['TIER_'+k];return '<i class="lemb"'+(u?' style="background-image:url('+u.url+')"':'')+'></i>'}
@@ -1333,7 +1338,7 @@ function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);clearInterval(S
  var h='<div class="scr lb'+(dsk?' dsk':' mob')+'" id="lobby" style="'+padCss(p)+frmVars(p)+';--g:'+p.g.toFixed(1)+'px">'
   +'<div class="ltop"><button class="lprof" id="lProf"><i class="lav" style="'+(art?'background-image:url('+art+')':'')+'"></i><span><small>'+tierEmb(rk&&rk.name)+esc(rk?rk.name:'')+'</small><b>'+esc(nick||'플레이어')+'</b></span></button>'
   +'<nav class="lbnav"><button data-soon="1">상점</button><button data-soon="1">컬렉션</button>'+(dsk?'<button class="on" aria-current="page">로비</button>':'')+'<button id="lFr">친구</button><button data-soon="1">랭크</button></nav>'
-  +'<div class="lright">'+(P.prompt?'<button class="sm sec" id="inst">앱으로 설치</button>':'')+'<span class="lgold"><i></i>'+(e.gold!=null?Number(e.gold).toLocaleString():'-')+'</span><button class="lic" id="lMail" title="우편">✉'+(e.mailUnread?'<em>'+e.mailUnread+'</em>':'')+'</button><button class="lic" id="lSet" title="설정">'+SVG_GEAR+'</button></div></div>'
+  +'<div class="lright"><span class="lonl" title="최근 2분 안에 접속한 사람 수"><i></i>접속 <b id="lOnl">'+(S.onl!=null?Number(S.onl).toLocaleString():'-')+'</b></span>'+(P.prompt?'<button class="sm sec" id="inst">앱으로 설치</button>':'')+'<span class="lgold"><i></i>'+(e.gold!=null?Number(e.gold).toLocaleString():'-')+'</span><button class="lic" id="lMail" title="우편">✉'+(e.mailUnread?'<em>'+e.mailUnread+'</em>':'')+'</button><button class="lic" id="lSet" title="설정">'+SVG_GEAR+'</button></div></div>'
   +'<div class="lbbody">';
  if(dsk){h+='<div class="lbc lleft"><div class="lcard lcev"><small class="lbk">EVENT</small><b class="lt">이벤트</b>'+lobEvent()+'</div><div class="lcard lcmis"><small class="lbk">MISSION</small><b class="lt">오늘의 미션'+(e.claimable?' <em class="ldot">'+e.claimable+'</em>':'')+'</b>'+lobMis()+'</div></div>'
    +'<div class="lart" style="'+(art?'background-image:url('+art+')':'')+'">'+(art?'':'<span class="mu">대표 캐릭터</span>')+recent+'</div>'
@@ -1362,7 +1367,7 @@ function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);clearInterval(S
   d2.querySelector('#pOk').onclick=function(){var d=$('pDev').value.trim().toLowerCase(),n=$('pNick').value.trim();if(!/^[a-z0-9_-]{3,32}$/.test(d)){toast('아이디는 영문 소문자·숫자 3~32자');return}if(n&&!/^[\p{L}\p{N}_]{2,12}$/u.test(n)){toast('닉네임은 한글·영문·숫자·_ 2~12자');return}
    if(d!==lsGet('play_dev')){S.tok=null;S.lob=null}localStorage.setItem('play_dev',d);lsSet('play_nick',n);S.lobAt=0;ppClose(d2);lobLoad(true);home()}};
  var b0=(((L.content||{}).banners)||[]).length;if(dsk&&b0>1)S.lobT=setInterval(function(){if(!$('lobby')||S.st){clearInterval(S.lobT);return}S.lobEv=(S.lobEv||0)+1;var x=document.querySelector('.lcev');if(x){var t=x.querySelector('.lt').outerHTML,k=x.querySelector('.lbk').outerHTML;x.innerHTML=k+t+lobEvent()}},5000);
- lobLoad();
+ lobLoad();lobOnline();
  var code=sessionStorage.getItem('play_room');if(code&&!msg){if(S.tok)connect(code);else login(dev).then(function(){connect(code)}).catch(function(){sessionStorage.removeItem('play_room')})}}
 window.onPwaChange=function(){if(!S.st&&S.data&&$('lobby'))home()};
 function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}

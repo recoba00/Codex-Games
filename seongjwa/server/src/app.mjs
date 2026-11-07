@@ -144,6 +144,9 @@ export async function handle(request, env) {
       return new Response(BO_PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-frame-options": "DENY",
         "content-security-policy": `default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src 'self' data: blob: https: ${originOf(env.SUPABASE_URL)}; connect-src 'self'; frame-ancestors 'none'` } });
 
+    case "GET /v1/online":  // 로비 실시간 접속자 수(최근 2분 접속 신호, 사용자 요청 2026-11-07). 30초 캐시
+      return json({ ok: true, count: Number(await rpc(env, "online_count", {})) || 0 }, 200, { "cache-control": "public, max-age=30" });
+
     case "GET /v1/lobby":  // 로비 배너(최대 5)·공지 팝업(상세 05)
       return json({ ok: true, ...(await rpc(env, "lobby_content", {})) }, 200, { "cache-control": "public, max-age=60" });
 
