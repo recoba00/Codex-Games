@@ -1062,7 +1062,8 @@ html.dsk .frm .top .tl>.mu,html.dsk .frm .top .chip{font-size:calc(12px / var(--
 .lprof span{display:flex;flex-direction:column;min-width:0}.lprof small{display:flex;align-items:center;gap:4px;font-size:10px;color:#ffd97a}.lprof b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lav{width:36px;height:36px;flex:none;border-radius:50%;border:2px solid #4152b5;background:#1a2150 50% 6%/260% auto no-repeat}.lav.sm{width:28px;height:28px}
 .lemb{display:inline-block;width:14px;height:14px;background:center/contain no-repeat;vertical-align:middle}
-.lbnav{display:flex;gap:4px}.lbnav button{background:none;border:0;color:#f4f6ff;font-size:14px;font-weight:700;padding:0 12px;height:36px;border-radius:8px}.lbnav button:hover{background:rgba(65,82,181,.25)}
+.lbnav{display:flex;gap:4px}.lbnav button{position:relative;background:none;border:0;color:#c8cfee;font-size:14px;font-weight:700;padding:0 12px;height:36px;border-radius:8px;transition:background .12s,color .12s}.lbnav button:hover{background:rgba(65,82,181,.25);color:#fff}.lbnav button:active{background:rgba(65,82,181,.45)}.lbnav button.on{color:#ffd97a}.lbnav button.on::after{content:'';position:absolute;left:12px;right:12px;bottom:2px;height:2px;border-radius:1px;background:#ffd97a}  /* 상단 메뉴: 현재 화면(금색 밑줄)·호버·눌림(89차)*/
+.lgo{background:linear-gradient(180deg,#ffcf55,#f0a92a);border:1px solid #ffe08a;color:#1a1305;font-weight:800}.lgo:hover{filter:brightness(1.08)}  /* 받을 수 있는 미션 = 골드 강조 */
 .lright{display:flex;align-items:center;gap:8px;justify-self:end}
 .lgold{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid #2a3470;border-radius:8px;background:rgba(15,19,40,.8);font-weight:800;font-size:13px;color:#ffd97a}.lgold i{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe7a0,#d9962a)}
 .lic{position:relative;width:36px;height:36px;padding:0;border-radius:8px;border:1px solid #2a3470;background:rgba(15,19,40,.8);color:#f4f6ff;display:grid;place-items:center;font-size:16px}.lic svg{width:20px;height:20px}
@@ -1312,7 +1313,7 @@ function lobLoad(force){var d=lsGet('play_dev');if(!d||(!force&&S.lobAt&&Date.no
   return Promise.all([g('/v1/econ'),g('/v1/rank/me'),g('/v1/friends'),fetch('/v1/lobby').then(function(r){return r.json()}).catch(function(){return null})])})
  .then(function(x){S.lob={econ:x[0],rank:x[1],friends:x[2],content:x[3]};if($('lobby')&&!S.st)home()}).catch(function(){})}
 function lobMis(){var e=(S.lob||{}).econ;if(!e)return '<div class="mu small">'+(lsGet('play_dev')?'불러오는 중…':'테스트 계정을 넣으면 미션이 보여요')+'</div>';
- return (e.daily||[]).map(function(m){var b=m.claimed?'<button class="sm sec" disabled>완료</button>':m.done?'<button class="sm pri" data-mclaim="'+m.id+'">받기</button>':'<button class="sm sec" disabled>진행 중</button>';
+ return (e.daily||[]).map(function(m){var b=m.claimed?'<button class="sm sec" disabled>완료</button>':m.done?'<button class="sm lgo" data-mclaim="'+m.id+'">받기</button>':'<button class="sm sec" disabled>진행 중</button>';
   return '<div class="lmis"><div><b>'+esc(m.name||m.id)+'</b><small>'+(m.progress||0)+' / '+(m.target||1)+' · 골드 '+(m.gold||0)+'</small></div>'+b+'</div>'}).join('')||'<div class="mu small">오늘의 미션이 없어요</div>'}
 function lobEvent(){var b=(((S.lob||{}).content||{}).banners)||[],i=(S.lobEv||0)%Math.max(1,b.length),x=b[i];
  return '<div class="lev"'+(x&&x.image?' style="background-image:url('+esc(x.image)+')"':'')+'>'+(x?(x.image?'':'<span>'+esc(x.title||'')+'</span>'):'<span>진행 중인 이벤트가 없어요</span>')+'</div>'+(b.length>1?'<div class="ldots">'+b.map(function(_,k){return '<i'+(k===i?' class="on"':'')+'></i>'}).join('')+'</div>':'')}
@@ -1332,7 +1333,7 @@ function home(msg){applyZoom();S.st=null;S.prev=null;wake(false);clearInterval(S
  var recent='<div class="lcard lrec"><small class="lbk">최근 10경기</small><b class="lt">최근 전적</b><div class="lrs">'+lobRecent()+'</div></div>';
  var h='<div class="scr lb'+(dsk?' dsk':' mob')+'" id="lobby" style="'+padCss(p)+frmVars(p)+';--g:'+p.g.toFixed(1)+'px">'
   +'<div class="ltop"><button class="lprof" id="lProf"><i class="lav" style="'+(art?'background-image:url('+art+')':'')+'"></i><span><small>'+tierEmb(rk&&rk.name)+esc(rk?rk.name:'')+'</small><b>'+esc(nick||'플레이어')+'</b></span></button>'
-  +'<nav class="lbnav"><button data-soon="1">상점</button><button data-soon="1">컬렉션</button><button id="lFr">친구</button><button data-soon="1">랭크</button></nav>'
+  +'<nav class="lbnav"><button data-soon="1">상점</button><button data-soon="1">컬렉션</button>'+(dsk?'<button class="on" aria-current="page">로비</button>':'')+'<button id="lFr">친구</button><button data-soon="1">랭크</button></nav>'
   +'<div class="lright">'+(P.prompt?'<button class="sm sec" id="inst">앱으로 설치</button>':'')+'<span class="lgold"><i></i>'+(e.gold!=null?Number(e.gold).toLocaleString():'-')+'</span><button class="lic" id="lMail" title="우편">✉'+(e.mailUnread?'<em>'+e.mailUnread+'</em>':'')+'</button><button class="lic" id="lSet" title="설정">'+SVG_GEAR+'</button></div></div>'
   +'<div class="lbbody">';
  if(dsk){h+='<div class="lbc lleft"><div class="lcard lcev"><small class="lbk">EVENT</small><b class="lt">이벤트</b>'+lobEvent()+'</div><div class="lcard lcmis"><small class="lbk">MISSION</small><b class="lt">오늘의 미션'+(e.claimable?' <em class="ldot">'+e.claimable+'</em>':'')+'</b>'+lobMis()+'</div></div>'
