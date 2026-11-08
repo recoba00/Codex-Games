@@ -31,7 +31,7 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
   }
   const endE = st.log.find((e) => e.t === "end") || {};
   games.push({ a, b, sl: slots, o: st.result.outcome, r: st.result.reason, ko2: !!endE.koBoth, t: st.result.turn,
-    hp: st.players.map((p) => Math.max(0, p.hp) / p.maxHp), mx: st.players.map((p) => p.maxHp),
+    hp: st.players.map((p) => Math.max(0, p.hp) / p.maxHp), mx: st.players.map((p) => p.maxHp), dealt: st.players.map((p) => p.dealt ?? 0),
     acc: acc.map((x, s) => Object.fromEntries(Object.entries(x).map(([k, v]) => [k, Math.round(v) / st.players[s].maxHp]))) });
 }
 console.log(JSON.stringify({ diff, per, version: DATA.version, games }));
