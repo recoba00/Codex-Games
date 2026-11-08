@@ -276,7 +276,7 @@ try {
       const leftMs = await pg.evaluate(() => S.st.phaseDeadline - now());
       assert.ok(leftMs > 7000, `매칭 뒤 밴 시간이 줄어 있음 ${leftMs}ms`);
     }
-    const labs = await Promise.all(pages.map(([pg]) => pg.$$eval(".lab2", (x) => x.map((e) => e.textContent))));
+    const labs = await Promise.all(pages.map(([pg]) => pg.$$eval(".lab4 span", (x) => x.map((e) => e.textContent))));
     assert.ok(labs[0].join(" ").includes(pages[0][1]) && labs[0].join(" ").includes(pages[1][1]), `밴픽에 닉네임 ${labs[0]}`);
     assert.ok(labs[1].join(" ").includes(pages[1][1]) && labs[1].join(" ").includes(pages[0][1]), `밴픽에 닉네임 ${labs[1]}`);
     await pages[0][0].screenshot({ path: "/tmp/play_pvp_ban.png" });
