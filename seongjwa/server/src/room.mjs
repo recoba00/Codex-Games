@@ -589,7 +589,7 @@ export class FriendRoom extends DurableObject {
     const reason = voidReason ?? b.result.reason;
     const mode = room.mode ?? "friend";
     room.games += 1;
-    room.last = { id: g.id, outcome, reason, koBoth: !!b.result?.koBoth, turn: b.turn, picks: g.picks, hp: b.players.map((p) => [p.hp, p.maxHp]),
+    room.last = { id: g.id, outcome, reason, koBoth: !!b.result?.koBoth, byDealt: !!b.result?.byDealt, turn: b.turn, picks: g.picks, hp: b.players.map((p) => [p.hp, p.maxHp]),
       stats: b.players.map((p, s) => ({ dealt: p.dealt ?? 0, taken: b.players[1 - s].dealt ?? 0, blocked: p.absorbed ?? 0 })) };  // 결과 통계 5가지(턴·준/받은 피해·실드로 막은 피해·남은 HP)
     room.saves.push({
       tries: 0, next: now,
@@ -605,7 +605,8 @@ export class FriendRoom extends DurableObject {
           battle_sec: Math.round((now - (g.battleStartedAt ?? now)) / 1000), options: room.options,
           ai: room.members.find((m) => m.ai)?.ai ?? null,
           tally: b.players.map((p) => p.tally ?? null),  // 낸 카드 종류·스펠 횟수·액티브·무행동 턴(기획답변 59차)
-          ...(b.result?.koBoth ? { ko_both: true } : {})  // 동시 HP 0을 준 피해로 가른 판(기획답변 56차)
+          ...(b.result?.koBoth ? { ko_both: true } : {}),
+          ...(b.result?.byDealt ? { by_dealt: true } : {})  // 10턴 HP 비율 차 judge_margin 이내 → 준 피해 판정(기획답변 93차)  // 동시 HP 0을 준 피해로 가른 판(기획답변 56차)
         }
       }
     });

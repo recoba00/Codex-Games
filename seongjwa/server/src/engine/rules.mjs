@@ -7,6 +7,7 @@ export const RULE_DEFAULTS = Object.freeze({
   rush_start_turn: 7,
   rush_dmg_step: 0.5,  // 시트 설정값 기준(43차, 라이브 v38 = 0.5). 데이터에 값이 있으면 그 값을 씀
   rush_heal_cut: 0.5,
+  judge_margin: 0.05,        // 10턴 판정 HP 비율 차 허용폭(시트 설정값 72행, 수치패치 v42, 기획답변 93차 C5). 이 안이면 누적 준 피해로 판정
   crit_mult: 1.5,
   dmg_global_mult: 1.3,      // 전역 피해 배율(시트 설정값, 기획답변 42차·82차 대체값 1.3): 공격·반격·액티브 피해 최종값에 곱함. 작열 틱은 제외
   reconnect_grace_sec: 60,

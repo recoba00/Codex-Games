@@ -590,10 +590,11 @@ export function resolveTurn(state) {
     return state;
   }
   if (state.turn >= state.rules.max_turn) {
-    // 최대 턴: HP 비율 → 누적 준 HP 피해 → 무승부 (총괄 6·12장)
-    const ra = A.hp / A.maxHp, rb = B.hp / B.maxHp;
-    const outcome = ra !== rb ? (ra > rb ? "a" : "b") : A.dealt !== B.dealt ? (A.dealt > B.dealt ? "a" : "b") : "draw";
-    finish(state, outcome, "turn_limit");
+    // 최대 턴(기획답변 93차 C5, 총괄 6장): HP 비율 차가 judge_margin(5%p) 이내면 누적 준 HP 피해 → 같으면 무승부, 넘으면 HP 비율
+    const ra = Math.max(0, A.hp) / A.maxHp, rb = Math.max(0, B.hp) / B.maxHp;
+    const close = Math.abs(ra - rb) <= (state.rules.judge_margin ?? 0.05) + 1e-9;  // 경계값 정확히 5%p는 이내
+    const outcome = !close ? (ra > rb ? "a" : "b") : A.dealt !== B.dealt ? (A.dealt > B.dealt ? "a" : "b") : "draw";
+    finish(state, outcome, "turn_limit", close ? { byDealt: true } : {});
     return state;
   }
   beginTurn(state);
@@ -717,7 +718,7 @@ export function view(state, seat) {
     } : {})
   });
   return {
-    turn: state.turn, dataVersion: state.dataVersion, rules: { max_turn: state.rules.max_turn, rush_start_turn: state.rules.rush_start_turn, rush_dmg_step: state.rules.rush_dmg_step, cards_per_turn_max: state.rules.cards_per_turn_max,
+    turn: state.turn, dataVersion: state.dataVersion, rules: { max_turn: state.rules.max_turn, rush_start_turn: state.rules.rush_start_turn, rush_dmg_step: state.rules.rush_dmg_step, judge_margin: state.rules.judge_margin, cards_per_turn_max: state.rules.cards_per_turn_max,
       turn_select_sec: state.rules.turn_select_sec, rush_siren_sec: state.rules.rush_siren_sec, reveal_max_sec: state.rules.reveal_max_sec, reveal_zoom_sec: state.rules.reveal_zoom_sec },
     you: seat, me: pub(state.players[seat], true), opp: pub(state.players[1 - seat], false),
     log: state.log, result: state.result

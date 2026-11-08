@@ -1139,7 +1139,8 @@ var I18N={
   'help.view':"Your side is bottom-left, the opponent's top-right. Pick cards from your hand and confirm; both sides reveal at once",
   'help.order':"Cards resolve by type: 0 Spell → 1 Guard → 2 Disrupt → 3 Skill → 4 Attack → 5 End. Pick order doesn't matter; within a step, higher SPD shows first",
   'help.active':"Your gauge fills each turn (+15 at turn start, +8 per energy spent). At 100 you can use your character's active",
-  'help.rush':'From turn {start}, Rampage: all damage grows each turn and healing is halved. The match ends at 0 HP; at turn {max} the higher HP ratio wins',
+  'help.rush':'From turn {start}, Rampage: all damage grows each turn and healing is halved. The match ends at 0 HP; at turn {max} the higher HP ratio wins, but if the HP ratios are within {m}%p, whoever dealt more total damage wins',
+  'res.byDealt':'Turn limit · HP within {m}%p → decided by damage dealt','res.koBoth':'Double KO · decided by damage dealt',
   'help.rank':'Win ranked matches to gain RP, lose to drop. Every 100 RP is a tier. AI ranked matches give 60% RP','help.soon':'Coming soon.',
   'help.k.view':'Reading the screen','help.k.cards':'Card list','help.k.order':'Resolution order','help.k.status':'Status & keywords','help.k.active':'Active & gauge','help.k.spells':'Spells','help.k.rush':'Rampage & match end','help.k.rank':'Rank & RP','help.k.tut':'Tutorial & matchup lessons',
   'st.shield':'Shield|Absorbs damage before HP','st.carry_shield':"Carried Shield|Shield carried over from last turn. Doesn't carry again",'st.burn':'Burn|At turn end, 3% max HP damage (ignores shield)','st.mark':'Mark|Takes +20% critical damage','st.weaken':'Weaken|Attack −20%','st.silence':'Silence|Skill cards and active are voided','st.active_lock':"Active Locked|Can't use active next turn",'st.skill_lock':"Skill Lock|Can't use skill cards next turn",'st.hand_seal':"Hand Seal|1 card can't be used next turn",'st.energy_down':'Energy Down|Less energy next turn','st.immune':"Immune|Can't be silenced or debuffed (damage still hits)",'st.atk_up':'Attack Up|Attack cards deal more damage this turn','st.counter_ready':'Counter Ready|Voids an attack and strikes back','st.tide_flood':'High Tide|Attack damage +20%','st.tide_ebb':'Low Tide|Damage taken −20%','st.active_inferno':'Inferno|Attack cards ×{m}, damage taken +{t}%','st.active_tide':'Great Tide|High and Low Tide apply together','st.spell_ward':'Ward|All damage taken this turn is 0','st.spell_mirror':'Mirror|Reflects 50% of direct damage taken','st.spell_exhaust':'Exhaust|Enemy attack damage −30% this turn','st.spell_lock':'Spell Lock|Spell effects are voided this turn','st.heal_up':'Heal Up|Healing is increased','st.speed_up':'Speed Up|SPD is increased','st.no_carry':"No Carry|Shield doesn't carry over",'set.help':'Help','help.title':'Help','help.close':'Close','help.rankedTimer':'Ranked: the turn timer keeps running while Help is open.'},
@@ -1156,7 +1157,8 @@ var I18N={
   'help.view':'내 영역은 왼쪽 아래, 상대는 오른쪽 위예요. 손패에서 카드를 골라 확정을 누르면 양쪽이 동시에 공개돼요',
   'help.order':'카드는 종류별 단계 순서로 처리돼요: 0 스펠 → 1 보호 → 2 방해 → 3 스킬 → 4 공격 → 5 종료. 고른 순서와는 상관없고, 같은 단계에서는 속도(SPD)가 높은 쪽이 먼저 보여요',
   'help.active':'턴마다 게이지가 차고(턴 시작 +15, 쓴 에너지 1당 +8), 100이 되면 캐릭터의 액티브를 쓸 수 있어요',
-  'help.rush':'{start}턴부터 폭주: 모든 피해가 턴마다 커지고 회복은 절반이에요. HP가 0이 되면 바로 끝나고, {max}턴까지 가면 HP 비율로 승패를 정해요',
+  'help.rush':'{start}턴부터 폭주: 모든 피해가 턴마다 커지고 회복은 절반이에요. HP가 0이 되면 바로 끝나고, {max}턴까지 가면 HP 비율로 승패를 정해요. 단 HP 비율 차가 {m}%p 이내면 누적 준 피해가 많은 쪽이 이겨요',
+  'res.byDealt':'최대 턴 · HP 비율 차 {m}%p 이내 → 준 피해로 판정','res.koBoth':'동시 쓰러짐 · 준 피해로 판정',
   'help.rank':'랭킹전에서 이기면 승점(RP)을 얻고 지면 잃어요. 100 RP마다 티어가 올라요. AI 랭킹전은 승점이 60%예요','help.soon':'준비 중이에요.',
   'help.k.view':'화면 보는 법','help.k.cards':'카드 도감','help.k.order':'처리 순서','help.k.status':'상태·키워드','help.k.active':'액티브·게이지','help.k.spells':'스펠','help.k.rush':'폭주·종료','help.k.rank':'랭크·승점','help.k.tut':'튜토리얼 다시 하기·상성 레슨',
   'st.shield':'실드|받는 피해를 HP보다 먼저 막아요','st.carry_shield':'이월 실드|지난 턴에서 넘어온 실드예요. 다시 넘어가지 않아요','st.burn':'작열|턴이 끝날 때 최대 HP 3% 피해(실드 무시)','st.mark':'표식|받는 치명 피해 +20%','st.weaken':'약화|공격력 −20%','st.silence':'침묵|스킬 카드·액티브가 무효예요','st.active_lock':'액티브 봉인|다음 턴 액티브를 쓸 수 없어요','st.skill_lock':'스킬 봉쇄|다음 턴 스킬 카드를 쓸 수 없어요','st.hand_seal':'손패 봉인|손패 1장이 다음 턴 사용 불가예요','st.energy_down':'에너지 감소|다음 턴 에너지가 줄어요','st.immune':'면역|침묵·디버프에 걸리지 않아요(피해는 못 막음)','st.atk_up':'공격 강화|이번 턴 공격 카드 피해가 늘어요','st.counter_ready':'반격 대기|상대 공격을 무효로 하고 되돌려요','st.tide_flood':'밀물|공격 피해 +20%','st.tide_ebb':'썰물|받는 피해 −20%','st.active_inferno':'업화|공격 카드 피해 ×{m}, 받는 피해 +{t}%','st.active_tide':'대조류|밀물·썰물 효과가 동시에 적용돼요','st.spell_ward':'수호|이번 턴 받는 모든 피해가 0이에요','st.spell_mirror':'거울|받는 직접 피해의 50%를 되돌려요','st.spell_exhaust':'탈진|이번 턴 공격 피해 −30%','st.spell_lock':'봉쇄|이번 턴 스펠 효과가 무효예요','st.heal_up':'회복 증가|회복량이 늘어요','st.speed_up':'속도 증가|SPD가 올라요','st.no_carry':'실드 이월 불가|실드가 다음 턴으로 넘어가지 않아요','set.help':'도움말','help.title':'도움말','help.close':'닫기','help.rankedTimer':'랭킹전은 도움말을 보는 동안에도 타이머가 계속 흘러요.'}};
@@ -1198,7 +1200,7 @@ function helpBody(k){var D=S.data||{},R=(S.st&&S.st.battle&&S.st.battle.rules)||
  if(k==='status')return '<div class="hst">'+ST_DOC.map(function(x){var d=stDoc(x);return '<div><b>'+esc(d[0])+'</b> <span class="mu">'+esc(d[1])+'</span></div>'}).join('')+'</div>';
  if(k==='active'){var cs=Object.keys(D.characters||{}).sort();return '<p>'+esc(T('help.active'))+'</p><div class="hst">'+cs.map(function(id){var c=D.characters[id];return '<div><b>'+esc(c.name)+' · '+esc(c.active_name||'')+'</b> <span class="mu">'+esc(c.active_text||'')+'</span>'+(c.passive_text?'<br><span class="mu small">패시브: '+esc(c.passive_text)+'</span>':'')+' <button class="sm" data-hsk="'+id+'">스킬 연출 보기</button></div>'}).join('')+'</div>'}
  if(k==='spells')return '<p>스펠은 매 판 2개를 가져가고, 턴마다 1개를 카드와 함께 쓸 수 있어요(0 스펠 단계, 쿨다운).</p><div class="hst">'+Object.keys(D.spells||{}).sort().map(function(id){var p=D.spells[id];return '<div><b>'+esc(p.name)+'</b> <span class="mu">'+esc(p.effect_text||'')+' · 쿨다운 '+(p.cooldown||0)+'턴</span></div>'}).join('')+'</div>';
- if(k==='rush')return '<p>'+esc(T('help.rush',{start:R.rush_start_turn||st.rush_start_turn||7,max:R.max_turn||st.max_turn||10}))+'</p>';  /* 수치는 데이터(설정값)에서 */
+ if(k==='rush')return '<p>'+esc(T('help.rush',{start:R.rush_start_turn||st.rush_start_turn||7,max:R.max_turn||st.max_turn||10,m:Math.round((R.judge_margin!=null?R.judge_margin:st.judge_margin!=null?st.judge_margin:0.05)*100)}))+'</p>';  /* 수치는 데이터(설정값)에서 */
  if(k==='rank')return '<p>'+esc(T('help.rank'))+'</p><p class="mu small">'+esc(T('help.soon'))+'</p>';
  if(k==='tut')return '<p class="mu">'+esc(T('help.soon'))+'</p>';return ''}
 function helpOpen(k){k=k||S.helpK||'view';S.helpK=k;evt('help_open',{item:k,inBattle:!!(S.st&&S.st.phase==='battle')});
@@ -1212,6 +1214,7 @@ function tourView(){coach([{sel:'.mec',title:'내 영역과 상대 영역',body:
  {sel:'.hand .bc',title:'카드 읽기',body:'이름·비용(E1)·종류 색·짧은 효과. 길게 누르면 자세히 봐요'},{sel:'#pills',title:'처리 순서',body:'카드는 종류별 순서대로 처리돼요. 위가 나, 아래가 상대예요'}],{onStep:function(i){evt('tutorial_step',{step:'view_'+i})}})}
 function stName(k){var d=ST[k]||[k];return S.lang==='ko'?d[0]:(d[1]||stDoc(ST_MAP[k]||k)[0]||d[0])}  /* 공개 연출 단계 칩은 영어(상세 01, 기획지시 11-05 2) */
 var REASON={hp:'HP 0',surrender:'항복',turn_limit:'최대 턴 도달',afk:'자리 비움',leave:'이탈',disconnect:'연결 끊김'};
+function endWhy(g){if(g.koBoth)return T('res.koBoth');if(g.byDealt){var r=(S.st&&S.st.battle&&S.st.battle.rules)||(S.data&&S.data.settings)||{};return T('res.byDealt',{m:Math.round((r.judge_margin!=null?r.judge_margin:0.05)*100)})}return REASON[g.reason]||g.reason||''}  /* 종료 사유(기획답변 93차 C5) */
 var $=function(id){return document.getElementById(id)};
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function api(path,body){return fetch(path,{method:body===undefined?'GET':'POST',headers:Object.assign({'content-type':'application/json'},S.tok?{authorization:'Bearer '+S.tok}:{}),body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!j.ok)throw new Error(j.error||r.status);return j})})}
@@ -2015,7 +2018,7 @@ function groupsOf(L,you){var G=[],cur=null,end=false,last=null,nw=function(o){o.
   case 'void':nw({k:'void',seat:e.seat,id:e.card,ph:phOf(e.card),bad:({energy:'에너지 부족',silence:'침묵'}[e.why]||e.why)+': 이 카드는 무효',lock:({energy:'noenergy',silence:'silenced'}[e.why]||'void')});cur=null;return;
   case 'rush':nw({k:'rush',ph:5});cur=null;return;
   case 'skip':nw({k:'skip',ph:5,phases:e.phases||[],cards:e.cards||[]});cur=null;return;
-  case 'end':nw({k:'end',ph:5,reason:e.reason,koBoth:!!e.koBoth});cur=null;return;
+  case 'end':nw({k:'end',ph:5,reason:e.reason,koBoth:!!e.koBoth,byDealt:!!e.byDealt});cur=null;return;
   case 'crit':if(last)last.crit=true;return}
   if(e.t==='dmg')last=e;
   if(end||!cur){nw({k:'tick',seat:e.seat,ph:end?5:(cur?cur.ph:5)});cur.ev.push(e);if(end)cur=null;return}
@@ -2031,7 +2034,7 @@ function capOf(g,you,ob){var who=g.seat==null?'':(g.seat===you?'나':'상대'),c
   case 'spell':head='스펠 '+esc(sname(g.id));fx=(S.data.spells[g.id]||{}).effect_text;break;case 'active':head='액티브 '+esc(ch(chr).active_name||'');fx=ch(chr).active_text;break;
   case 'void':head=cn(g.id);break;case 'auto':head='시간 초과';res=['아무것도 내지 않음'];break;case 'rush':return {html:'폭주 시작: 이번 턴부터 피해 증가·회복 감소',text:'폭주 시작'};
   case 'skip':return {html:'■ K.O. · 처리하지 않은 단계: '+(g.phases.map(function(n){return n+' '+PH[n]}).join(' · ')||'없음')+(g.cards.length?' (안 나간 카드: '+g.cards.map(function(c){return (c.seat===you?'나':'상대')+' '+esc(card(c.id).name)}).join(', ')+')':''),text:'■ K.O.'};
-  case 'end':return {html:'■ 종료 · '+esc(g.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[g.reason]||g.reason)),text:'■ 종료'};
+  case 'end':return {html:'■ 종료 · '+esc(endWhy(g)),text:'■ 종료'};
   default:head=g.ev.some(function(e){return e.src==='burn'})?'작열':g.ev.some(function(e){return e.t==='heal'})&&chr==='SE'?esc(ch(chr).passive_name||'재생'):g.ev.some(function(e){return e.t==='burnout'})?'손패':'효과'}
  var body=g.bad||(res.length?res.join(', '):esc(fx||''));
  var calcs=g.ev.filter(function(e){return e.t==='dmg'&&e.calc}).map(function(e){return '<button class="calcb" data-calc="'+esc(JSON.stringify(Object.assign({},e.calc,{v:e.v,abs:e.absorbed||0})))+'">내역</button>'}).join('');
@@ -2182,7 +2185,7 @@ function renderResult(m){var rk0=m.code+':'+((m.last&&m.last.id)||'');if(S.resSn
  $('app').innerHTML='<div class="scr frm res3'+(win?' win':draw?' draw':' lose')+'" style="'+padCss(pp)+frmVars(pp)+';--g:'+pp.g.toFixed(1)+'px">'
   +'<div class="rl" style="left:'+pp.l.toFixed(1)+'px;width:'+aw+'px"><div class="rimg" style="top:'+pp.t.toFixed(1)+'px'+(ad.full?';background-image:url('+ad.full.url+')':'')+'"></div><div class="rgrad" style="padding-bottom:'+(pp.b+pp.ftr+pp.sec).toFixed(1)+'px">'+rpb+'</div></div>'
   +topBar(null,'',T('res.title'))+'<div class="rbody"><div></div>'
-  +'<div class="rr"><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(L.koBoth?'동시 쓰러짐 · 준 피해로 판정':(REASON[L.reason]||L.reason||''))+(mine?' · '+esc(ch(mine).name):'')+'</div>'
+  +'<div class="rr"><h2>'+(draw?'무승부':L.outcome==='void'?'결과 없음':win?'승리':'패배')+'</h2><div class="mu small">'+esc(endWhy(L))+(mine?' · '+esc(ch(mine).name):'')+'</div>'
   +'<div class="stats">'+stat('판 길이',(L.turn||0)+'턴')+stat('준 피해',st.dealt!=null?st.dealt:'-')+stat('받은 피해',st.taken!=null?st.taken:'-')+stat('실드로 막은 피해',st.blocked!=null?st.blocked:'-')+stat('남은 HP',Math.round(100*hp[0]/hp[1])+'%')+'</div>'
   +'</div></div>'
   +'<div class="row fbar"><div class="fsub"></div><button id="home" class="sec">로비</button><button class="pri confirm" id="again">다시 하기 (Enter)</button></div></div>';frmBind();

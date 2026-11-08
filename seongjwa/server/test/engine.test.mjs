@@ -213,6 +213,27 @@ test("10턴 종료: HP 비율 높은 쪽 승리", () => {
   assert.equal(st.result.outcome, "a");
 });
 
+test("10턴 판정 C5: HP 비율 차 5%p 이내(경계 포함)면 준 피해, 넘으면 HP 비율, 준 피해 같으면 무승부 (기획답변 93차)", () => {
+  const end = (hpA, hpB, dA, dB) => {
+    const st = battle("AU", "AU");
+    st.players[0].idle = -99; st.players[1].idle = -99;
+    toTurn(st, 10);
+    const [A, B] = st.players;
+    A.hp = Math.round(A.maxHp * hpA); B.hp = Math.round(B.maxHp * hpB); A.dealt = dA; B.dealt = dB;
+    A.idle = -99; B.idle = -99;
+    play(st, pass, pass);
+    assert.equal(st.result.reason, "turn_limit");
+    return st.result;
+  };
+  assert.equal(end(0.5, 0.46, 100, 300).outcome, "b");             // 4%p 이내 → 준 피해 많은 B
+  assert.equal(end(0.5, 0.46, 100, 300).byDealt, true);
+  assert.equal(end(0.5, 0.45, 100, 300).outcome, "b");             // 정확히 5%p → 이내
+  const far = end(0.5, 0.44, 100, 300);                            // 6%p → HP 비율
+  assert.equal(far.outcome, "a"); assert.equal(far.byDealt, undefined);
+  assert.equal(end(0.5, 0.48, 200, 200).outcome, "draw");          // 이내 + 준 피해 같음 → 무승부
+  assert.equal(end(0.3, 0.3, 50, 10).outcome, "a");                // HP 비율 같음 → 준 피해
+});
+
 test("AFK: 접속 중 3턴 연속 무행동이면 이탈, 끊김 중 자동 방어 턴은 세지 않음", () => {
   const st = battle();
   for (let i = 0; i < 3; i += 1) {
