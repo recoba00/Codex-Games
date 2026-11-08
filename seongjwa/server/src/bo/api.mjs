@@ -10,6 +10,7 @@ import { payoutConfig, seasonSkin, tierGroups } from "../season.mjs";
 import { offerRule } from "../shop-rules.mjs";
 import { priceRef } from "../economy.mjs";
 import { cupRewardCfg, cupWindow } from "../cup.mjs";
+import { validRotation } from "../characters.mjs";
 import { ART, LINE_SLOTS, MEDIA, SLOTS, artKey, assetPath, checkFaceOn, checkMedia, checkUpload, dropAssetCache, mediaInfo, publicBase, shapeAssets, slotKey, slotOf, storageDelete, storagePut, webpInfo } from "../assets.mjs";
 
 export const STAFF_TTL_SECONDS = 8 * 3600;
@@ -197,7 +198,9 @@ export async function handleBo(request, env, url) {
     case "POST /settings": {
       const st = await staffOf(request, env); allow(st, "staff");
       const input = await body(request);
-      if (input.key !== "solo_mode" || typeof input.value !== "boolean") throw new Error("value_invalid");
+      // solo_mode(켬/끔) · char_rotation(주간 무료 캐릭터: 시작 주차·순환·주차별 지정, 기획지시 캐릭터입수)
+      if (input.key === "char_rotation") input.value = validRotation(input.value);
+      else if (input.key !== "solo_mode" || typeof input.value !== "boolean") throw new Error("value_invalid");
       return json({ ok: true, settings: await rpc(env, "bo_config_set", { p_key: input.key, p_value: input.value, p_staff: st.id, p_reason: reasonOf(input) }) });
     }
 

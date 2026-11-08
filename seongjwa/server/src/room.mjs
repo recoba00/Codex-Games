@@ -16,6 +16,7 @@ import { rpc } from "./db.mjs";
 import { cupRewardCfg } from "./cup.mjs";
 import { masteryDbCfg, masteryTiers } from "./mastery.mjs";
 import { frameOf, masterTierNo } from "./badges.mjs";
+import { availOf, charsOf } from "./characters.mjs";
 
 export const PREP = Object.freeze({ ban_sec: 30, pick_sec: 30, loadout_sec: 30, grace_ms: 500 });  // 대체값 = 시트 설정값 v38(기획답변 82차)
 const JOIN_GRACE_MS = 15000;  // 매칭 뒤 접속까지 기다려 주는 최대 시간(한 명이 끝내 안 들어오면 이 뒤로 시간이 흐름)
@@ -357,12 +358,16 @@ export class FriendRoom extends DurableObject {
     const profs = accs.length && this.env.SUPABASE_URL ? await Promise.all(accs.map((a) => rpc(this.env, "profile_get", { p_account: a }).catch(() => null))) : [];
     const nameOf = Object.fromEntries(accs.map((a, i) => [a, profs[i]?.name ?? null]));
     const DIFF_KO = { easy: "쉬움", normal: "보통", hard: "어려움" };
+    // 보유 + 이번 주 무료(기획지시 캐릭터입수, 88-89차). 컵은 등록 3명으로 이미 정해져 있어 제외. 조회 실패면 제한 없음
+    const chars = room.mode === "cup" ? null : await charsOf(this.env, accs, pinned.snapshot, now);
     room.game = {
       id: crypto.randomUUID(), startedAt: now, dataVersion: pinned.version, data: pinned.snapshot,
       mastery: room.members.map((m) => (m.ai ? {} : masteryTiers(mast?.[m.acc] ?? {}, pinned.snapshot))),  // 숙련도 단계(능력치 영향 없음)
       // 카드 프레임 = 현재 티어, 홀로 연출 = 계정 속성(LoL식 정리). AI는 표시 티어(랭킹 AI) 또는 브론즈, 홀로 없음
       frames: room.members.map((m) => (m.ai ? frameOf(pinned.snapshot, { cur: { tier_no: m.tier ?? room.members.find((x) => !x.ai)?.tier ?? 1 } }) : frameOf(pinned.snapshot, badges?.[m.acc]))),
       names: room.members.map((m) => (m.ai ? (room.mode === "practice" ? `AI · ${DIFF_KO[m.ai.difficulty] ?? "보통"}` : "AI") : (nameOf[m.acc] || "플레이어"))),
+      free: chars?.free ?? [],
+      avail: room.members.map((m) => (m.ai || !m.acc || !chars?.owned ? null : availOf(pinned.snapshot, chars.owned[m.acc] ?? [], chars.free))),
       bans: [null, null], picks: [null, null], loadouts: [null, null],
       battle: null, deadline: [0, 0], timebank: [0, 0], away: [null, null], warned: [0, 0], log: []
     };
@@ -412,7 +417,7 @@ export class FriendRoom extends DurableObject {
   rosterOf(seat) { return (this.room.members[seat]?.cup?.roster ?? []).map((r) => r.char); }
   cupPreset(seat, charId) { return this.room.members[seat]?.cup?.roster?.find((r) => r.char === charId)?.preset ?? 2; }
   pickableFor(g, seat) {
-    if (this.room.mode !== "cup") return this.pickable(g);
+    if (this.room.mode !== "cup") { const av = g.avail?.[seat]; return av ? this.pickable(g).filter((id) => av.includes(id)) : this.pickable(g); }
     const banned = g.bans[1 - seat]?.id;
     return this.rosterOf(seat).filter((id) => id !== banned);
   }
@@ -442,7 +447,10 @@ export class FriendRoom extends DurableObject {
       const pref = m.defaults.preferred.find((id) => pool.includes(id));
       if (pref) return pref;
       if (m.lastPick && pool.includes(m.lastPick)) return m.lastPick;
-      return pool[0];
+      if (pool.length) return pool[0];
+      const free = (g.free ?? []).filter((id) => this.pickable(g).includes(id));  // 픽 가능 목록이 비면 무료 중 무작위(88-89차 #2)
+      const any = free.length ? free : this.pickable(g);
+      return any[Math.floor(Math.random() * any.length)];
     });
     this.room.phase = "loadout";
     this.room.phaseDeadline = now + this.prepSec("loadout_sec") * 1000 + PREP.grace_ms;
@@ -605,8 +613,8 @@ export class FriendRoom extends DurableObject {
           battle_sec: Math.round((now - (g.battleStartedAt ?? now)) / 1000), options: room.options,
           ai: room.members.find((m) => m.ai)?.ai ?? null,
           tally: b.players.map((p) => p.tally ?? null),  // 낸 카드 종류·스펠 횟수·액티브·무행동 턴(기획답변 59차)
-          ...(b.result?.koBoth ? { ko_both: true } : {}),
-          ...(b.result?.byDealt ? { by_dealt: true } : {})  // 10턴 HP 비율 차 judge_margin 이내 → 준 피해 판정(기획답변 93차)  // 동시 HP 0을 준 피해로 가른 판(기획답변 56차)
+          ...(b.result?.koBoth ? { ko_both: true } : {}),  // 동시 HP 0을 준 피해로 가른 판(기획답변 56차)
+          ...(b.result?.byDealt ? { by_dealt: true } : {})  // 10턴 HP 비율 차 judge_margin 이내 → 준 피해 판정(기획답변 93차)
         }
       }
     });
@@ -806,6 +814,7 @@ export class FriendRoom extends DurableObject {
     base.dataVersion = g.dataVersion;
     base.prep = {
       characters: r.mode === "cup" ? (r.phase === "ban" ? this.rosterOf(1 - seat) : this.pickableFor(g, seat)) : Object.keys(g.data.characters),
+      avail: r.mode === "cup" ? null : g.avail?.[seat] ?? null, free: g.free ?? [],  // 픽 가능(보유+무료, null = 제한 없음)·이번 주 무료
       banned: r.phase === "ban" ? [] : r.mode === "cup" ? [g.bans[0]?.id, g.bans[1]?.id].filter(Boolean) : this.banned(g),
       ...(r.mode === "cup" ? { cup: { myRoster: r.members[seat].cup?.roster ?? [], oppRoster: this.rosterOf(1 - seat), myRecord: [r.members[seat].cup?.wins ?? 0, r.members[seat].cup?.losses ?? 0],
         oppRecord: [r.members[1 - seat]?.cup?.wins ?? 0, r.members[1 - seat]?.cup?.losses ?? 0], myCharBanned: r.phase === "ban" ? null : g.bans[1 - seat]?.id ?? null } } : {}),

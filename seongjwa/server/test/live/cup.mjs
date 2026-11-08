@@ -84,6 +84,7 @@ try {
   await sql("insert into public.ratings (account_id, season_id, rp, tier_no, state) values ($1, $3, 1000, 11, '{\"best\":11}'), ($2, $3, 900, 10, '{\"best\":10}') on conflict (account_id, season_id) do update set state = excluded.state, tier_no = excluded.tier_no", [a.acc, b.acc, sid]);
   await err(c.post("/v1/cup/enter", { roster: R("AU", "SE", "UM") }), "cup_not_eligible");
   await err(a.post("/v1/cup/enter", { roster: R("AU", "AU", "UM") }), "cup_roster_invalid");
+  await err(a.post("/v1/cup/enter", { roster: R("AU", "IG", "UM") }), "character_not_owned");  // 컵 = 보유만(무료 불가, 기획지시 캐릭터입수)
   await err(a.post("/v1/cup/ticket", {}), "cup_no_entry");
   await ok(a.post("/v1/cup/enter", { roster: R("AU", "SE", "UM") }));
   await ok(b.post("/v1/cup/enter", { roster: R("PY", "SI", "AU") }));

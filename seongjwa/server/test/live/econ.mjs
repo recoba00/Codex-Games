@@ -83,9 +83,17 @@ class Client {
 }
 
 // 판 진행: 밴 없음 → 픽 → 덱 → 4턴까지 카드 1장씩 → 진 쪽 항복
-async function playMatch(players, picks, loserIdx) {
+async function playMatch(players, picks, loserIdx, lockCheck = false) {
   const lead = players[0];
   if (lead.state.phase === "ban") { players.forEach((p) => p.send({ type: "ban", characterId: null })); await lead.until((s) => s.phase === "pick"); }
+  if (lockCheck) {  // 픽 = 보유 6 + 이번 주 무료 2(기획지시 캐릭터입수): 잠긴 캐릭터 픽은 서버가 거부
+    const av = lead.state.prep.avail, locked = ["IG", "TE", "SL"].find((c) => !av.includes(c));
+    assert.equal(av.length, 8, JSON.stringify(lead.state.prep));
+    assert.equal(lead.state.prep.free.length, 2);
+    lead.send({ type: "pick", characterId: locked });
+    await sleep(400);
+    assert.equal(lead.state.prep.myPick, null, "잠긴 캐릭터 픽 거부");
+  }
   players.forEach((p, i) => p.send({ type: "pick", characterId: picks[i] }));
   await lead.until((s) => s.phase === "loadout");
   players.forEach((p) => p.send({ type: "loadout", spells: ["SP01", "SP04"], preset: 2 }));
@@ -132,7 +140,13 @@ try {
   const defaults = { preferred: ["AU"], spells: ["SP01", "SP04"], preset: 2 };
   alice.send({ type: "ready", defaults }); bob.send({ type: "ready", defaults });
   await alice.until((s) => s.phase === "ban" || s.phase === "pick");
-  let st = await playMatch([alice, bob], ["AU", "SE"], 1);
+  const chs = await ok(alice.get("/v1/characters"));
+  assert.deepEqual(chs.owned, ["AU", "MO", "PY", "SE", "SI", "UM"], "고정 6명 지급(첫 조회)");
+  assert.equal(chs.free.length, 2); assert.ok(chs.free.every((c) => ["IG", "TE", "SL"].includes(c)));
+  assert.equal(chs.avail.length, 8); assert.equal(chs.priceGold, 9000);
+  const binv = await sql("select count(*)::int n from public.inventory where account_id = $1 and ref = 'base_characters'", [alice.acc]);
+  assert.equal(binv[0].n, 6);
+  let st = await playMatch([alice, bob], ["AU", "SE"], 1, true);
   assert.equal(st.last.econ[0].gold, 0, "친구방은 골드 없음");
   e = await ok(alice.get("/v1/econ"));
   assert.equal(e.weekly.find((m) => m.id === "W03").done, true);
@@ -154,6 +168,12 @@ try {
   const led = await sql("select count(*)::int n from public.gold_ledger where account_id = $1 and ref like 'match:%'", [alice.acc]);
   assert.equal(led[0].n, 2, "판마다 장부 1줄(친구방 0골드 포함)");
   step(`랭킹전 승리 → +30 승리 +100 첫 승(${e.tierName}) = 잔액 ${e.gold}`);
+  let hist = [];
+  for (let i = 0; i < 40 && hist.length < 2; i += 1) { hist = (await ok(alice.get("/v1/history?limit=10"))).results; if (hist.length < 2) await sleep(250); }
+  assert.equal(hist.length, 2, "최근 전적 2판(친구방·랭킹전)");
+  assert.deepEqual(hist.map((h) => h.result), ["W", "W"]);
+  assert.equal(hist[0].mode, "ranked"); assert.equal(hist[1].mode, "friend");
+  step("캐릭터 보유: 고정 6 + 무료 2, 잠긴 캐릭터 픽 거부 · 최근 전적 API");
   alice.ws.close(); bob.ws.close();
 
   // 4) 미션 받기 + 일일 교체

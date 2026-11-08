@@ -2,6 +2,7 @@
 import { rpc } from "./db.mjs";
 import { PWA_DEV, PWA_PLAY, MANIFEST, SW_SOURCE, iconBytes } from "./pwa.mjs";
 import { getLive, pinLive } from "./gamedata.mjs";
+import { availOf, charsOf } from "./characters.mjs";
 import { aiAllowed, legendCount } from "./rank.mjs";
 import { currentSeason, loadRank, tierName } from "./ranking.mjs";
 import { verifySteamTicket } from "./steam.mjs";
@@ -55,7 +56,7 @@ const STATUS = {
   friend_not_found: 404, already_friends: 409, friend_blocked: 403, friend_limit: 409, friend_in_game: 409, invite_expired: 410, not_friend: 403, invite_limit: 429, block_limit: 409,
   asset_not_webp: 400, asset_too_large: 413, asset_spec: 422, asset_region: 422, asset_slot_invalid: 400, asset_kind_invalid: 400, asset_skin_invalid: 400,
   asset_char_invalid: 400, asset_full_missing: 409, asset_combined_missing: 409, asset_no_previous: 409, storage_failed: 502, state_invalid: 409,
-  rate_limited: 429, cup_closed: 409, cup_not_eligible: 403, cup_entry_active: 409, cup_left_this_week: 409, cup_no_ticket: 409, cup_no_entry: 409, cup_roster_invalid: 400,
+  rate_limited: 429, cup_closed: 409, cup_not_eligible: 403, cup_entry_active: 409, cup_left_this_week: 409, cup_no_ticket: 409, cup_no_entry: 409, cup_roster_invalid: 400, character_not_owned: 403,
   name_banned: 422, provider_taken: 409, provider_invalid: 400, choice_invalid: 400, account_not_active: 409, link_unavailable: 503, events_invalid: 400, confirm_required: 400,
   forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
@@ -285,6 +286,8 @@ export async function handle(request, env) {
       if (!w.open && env.CUP_ALWAYS_OPEN !== "1") throw new Error("cup_closed");
       const { snapshot: data } = await pinLive(env);
       const roster = validRoster(data, input.roster);
+      const own = await charsOf(env, [claims.sub], data);  // 컵 등록 = 보유만(무료 캐릭터 불가, 기획지시 캐릭터입수)
+      if (own.owned && roster.some((r) => !(own.owned[claims.sub] ?? []).includes(r.char))) throw new Error("character_not_owned");
       const season = await currentSeason(env);
       return json({ ok: true, entry: await rpc(env, "cup_enter", { p_account: claims.sub, p_week: w.week, p_season: season.id, p_roster: roster, p_min_tier: CUP.minTier }) });
     }
@@ -531,6 +534,19 @@ export async function handle(request, env) {
       return json({ ok: true, account: id, mastery: masteryView(all?.[id] ?? {}, data), cfg: masteryCfg(data) });
     }
 
+    case "GET /v1/characters": {  // 보유·이번 주 무료·픽 가능(기획지시 캐릭터입수). until = 다음 무료 교체(월 05:00 KST)
+      const claims = await authenticate(request, env);
+      const { snapshot: data } = await pinLive(env);
+      const c = await charsOf(env, [claims.sub], data);
+      const owned = c.owned?.[claims.sub] ?? null;
+      const g = Number(data.settings?.char_price_gold);
+      return json({ ok: true, week: c.week, until: c.until, free: c.free, owned, avail: availOf(data, owned, c.free), priceGold: Number.isFinite(g) && g > 0 ? g : 9000 });
+    }
+    case "GET /v1/history": {  // 최근 전적(로비, 89차 3): 모든 모드, 결과 없음(void) 제외, 항복·이탈은 패. ?limit=1~20(기본 10)
+      const claims = await authenticate(request, env);
+      const limit = Math.min(20, Math.max(1, Number(new URL(request.url).searchParams.get("limit")) || 10));
+      return json({ ok: true, results: await rpc(env, "recent_results", { p_account: claims.sub, p_limit: limit }) });
+    }
     case "GET /v1/inventory": {
       const claims = await authenticate(request, env);
       return json({ ok: true, ...(await rpc(env, "inventory_list", { p_account: claims.sub })) });
