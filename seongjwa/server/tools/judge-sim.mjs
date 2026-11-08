@@ -7,6 +7,8 @@ import { createBattle, presetDeck, resolveTurn, submit } from "../src/engine/bat
 const per = Number(process.argv[2] ?? 40);
 const DATA = JSON.parse(readFileSync(process.argv[3] ?? new URL("../test/fixtures/data_v1.json", import.meta.url)));
 const diff = process.argv[4] ?? "hard";
+// SIM_PP=패시브 수치 덮어쓰기 JSON 예: '{"SE":{"passive_regen":0.01}}'
+for (const [id, kv] of Object.entries(JSON.parse(process.env.SIM_PP ?? "{}"))) DATA.characters[id].passive_params = { ...(DATA.characters[id].passive_params ?? {}), ...kv };
 const CHARS = Object.keys(DATA.characters);
 let seed = Number(process.env.SIM_SEED ?? 20261108);
 const r = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -31,7 +33,7 @@ for (const a of CHARS) for (const b of CHARS) for (let i = 0; i < per; i += 1) {
   }
   const endE = st.log.find((e) => e.t === "end") || {};
   games.push({ a, b, sl: slots, o: st.result.outcome, r: st.result.reason, ko2: !!endE.koBoth, t: st.result.turn,
-    hp: st.players.map((p) => Math.max(0, p.hp) / p.maxHp), mx: st.players.map((p) => p.maxHp), dealt: st.players.map((p) => p.dealt ?? 0),
+    hp: st.players.map((p) => Math.max(0, p.hp) / p.maxHp), mx: st.players.map((p) => p.maxHp), dealt: st.players.map((p) => p.dealt ?? 0), hs: st.players.map((p) => (p.hpStart[st.result.turn] ?? p.hp) / p.maxHp),
     acc: acc.map((x, s) => Object.fromEntries(Object.entries(x).map(([k, v]) => [k, Math.round(v) / st.players[s].maxHp]))) });
 }
 console.log(JSON.stringify({ diff, per, version: DATA.version, games }));
