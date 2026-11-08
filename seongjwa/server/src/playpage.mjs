@@ -1326,8 +1326,8 @@ function lobRank(){var L=S.lob||{},rk=L.rank,t=(((S.data||{}).tables||{}).rank_t
  var st=cur?cur.rp_start||0:0,span=nx?nx.rp_start-st:100;return {name:rk.tierName||(cur&&cur.name)||'',rp:rp,cur:rp-st,span:span,pct:Math.max(0,Math.min(100,100*(rp-st)/span))}}
 function lobLoad(force){var d=lsGet('play_dev');if(!d||(!force&&S.lobAt&&Date.now()-S.lobAt<30000))return;S.lobAt=Date.now();
  (S.tok?Promise.resolve():login(d).then(ensureName)).then(function(){var g=function(u){return api(u).catch(function(){return null})};
-  return Promise.all([g('/v1/econ'),g('/v1/rank/me'),g('/v1/friends'),fetch('/v1/lobby').then(function(r){return r.json()}).catch(function(){return null}),g('/v1/characters')])})
- .then(function(x){S.lob={econ:x[0],rank:x[1],friends:x[2],content:x[3],chars:x[4]};if($('lobby')&&!S.st)home()}).catch(function(){})}
+  return Promise.all([g('/v1/econ'),g('/v1/rank/me'),g('/v1/friends'),fetch('/v1/lobby').then(function(r){return r.json()}).catch(function(){return null}),g('/v1/characters'),g('/v1/history?limit=10')])})
+ .then(function(x){S.lob={econ:x[0],rank:x[1],friends:x[2],content:x[3],chars:x[4],hist:x[5]};if($('lobby')&&!S.st)home()}).catch(function(){})}
 function lobMis(){var e=(S.lob||{}).econ;if(!e)return '<div class="mu small">'+(lsGet('play_dev')?'불러오는 중…':'테스트 계정을 넣으면 미션이 보여요')+'</div>';
  return (e.daily||[]).map(function(m){var b=m.claimed?'<button class="sm sec" disabled>완료</button>':m.done?'<button class="sm lgo" data-mclaim="'+m.id+'">받기</button>':'<button class="sm sec" disabled>진행 중</button>';
   return '<div class="lmis"><div><b>'+esc(m.name||m.id)+'</b><small>'+(m.progress||0)+' / '+(m.target||1)+' · 골드 '+(m.gold||0)+'</small></div>'+b+'</div>'}).join('')||'<div class="mu small">오늘의 미션이 없어요</div>'}
@@ -1336,7 +1336,7 @@ function lobEvent(){var b=(((S.lob||{}).content||{}).banners)||[],i=(S.lobEv||0)
 function lobFriends(f){var fr=((S.lob||{}).friends||{}).friends;if(!fr)return '<div class="mu small">'+(lsGet('play_dev')?'불러오는 중…':'테스트 계정을 넣으면 친구가 보여요')+'</div>';
  var on=function(x){return x.status&&x.status!=='offline'},l=fr.filter(function(x){return f==='on'?on(x):f==='off'?!on(x):true});
  return l.map(function(x){return '<div class="lfr"><i class="lav sm"></i><div><b>'+esc(x.name||'')+'</b><small>'+esc(x.status==='in_game'?'게임 중':on(x)?'온라인':'오프라인')+'</small></div><button class="sm sec" data-soon="1">친구 대전</button></div>'}).join('')||'<div class="mu small">'+(fr.length?'해당하는 친구가 없어요':'아직 친구가 없어요')+'</div>'}
-function lobRecent(){var h=(lsGet('play_hist')||'').split('').slice(0,10);return h.length?h.map(function(r){return '<i class="lr '+(r==='W'?'w':r==='D'?'d':'l')+'">'+(r==='W'?'승':r==='D'?'무':'패')+'</i>'}).join(''):'<span class="mu small">아직 기록이 없어요</span>'}
+function lobRecent(){var sv=((S.lob||{}).hist||{}).results,h=sv?sv.map(function(r){return r.result}):(lsGet('play_hist')||'').split('').slice(0,10);  /* 서버 전적(최근 10판, 모든 모드) 우선, 없으면 기기 기록 */return h.length?h.map(function(r){return '<i class="lr '+(r==='W'?'w':r==='D'?'d':'l')+'">'+(r==='W'?'승':r==='D'?'무':'패')+'</i>'}).join(''):'<span class="mu small">아직 기록이 없어요</span>'}
 /* ===== 로비 진영 무대(기획지시 2026-11-08 로비진영무대, 상세 05): 대표 캐릭터 진영(불·물·바람)별 그라데이션 + 코드 입자·광선. 새 이미지 에셋 없음
    레이어: 진영 그라데이션(.lsbg) → 먼 효과(뒤 캔버스) → 대표 캐릭터(.lart) → 가까운 입자(앞 캔버스, 가장자리 위주) → 비네트 → UI
    수치는 가안(기획이 시안 보고 조정): STGV 한 곳에 모음 */
