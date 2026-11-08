@@ -69,6 +69,7 @@ try {
     await page.screenshot({ path: `/tmp/play_pick_${vp.width}${vp.safe ? 's' : ''}.png` });
     const rowsTop = await page.$$eval("[data-pick]", (x) => x.map((e) => Math.round(e.getBoundingClientRect().top)));
     assert.deepEqual([new Set(rowsTop).size, rowsTop.filter((t) => t === rowsTop[0]).length], [2, 5], "픽 목록 5열(5+4)");
+    { const L = await page.$$eval("[data-pick]", (x) => x.map((e) => Math.round(e.getBoundingClientRect().left))); assert.equal(L[5], L[0], "둘째 줄 왼쪽 정렬(픽스펠UI정돈2 5번)"); }
     assert.ok(!(await page.$(".plist.scr2")), "9명일 때 스크롤 없음");
     const pw = await page.$eval("[data-pick]", (e) => e.getBoundingClientRect().width);
     console.log(`  픽 카드 폭 ${vp.name} ${Math.round(pw)}px`);
@@ -83,15 +84,25 @@ try {
     await page.screenshot({ path: `/tmp/play_lo_${vp.width}${vp.safe ? 's' : ''}.png` });
     await noScroll(page, "스펠·덱");
     const rc = (q) => page.evaluate((q) => { const b = document.querySelector(q)?.getBoundingClientRect(); return b && [b.left, b.top, b.width, b.height].map((v) => Math.round(v * 10) / 10); }, q);
-    const gearLo = await rc("#fSet"), topLo = await rc(".frm .top"), dskLo = await page.evaluate(() => [!!S.dsk, S.zs]);
+    const gearLo = await rc("#fSet");
+    { const v = await page.evaluate(() => { const c = (q) => { const b = document.querySelector(q).getBoundingClientRect(); return b.top + b.height / 2; }; const r = (q) => document.querySelector(q).getBoundingClientRect();
+        const ml = r(".lab4.me span"), mc = r(".cc4.me>*"), ol = r(".lab4.opp span"), oc = r(".cc4.opp>*"), k = S.L4 ? 1 : 1, z = (S.zs || 1) * prepGeo().k;
+        return { cy: ["#fSet", "#fHelp", ".pk4 .chip", ".hlab", "#tm"].map(c), meGap: (mc.top - ml.bottom) / z, opGap: (oc.top - ol.bottom) / z, meCx: Math.abs((ml.left + ml.right) / 2 - (mc.left + mc.right) / 2), cols: new Set([...document.querySelectorAll(".deck2 .bc")].map((e) => Math.round(e.getBoundingClientRect().top))).size };
+      });
+      assert.ok(Math.max(...v.cy) - Math.min(...v.cy) <= 1, `위 줄 수직 중앙 ${v.cy}`);  // 픽스펠UI정돈2 1번
+      assert.ok(Math.abs(v.meGap - 8) <= 1 && Math.abs(v.opGap - 8) <= 1 && v.meCx <= 1, `이름 뱃지 = 카드 8px 위 가운데 ${JSON.stringify(v)}`);  // 2·3번
+    }
     step(`${vp.name}: 시작 → 픽 → 스펠·덱 화면(스크롤 없음)`);
+    const meLo = await rc(".cc4.me>*"), opLo = await rc(".cc4.opp>*");
     await page.click("#ok");
     await page.waitForSelector("#side_me", { timeout: 15000 });
     await page.waitForSelector("#guide", { timeout: 5000 });  // 첫 턴 안내 3장(계정 첫 3판)
     for (let i = 0; i < 3; i += 1) await page.click("#gnext");
     assert.equal(await page.$("#guide"), null);
     await noScroll(page, "전투");
-    { const gearBt = await rc("#menu"); console.log(`  ⚙ 좌표 ${vp.name} 스펠·덱 ${gearLo} / 전투 ${gearBt}`); if (dskLo[0]) assert.ok(Math.abs(gearLo[0] - topLo[0] - 8 * dskLo[1]) <= 1, "데스크톱 ⚙ = 콘텐츠 열 왼쪽 +8(상세 01 비율 보정)"); else assert.ok(gearLo.every((v, i) => Math.abs(v - gearBt[i]) <= 1), "⚙ 위치 = 전투(기획답변 84차 ④)"); }
+    { const gearBt = await rc("#menu"); console.log(`  ⚙ 좌표 ${vp.name} 스펠·덱 ${gearLo} / 전투 ${gearBt}`); assert.ok(gearLo.every((v, i) => Math.abs(v - gearBt[i]) <= 1), "⚙ 위치·크기 = 전투(세 화면 일치, 픽스펠UI정돈2 4번)");
+      const meBt = await rc("#side_me"), opBt = await rc("#side_opp"); console.log(`  카드 전투 내 ${meBt} 상대 ${opBt} / 스펠·덱 내 ${meLo} 상대 ${opLo}`);
+      assert.ok(meLo.every((v, i) => Math.abs(v - meBt[i]) <= 1.5) && opLo.every((v, i) => Math.abs(v - opBt[i]) <= 1.5), "내 카드·상대 카드 위치·크기 = 전투(4번)"); }
     const [opp, me] = await page.evaluate(() => ["#side_opp", "#side_me"].map((q) => document.querySelector(q).getBoundingClientRect().left));
     await page.screenshot({ path: `/tmp/play_t1_${vp.width}${vp.safe ? 's' : ''}.png` });
     assert.ok(opp > me + 100, `상대 프로필 우상단, 내 프로필 좌하단 ${opp} ${me}`);
