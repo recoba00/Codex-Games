@@ -359,7 +359,7 @@ export class FriendRoom extends DurableObject {
     const nameOf = Object.fromEntries(accs.map((a, i) => [a, profs[i]?.name ?? null]));
     const DIFF_KO = { easy: "쉬움", normal: "보통", hard: "어려움" };
     // 보유 + 이번 주 무료(기획지시 캐릭터입수, 88-89차). 컵은 등록 3명으로 이미 정해져 있어 제외. 조회 실패면 제한 없음
-    const chars = room.mode === "cup" ? null : await charsOf(this.env, accs, pinned.snapshot, now);
+    const chars = room.mode === "cup" ? null : await charsOf(this.env, accs, pinned.snapshot, now, room.mode);
     room.game = {
       id: crypto.randomUUID(), startedAt: now, dataVersion: pinned.version, data: pinned.snapshot,
       mastery: room.members.map((m) => (m.ai ? {} : masteryTiers(mast?.[m.acc] ?? {}, pinned.snapshot))),  // 숙련도 단계(능력치 영향 없음)

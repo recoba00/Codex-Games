@@ -286,7 +286,7 @@ export async function handle(request, env) {
       if (!w.open && env.CUP_ALWAYS_OPEN !== "1") throw new Error("cup_closed");
       const { snapshot: data } = await pinLive(env);
       const roster = validRoster(data, input.roster);
-      const own = await charsOf(env, [claims.sub], data);  // 컵 등록 = 보유만(무료 캐릭터 불가, 기획지시 캐릭터입수)
+      const own = await charsOf(env, [claims.sub], data, Date.now(), "cup");  // 컵 등록 = 보유만(무료 캐릭터 불가, 기획지시 캐릭터입수)
       if (own.owned && roster.some((r) => !(own.owned[claims.sub] ?? []).includes(r.char))) throw new Error("character_not_owned");
       const season = await currentSeason(env);
       return json({ ok: true, entry: await rpc(env, "cup_enter", { p_account: claims.sub, p_week: w.week, p_season: season.id, p_roster: roster, p_min_tier: CUP.minTier }) });

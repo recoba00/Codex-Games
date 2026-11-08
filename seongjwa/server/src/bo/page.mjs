@@ -428,6 +428,7 @@ V.assetSlot.bind=function(){var d=T.ad;if(!d||!$('aBack'))return;bindBack();bind
 function who(id,name){return '<button class="btn sm" data-uid="'+id+'">'+esc(name||'-')+'</button>'}
 V.suspects=function(){return api('/suspects?days='+(T.sdays||7)).then(function(d){var c=d.cfg;
  return '<h2>어뷰징 의심</h2><p class="sub">자동으로 걸러낸 목록이에요. 이름을 누르면 유저 조회로 가서 전적·턴별 기록을 보고 사람이 판단해요. 기준은 설정값으로 바꿀 수 있어요(상세 13).</p>'
+ +(d.charFails!=null?'<p class="small'+(d.charFails>5?'':' muted')+'"'+(d.charFails>5?' style="color:var(--bad)"':'')+'>캐릭터 보유 조회 실패(최근 24시간): <b>'+d.charFails+'회</b>'+(d.charFails>5?' — 5회 초과: 실패한 판은 픽 제한 없이 진행되므로 원인 확인 후 기획에 보고':' · 실패한 판은 픽 제한 없이 진행(5회 초과 시 보고)')+'</p>':'')
  +'<div class="row" style="margin-bottom:12px"><span class="small">최근</span><select id="sDays">'+[1,3,7,14,30].map(function(n){return '<option value="'+n+'"'+(n===c.days?' selected':'')+'>'+n+'일</option>'}).join('')+'</select></div>'
  +'<div class="grid g2"><div class="card"><h3>매크로 의심 '+d.macro.length+'</h3><p class="small muted">직접 확정한 턴 '+c.macro_min_turns+'번 이상, 확정 시간 표준편차 '+c.macro_std_sec+'초 미만. 자동 대응: 확인 팝업(사람 인증) — 클라이언트 작업 때 연결.</p>'
  +table(['계정','턴','평균','표준편차'],d.macro.map(function(x){return '<tr><td>'+who(x.id,x.name)+'</td><td>'+x.turns+'</td><td>'+x.avg+'초</td><td><span class="tag bad">'+x.std+'초</span></td></tr>'}))+'</div>'

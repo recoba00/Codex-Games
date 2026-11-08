@@ -16,7 +16,7 @@ test("주 경계 = 월요일 05:00 KST (기획지시 캐릭터입수)", () => {
 
 test("고정 6명 = 로테이션 풀(이그니스·테티스·실피)과 유료 추가를 뺀 캐릭터", () => {
   assert.deepEqual(baseIds(DATA).sort(), ["AU", "MO", "PY", "SE", "SI", "UM"]);
-  const d = structuredClone(DATA); d.characters.SI.offer = "paid";
+  const d = structuredClone(DATA); d.characters.SI.offer = "addon";  // 시트 "유료 추가"(v43)
   assert.deepEqual(baseIds(d).sort(), ["AU", "MO", "PY", "SE", "UM"]);
 });
 

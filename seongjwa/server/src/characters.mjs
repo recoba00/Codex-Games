@@ -29,10 +29,10 @@ export function validRotation(v) {
 
 const enabledIds = (data) => Object.keys(data.characters ?? {}).filter((id) => data.characters[id].enabled !== false);
 export const rotationPool = (cfg) => [...new Set([...cfg.cycle.flat(), ...Object.values(cfg.overrides ?? {}).flat()])];
-// 고정 지급 대상: 사용 중이고 유료 추가가 아니며 로테이션 풀에 없는 캐릭터
+// 고정 지급 대상: 사용 중이고 유료 추가(시트 "유료 추가" = addon, 수치패치 v43)가 아니며 로테이션 풀에 없는 캐릭터
 export function baseIds(data, cfg = ROTATION_DEFAULT) {
   const pool = rotationPool(cfg);
-  return enabledIds(data).filter((id) => data.characters[id].offer !== "paid" && !pool.includes(id));
+  return enabledIds(data).filter((id) => !["addon", "paid"].includes(data.characters[id].offer) && !pool.includes(id));
 }
 
 // 이번 주 무료: BO 주차 지정 → 순환. 데이터 설정값 rotation_free_count(기본 2)만큼, 사용 중인 캐릭터만
@@ -59,11 +59,16 @@ export async function rotationCfg(env) {
 }
 
 // 계정별 보유(고정 6명은 없으면 지급) + 이번 주 무료. DB가 없거나 실패하면 null(= 제한 없음, 판 진행을 막지 않음)
-export async function charsOf(env, accs, data, now = Date.now()) {
+export async function charsOf(env, accs, data, now = Date.now(), where = "api") {
   const cfg = await rotationCfg(env);
   const f = freeOf(data, cfg, now);
   if (!accs.length || !env.SUPABASE_URL) return { ...f, owned: null };
-  try { return { ...f, owned: await rpc(env, "characters_owned", { p_accounts: accs, p_base: baseIds(data, cfg) }) }; } catch { return { ...f, owned: null }; }
+  try { return { ...f, owned: await rpc(env, "characters_owned", { p_accounts: accs, p_base: baseIds(data, cfg) }) }; } catch (e) {
+    // 조회 실패 = 그 판은 제한 없이 진행(기획답변 95차 승인). 서버 로그 + 이벤트(char_check_failed)로 남겨 BO에서 하루 횟수를 본다
+    console.error("char_check_failed", where, e?.message);
+    rpc(env, "events_add", { p_rows: accs.map((a) => ({ account: a, name: "char_check_failed", props: { where, error: String(e?.message ?? "") } })) }).catch(() => {});
+    return { ...f, owned: null };
+  }
 }
 
 // 픽 가능 = 보유 + 이번 주 무료(사용 중인 캐릭터만)
