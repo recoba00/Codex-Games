@@ -1158,6 +1158,12 @@ html.dsk .frm .top .tl>.mu,html.dsk .frm .top .chip{font-size:calc(12px / var(--
 .pk4 .lo4 .tab2{height:28px;padding:0 12px;font-size:11px;border-radius:999px;background:#1e2866;border:2px solid #4152b5}.pk4 .lo4 .tab2.on{background:#f5b93a;border-color:#ffd97a;color:#070a1c}
 .pk4 .deck4{display:grid;justify-content:space-between;row-gap:8px;column-gap:0;flex:none}
 .lb .ltop{display:flex;grid-template-columns:none}.lb .ltop .lbnav{margin-left:32px}.lb .ltop .lright{margin-left:auto}
+/* 로비 데스크톱 재배치(사용자 요청 2026-11-09): 캐릭터·이벤트·친구 단을 넓히고, 캐릭터는 위 줄을 침범하지 않고 잘리지 않게(최근 전적 위 영역에 contain), 이벤트 배너 정사각형 */
+.lb.dsk .lbbody{grid-template-columns:minmax(0,23fr) minmax(0,32fr) minmax(320px,22fr) minmax(0,23fr)}
+.lb.dsk .lart{margin-top:0;background-size:contain;background-position:center bottom;background-origin:content-box;background-repeat:no-repeat;padding-bottom:calc(var(--rech,92px) + var(--g,12px))}
+.lb.dsk .lrec{height:var(--rech,92px);box-sizing:border-box}
+.lb.dsk .lcev{flex:none}.lb.dsk .lev{flex:none;width:100%;aspect-ratio:1/1;min-height:0}
+.lb.dsk .lcmis{flex:1;min-height:0}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1417,7 +1423,7 @@ function stgMount(cid,faction){var f=FAC[faction]||'FIRE',lob=$('lobby');if(!lob
   if(navigator.getBattery)navigator.getBattery().then(function(b){var u=function(){s.save=!b.charging&&b.level<=0.2};u();b.onlevelchange=b.onchargingchange=u}).catch(function(){})}
  lob.insertBefore(s.el,lob.firstChild);lob.appendChild(s.fr);lob.appendChild(s.vg);var art=lob.querySelector('.lart');
  s.showFps=stgFps();if(s.showFps){var fp=document.createElement('div');fp.className='lfps';fp.id='lFps';lob.appendChild(fp)}
- s.cap=STGV.cap[S.dsk?'dsk':'mob'];s.dpr=Math.min(window.devicePixelRatio||1,S.dsk?2:1.5);stgSize();
+ s.cap=STGV.cap[S.dsk?'dsk':'mob'];s.dpr=Math.min(window.devicePixelRatio||1,S.dsk?2:1.5,2560/Math.max(1,lob.clientWidth));  /* 캔버스 실제 폭 2560px 상한(4K 성능) */stgSize();
  if(s.fac!==f){var nb=document.createElement('div');nb.className='lsbg';nb.style.background=STGV[f].bg;s.el.insertBefore(nb,s.bk);
   if(s.fac&&!s.away&&!S.rmo){nb.style.opacity='0';void nb.offsetWidth;nb.style.transition='opacity '+STGV.fade+'s ease';nb.style.opacity='1';s.fx.push({k:'swap',f:f,age:0,dur:STGV.fade*1.6},{k:'fadeOut',f:s.fac,age:0,dur:STGV.fade})}
   var old=[].slice.call(s.el.querySelectorAll('.lsbg')).filter(function(x){return x!==nb});setTimeout(function(){old.forEach(function(x){x.remove()})},S.rmo||s.away?0:STGV.fade*1000+50);
@@ -1428,7 +1434,7 @@ function stgMount(cid,faction){var f=FAC[faction]||'FIRE',lob=$('lobby');if(!lob
  if(S.rmo){[s.bk,s.fr].forEach(function(c){c.getContext('2d').clearRect(0,0,c.width,c.height)});return}
  stgKick()}
 function stgSize(){var s=S.stg,lob=$('lobby');if(!s||!lob)return;var W=lob.clientWidth,H=lob.clientHeight;if(W!==s.W||H!==s.H){s.W=W;s.H=H;[s.bk,s.fr].forEach(function(c){c.width=Math.round(W*s.dpr);c.height=Math.round(H*s.dpr)})}
- var lr=lob.getBoundingClientRect(),a=lob.querySelector('.lart'),r=a?a.getBoundingClientRect():null;s.cx=r?r.left-lr.left+r.width/2:W/2;s.cy=r?r.top-lr.top+r.height*0.46:H/2;s.ch=r?r.height:H*0.7;s.foot=r?r.bottom-lr.top-r.height*0.04:H*0.92;s.sizeAt=s.t}
+ var lr=lob.getBoundingClientRect(),a=lob.querySelector('.lart'),r=a?a.getBoundingClientRect():null,pb=a?(parseFloat(getComputedStyle(a).paddingBottom)||0)*(S.zs||1):0,rh=r?r.height-pb:0;s.cx=r?r.left-lr.left+r.width/2:W/2;s.cy=r?r.top-lr.top+rh*0.46:H/2;s.ch=r?rh:H*0.7;s.foot=r?r.top-lr.top+rh*0.96:H*0.92;s.sizeAt=s.t}
 function stgSeed(s){var n=Math.round(s.cap*0.7);for(var i=0;i<n;i++){var p=stgSpawn(s,s.fac);p.age=Math.random()*p.life*0.7;p.x=Math.random()*s.W;p.y=Math.random()*s.H;if(p.hx){p.hx=[];p.hy=[]}s.ps.push(p)}}
 /* 기포 줄기 위치(가끔 옮김) */
 function stgCol(s){if(!s.cols.length||Math.random()<0.004){s.cols=[0,1,2,3].map(function(i){return i<2?s.cx+stgRnd(-0.9,0.9)*s.ch*0.45:Math.random()*s.W})}return s.cols[Math.floor(Math.random()*s.cols.length)]}
@@ -1526,7 +1532,7 @@ function stgFx(c,s,x){var u=Math.min(1,x.age/x.dur),T=s.tint[x.f],d;c.save();
  else if(x.k==='tap'&&x.f==='FIRE'&&!S.flr){d=s.ch*(0.6+u*0.7);c.globalCompositeOperation='lighter';c.globalAlpha=0.4*Math.sin(Math.PI*u);c.drawImage(T.rim,s.cx-d/2,s.foot-d*0.75,d,d*0.9)}
  c.restore()}
 function home(msg){var keepDev=$('dev')?$('dev').value:null,keepNick=$('nick')?$('nick').value:null;  /* 다시 그려도(설치 알림·창 크기 등) 입력 중인 아이디·닉네임 유지 */
- applyZoom();S.st=null;S.prev=null;wake(false);clearInterval(S.lobT);var dev=lsGet('play_dev')||'',P=window.PWA||{},p=prepPad(),L=S.lob||{},e=L.econ||{},rk=lobRank(),cid=lobChar(),c=ch(cid),mode=S.lobMode||lsGet('play_mode')||'ai',dsk=!!S.dsk;
+ applyZoom();S.st=null;S.prev=null;wake(false);clearInterval(S.lobT);var dev=lsGet('play_dev')||'',P=window.PWA||{},p=lobPad(),L=S.lob||{},e=L.econ||{},rk=lobRank(),cid=lobChar(),c=ch(cid),mode=S.lobMode||lsGet('play_mode')||'ai',dsk=!!S.dsk;
  var nick=lsGet('play_nick')||e.name||'',fr=((L.friends||{}).friends)||[],onl=fr.filter(function(x){return x.status&&x.status!=='offline'}).length,art=lobArt(cid);
  var acct='<div class="lcard lacct"><small class="lbk">TEST ACCOUNT</small><b class="lt">테스트 계정</b><label>아이디 <input id="dev" value="'+esc(keepDev!=null?keepDev:dev)+'" placeholder="예: kim01" autocapitalize="off" autocomplete="off"></label><label>닉네임 <input id="nick" value="'+esc(keepNick!=null?keepNick:(lsGet('play_nick')||''))+'" placeholder="2~12자" maxlength="12" autocomplete="off"></label><small class="mu">/dev에서 쓰던 아이디를 넣으면 그 계정 티어·숙련도로 보여요</small></div>';
  var rankCard='<div class="lcard lrank" id="lRank">'+tierEmb(rk&&rk.name)+'<div class="lrk"><small class="lbk">RANK</small><b>'+esc(rk?rk.name:'-')+'</b><small>'+(rk?rk.cur+' / '+rk.span+' RP':'랭크 정보 없음')+'</small></div><div class="lbar"><i style="width:'+(rk?rk.pct:0).toFixed(0)+'%"></i></div><small class="mu lsub">'+esc(e.rankRoad&&e.rankRoad.nextRewardTier?'다음 랭크 로드 보상 · '+e.rankRoad.rpToNext+' RP 남음':'랭크 로드 보상 정보 없음')+'</small></div>';
@@ -1651,6 +1657,8 @@ function applyZoom(){var z=bigScale(),a=$('app'),ch=S.zs!==z,de=document.documen
 /* 데스크톱 유동 레이아웃(상세 01 2026-11-07 12시): clamp(최소, 창 비례, 최대)를 실제 px로 구한 뒤 논리 px(÷s)로 */
 function dskL(){var W=innerWidth,H=innerHeight,z=S.zs||1,c=function(a,v,b){return Math.max(a,Math.min(b,v))},sd=c(16,W*.04,96);if(W-2*sd>1600)sd=(W-1600)/2;
  return {hdr:c(44,H*.075,84)/z,ftr:c(52,H*.085,92)/z,side:sd/z,g:c(12,W*.012,28)/z,cg:c(8,W*.008,16)/z,sec:c(12,H*.018,24)/z}}
+/* 로비 데스크톱 좌우 여백(사용자 요청 2026-11-09: 4K에서 여백 과다): 화면 폭 3%(24~72px). 휴대폰은 prepPad 그대로 */
+function lobPad(){var p=prepPad();if(!S.dsk)return p;var f=safe(),W=innerWidth,z=S.zs||1,sd=Math.max(24,Math.min(72,W*0.03));p.l=f.l+sd/z;p.r=f.r+sd/z;return p}
 function prepPad(){var f=safe(),short=VH()<=500;if(S.dsk){var d=dskL(),o=8/(S.zs||1);return {t:Math.max(o,f.t),b:Math.max(o,f.b),l:f.l+d.side,r:f.r+d.side,short:false,hdr:d.hdr,ftr:d.ftr,sec:d.sec,g:d.g,cg:d.cg}}
  return {t:Math.max(8,f.t),r:f.r+14,b:Math.max(8,f.b),l:f.l+14,short:short,hdr:40,ftr:48,sec:12,g:12,cg:8}}  /* 휴대폰: 좌우 14·위아래 8, 위 줄 40·아래 줄 48·섹션 12·단 12·카드 8(84차) */
 function frmVars(p){return ';--hdr:'+p.hdr.toFixed(1)+'px;--ftr:'+p.ftr.toFixed(1)+'px;--sec:'+p.sec.toFixed(1)+'px;--cg:'+p.cg.toFixed(1)+'px'}
