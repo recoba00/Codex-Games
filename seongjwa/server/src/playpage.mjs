@@ -1164,8 +1164,10 @@ html.dsk .frm .top .tl>.mu,html.dsk .frm .top .chip{font-size:calc(12px / var(--
 .lb.dsk .lrec{height:var(--rech,92px);box-sizing:border-box}
 .lb.dsk .lcev{flex:none}.lb.dsk .lev{flex:none;width:100%;aspect-ratio:1/1;min-height:0}
 .lb.dsk .lcmis{flex:1;min-height:0}
-#help .hgrid.hgrid2{display:grid;grid-template-columns:repeat(auto-fill,104px);justify-content:space-between;gap:14px 6px;align-items:start}.hgrid.hgrid2 .hcard{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+#help .hgrid.hgrid2{display:grid;justify-content:space-between;align-items:start}.hct{display:flex;gap:8px;margin-bottom:10px}.hct button{height:32px;padding:0 14px;border-radius:999px;background:#1e2866;border:1px solid #4152b5;color:#c8cfee;font-size:13px;font-weight:700}.hct button.on{background:#f5b93a;border-color:#ffd97a;color:#070a1c}.hct small{opacity:.7;font-size:11px}.hgrid.hgrid2 .hcard{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
 .hcd{margin:0;width:100%;font-size:11px;line-height:15px;color:#c8cfee;text-align:center;word-break:keep-all}.hcd small{display:block;font-size:10px;color:#f5b93a}.hkinds{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+html.dsk .ppw.hwin{width:calc(1040*var(--u));max-height:calc(720*var(--u))}  /* 데스크톱 도움말 넓게: 카드 도감 8열(사용자 요청 2026-11-09) */
+.ppw.hwin.htab{width:calc(.92*(100vw - (var(--sl,0px) + var(--sr,0px))*var(--zs,1)))}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1250,8 +1252,12 @@ var HELP=['view','cards','order','status','active','spells','rush','rank','tut']
 function helpBody(k){var D=S.data||{},R=(S.st&&S.st.battle&&S.st.battle.rules)||{},st=D.settings||{};
  if(k==='view')return '<p>'+esc(T('help.view'))+'</p>'+(S.st&&S.st.phase==='battle'?'<button class="pri sm" id="hTour">전투 화면에서 짚어 보기</button>':'');
  if(k==='cards'){var ids=Object.keys(D.cards||{}).sort(function(a,b){var x=D.cards[a],y=D.cards[b];return (!!x.owner_character)-(!!y.owner_character)||(KIND_ORD[x.kind]-KIND_ORD[y.kind])||a.localeCompare(b)});
-  /* 카드 도감(사용자 요청 2026-11-09): 카드 아래에 효과 설명을 바로 표시, 종류 설명은 맨 아래로 */
-  return '<p class="mu small">카드를 누르면 전투 중 길게 누르기와 같은 상세가 열려요.</p><div class="hgrid hgrid2">'+ids.map(function(id){var c=D.cards[id];return '<div class="hcard" data-hcard="'+id+'">'+bcCard(id,{w:86,mode:'hand',fig:true})+'<p class="hcd">'+esc(c.effect_text||'')+(c.owner_character?'<small>'+esc(ch(c.owner_character).name+' 전용')+'</small>':'')+'</p></div>'}).join('')+'</div>'
+  /* 카드 도감(사용자 요청 2026-11-09): 전투 카드·캐릭터 카드 탭, 휴대폰 5열·태블릿 6열·데스크톱 8열, 카드 아래 효과 설명 상시 표시, 종류 설명은 맨 아래 */
+  var tab=S.hcTab||'battle',cols=S.dsk?8:Math.min(innerWidth,innerHeight)>=600?6:5,gp=8,sw=S.hSecW||0,cw=sw?Math.max(48,Math.floor((sw-(cols-1)*gp)/cols)):72,
+   list=ids.filter(function(id){return tab==='char'?!!D.cards[id].owner_character:!D.cards[id].owner_character});
+  if(tab==='char')list.sort(function(a,b){var x=D.cards[a],y=D.cards[b];return String(x.owner_character).localeCompare(String(y.owner_character))||(KIND_ORD[x.kind]-KIND_ORD[y.kind])||a.localeCompare(b)});
+  return '<div class="hct">'+[['battle','전투 카드'],['char','캐릭터 카드']].map(function(x){return '<button data-hct="'+x[0]+'" class="'+(tab===x[0]?'on':'')+'">'+x[1]+' <small>'+ids.filter(function(id){return (x[0]==='char')===!!D.cards[id].owner_character}).length+'</small></button>'}).join('')+'</div>'
+   +'<p class="mu small">카드를 누르면 전투 중 길게 누르기와 같은 상세가 열려요.</p><div class="hgrid hgrid2" style="grid-template-columns:repeat('+cols+','+cw+'px);gap:14px '+gp+'px">'+list.map(function(id){var c=D.cards[id];return '<div class="hcard" data-hcard="'+id+'">'+bcCard(id,{w:cw,mode:'hand',fig:true})+'<p class="hcd">'+esc(c.effect_text||'')+(c.owner_character?'<small>'+esc(ch(c.owner_character).name+' 전용')+'</small>':'')+'</p></div>'}).join('')+'</div>'
    +'<div class="hst hkinds">'+['attack','defense','counter','silence','immune','disrupt','skill'].map(function(x){return '<div><b style="color:'+KCOL[x]+'">'+esc(KIND_KO[x])+' ('+PH_OF_KIND[x]+')</b> <span class="mu">'+esc(T('kind.'+x))+'</span></div>'}).join('')+'</div>'}
  if(k==='order')return '<p>'+esc(T('help.order'))+'</p><ol class="hord">'+[0,1,2,3,4,5].map(function(n){return '<li><b>'+n+' '+esc(T('phf.'+n))+'</b></li>'}).join('')+'</ol>';
  if(k==='status')return '<div class="hst">'+ST_DOC.map(function(x){var d=stDoc(x);return '<div><b>'+esc(d[0])+'</b> <span class="mu">'+esc(d[1])+'</span></div>'}).join('')+'</div>';
@@ -1263,7 +1269,9 @@ function helpBody(k){var D=S.data||{},R=(S.st&&S.st.battle&&S.st.battle.rules)||
 function helpOpen(k,from){k=k||S.helpK||'view';S.helpK=k;if(from)S.helpFrom=from;evt('help_open',{item:k,inBattle:!!(S.st&&S.st.phase==='battle'),from:S.helpFrom||(S.st?(S.st.phase==='battle'?'battle_settings':'prep_settings'):'lobby_settings')});  /* from: lobby_settings·prep_settings·battle_settings */
  var rk=S.st&&S.st.phase==='battle'&&S.st.mode==='ranked',d=ppOpen({id:'help',big:true,cls:'hwin',xid:'hClose',title:esc(T('help.title')),hx:rk?'<span class="hrk">'+esc(T('help.rankedTimer'))+'</span>':'',
   body:'<div class="hbd"><nav>'+HELP.map(function(h){return '<button data-hk="'+h+'"'+(h===k?' class="on"':'')+'>'+esc(T('help.k.'+h))+'</button>'}).join('')+'</nav><section id="hSec">'+helpBody(k)+'</section></div>'});
- d.onclick=function(e){if(e.target===d||(e.target.closest&&e.target.closest('.ppx'))){ppClose(d);return}var b=e.target.closest('[data-hk]');if(b){helpOpen(b.dataset.hk);return}
+ var pw=d.querySelector('.ppw');if(pw&&!S.dsk&&Math.min(innerWidth,innerHeight)>=600)pw.classList.add('htab');  /* 태블릿: 도움말 넓게(카드 도감 6열) */
+ var hs=$('hSec');if(k==='cards'&&hs){var cs=getComputedStyle(hs);S.hSecW=hs.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)-12;hs.innerHTML=helpBody(k)}  /* 카드 폭 = 실제 칸 폭 ÷ 열 수 */
+ d.onclick=function(e){if(e.target===d||(e.target.closest&&e.target.closest('.ppx'))){ppClose(d);return}var b=e.target.closest('[data-hk]');if(b){helpOpen(b.dataset.hk);return}var t=e.target.closest('[data-hct]');if(t){S.hcTab=t.dataset.hct;$('hSec').innerHTML=helpBody('cards');$('hSec').scrollTop=0;return}
   var c=e.target.closest('[data-hcard]');if(c){var hk=S.helpK;ppClose(d);cardModal(c.dataset.hcard,function(){helpOpen(hk)});return}  /* 팝업 위에 쌓지 않고 바꿔 열고, 닫으면 도움말로 돌아감 */
   var sk=e.target.closest('[data-hsk]');if(sk){ppClose(d);skPreview(sk.dataset.hsk);return}
   if(e.target.id==='hTour'){ppClose(d);tourView()}}}
