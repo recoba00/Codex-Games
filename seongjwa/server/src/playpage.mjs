@@ -1256,7 +1256,7 @@ function helpBody(k){var D=S.data||{},R=(S.st&&S.st.battle&&S.st.battle.rules)||
  if(k==='rush')return '<p>'+esc(T('help.rush',{start:R.rush_start_turn||st.rush_start_turn||7,max:R.max_turn||st.max_turn||10,m:Math.round((R.judge_margin!=null?R.judge_margin:st.judge_margin!=null?st.judge_margin:0.05)*100)}))+'</p>';  /* 수치는 데이터(설정값)에서 */
  if(k==='rank')return '<p>'+esc(T('help.rank'))+'</p><p class="mu small">'+esc(T('help.soon'))+'</p>';
  if(k==='tut')return '<p class="mu">'+esc(T('help.soon'))+'</p>';return ''}
-function helpOpen(k){k=k||S.helpK||'view';S.helpK=k;evt('help_open',{item:k,inBattle:!!(S.st&&S.st.phase==='battle')});
+function helpOpen(k,from){k=k||S.helpK||'view';S.helpK=k;if(from)S.helpFrom=from;evt('help_open',{item:k,inBattle:!!(S.st&&S.st.phase==='battle'),from:S.helpFrom||(S.st?(S.st.phase==='battle'?'battle_settings':'prep_settings'):'lobby_settings')});  /* from: lobby_settings·prep_settings·battle_settings */
  var rk=S.st&&S.st.phase==='battle'&&S.st.mode==='ranked',d=ppOpen({id:'help',big:true,cls:'hwin',xid:'hClose',title:esc(T('help.title')),hx:rk?'<span class="hrk">'+esc(T('help.rankedTimer'))+'</span>':'',
   body:'<div class="hbd"><nav>'+HELP.map(function(h){return '<button data-hk="'+h+'"'+(h===k?' class="on"':'')+'>'+esc(T('help.k.'+h))+'</button>'}).join('')+'</nav><section id="hSec">'+helpBody(k)+'</section></div>'});
  d.onclick=function(e){if(e.target===d||(e.target.closest&&e.target.closest('.ppx'))){ppClose(d);return}var b=e.target.closest('[data-hk]');if(b){helpOpen(b.dataset.hk);return}
@@ -1285,14 +1285,14 @@ function ask(msg,yes,fn,o){o=o||{};var d=ppOpen({id:'dlg',stack:true,modal:true,
 /* 설정 줄(44, 왼쪽 라벨·오른쪽 값). bt = 전투 전용 줄 포함 */
 function menuRows(bt){var r=function(id,l,v){return '<button id="'+id+'" class="pprow"><span>'+esc(l)+'</span>'+(v!=null?'<em>'+esc(v)+'</em>':'')+'</button>'},on=function(off){return off?'꺼짐':'켜짐'};
  return (bt?r('mSur','항복')+r('mLeft','왼손 모드',S.lefty?'켜짐':'꺼짐')+r('mHelp','도움말 다시보기')+r('mSpd','연출속도',SPD_LAB[S.rspd||'normal'])+(manualOk()?r('mMan','탭으로 행동',S.manual?'켜짐':'꺼짐'):''):'')
-  +r('mMus','음악',on(S.musOff))+r('mSnd','효과음',on(S.sndOff))+r('mVo','캐릭터 음성',on(S.voOff))+r('mVib','진동',on(S.vibOff))+r('mRmo','동작 줄이기',S.rmo?'켜짐':'꺼짐')+r('mFlr','반짝임 줄이기',S.flr?'켜짐':'꺼짐')+r('mSkm','스킬 연출 보기',S.skm==='over'?'오버레이':'풀화면')+r('mHelpX',T('set.help'))+r('mLang',T('set.lang'),langName())}
+  +r('mMus','음악',on(S.musOff))+r('mSnd','효과음',on(S.sndOff))+r('mVo','캐릭터 음성',on(S.voOff))+r('mVib','진동',on(S.vibOff))+r('mRmo','동작 줄이기',S.rmo?'켜짐':'꺼짐')+r('mFlr','반짝임 줄이기',S.flr?'켜짐':'꺼짐')+r('mSkm','스킬 연출 보기',S.skm==='over'?'오버레이':'풀화면')+r('mLang',T('set.lang'),langName())+r('mHelpX',T('set.help'))}  /* 도움말 = 언어 아래(기획지시 로비설정도움말, 상세 05) */
 /* 밴·픽·스펠·덱·결과 설정 팝업(전투는 renderBattle에서 같은 줄로 염) */
 function setPop(){var d=ppOpen({id:'m4',title:esc(T('set.title')),xid:'mClose',body:menuRows(false),cls:'plst'}),re=function(){setPop()},P=S.st&&S.st.prep;
  $('mMus').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();re()};$('mSnd').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();re()};
  $('mVo').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');re()};$('mVib').onclick=function(){S.vibOff=!S.vibOff;lsSet('play_vib',S.vibOff?'0':'1');re()};
  $('mRmo').onclick=function(){S.rmo=!S.rmo;lsSet('play_rmo',S.rmo?'1':'0');render();re()};$('mFlr').onclick=function(){S.flr=!S.flr;lsSet('play_flr',S.flr?'1':'0');re()};  /* 반짝임 줄이기: 로비 광휘 맥동·섬광·반짝임 끔(상세 05) */
  $('mSkm').onclick=function(){S.skm=S.skm==='over'?'full':'over';lsSet('play_skm',S.skm);var c=P&&(P.myPick||P.characters&&P.characters[0]);ppClose(d);if(c)skPreview(c)};
- $('mHelpX').onclick=function(){ppClose(d);helpOpen()};$('mLang').onclick=function(){langPop()}}
+ $('mHelpX').onclick=function(){ppClose(d);helpOpen(null,S.st?'prep_settings':'lobby_settings')};$('mLang').onclick=function(){langPop()}}
 /* 언어 선택 팝업(작은 팝업, 고르면 바로 적용·닫힘) */
 function langPop(){S.menu=false;var d=ppOpen({id:'plang',title:esc(T('set.lang')),cls:'plst',body:LANGS.map(function(l){return '<button class="pprow" data-lang="'+l[0]+'"><span>'+esc(l[1])+'</span>'+(S.lang===l[0]?'<em>✓</em>':'')+'</button>'}).join('')});
  d.querySelectorAll('[data-lang]').forEach(function(b){b.onclick=function(){S.lang=b.dataset.lang;lsSet('play_lang',S.lang);document.documentElement.lang=S.lang;ppClose(d);render()}})}
@@ -1640,7 +1640,7 @@ function topBar(m,label,extra){var h=hdrPos(),p=prepPad(),pl=Math.max(0,Math.cei
  return '<div class="fic" style="left:'+h.x.toFixed(1)+'px;top:'+h.y.toFixed(1)+'px;--s:'+h.s.toFixed(1)+'px;gap:'+h.g.toFixed(1)+'px"><button class="ibh" id="fSet" title="설정">'+SVG_GEAR+'</button><button class="ibh" id="fHelp" title="도움말">?</button></div>'
   +'<div class="top"><div class="tl" style="padding-left:'+pl+'px">'+(m?stepChips(m.phase):'<div class="chips"><span class="chip on">'+esc(extra||'')+'</span></div>')+'<span class="mu">'+esc(label)+'</span></div><div class="timer" id="tm"></div><div class="tr">'+(m?'':'<button class="ib44" id="rmore" title="신고">⋯</button>')+'</div></div>'}
 /* 위 줄 오른쪽 설정·도움말(밴·픽·스펠·덱·결과 공통) */
-function frmBind(){if($('fSet'))$('fSet').onclick=function(){setPop()};if($('fHelp'))$('fHelp').onclick=function(){helpOpen()}}
+function frmBind(){if($('fSet'))$('fSet').onclick=function(){setPop()};if($('fHelp'))$('fHelp').onclick=function(){helpOpen(null,'prep_help')}}
 function frameOf(f){return {tier:(f&&f.frame)||'BRONZE',holo:f&&f.holo!=null?f.holo:0}}
 /* 밴·픽: 가로 3단(기획지시 2026-11-01 밴픽화면재배치). 왼쪽 내 선택 · 가운데 4열 목록(이 화면만 세로 스크롤, 줄 단위 멈춤) · 오른쪽 상대 "?".
    선택 테두리 자리는 처음부터 2pt(투명) → 눌러도 크기·위치 불변. 눌러 둔 캐릭터는 서버에 hint로 보내 시간 초과 때 그것으로 확정(37차) */
@@ -2106,7 +2106,7 @@ function renderBattle(m,reveal){var b=m.battle,me=b.me,op=b.opp,sub=me.mySubmiss
   $('mSur').onclick=function(){S.menu=false;render();if(b.turn<4)return toast('항복은 4턴부터 할 수 있어요');ask('항복할까요? 패배로 끝나요.','항복',function(){send({type:'surrender'});busy($('ok'),'항복 처리 중…')})};
   $('mLeft').onclick=function(){S.lefty=!S.lefty;lsSet('play_lefty',S.lefty?'1':'');S.menu=false;render()};$('mHelp').onclick=function(){S.menu=false;lsSet(firstKey(),'{}');render();guide(true)};
   $('mSpd').onclick=function(){S.rspd=SPD_NEXT[S.rspd||'normal'];lsSet('play_rspd',S.rspd);render()};if($('mMan'))$('mMan').onclick=function(){S.manual=!S.manual;lsSet('play_manual',S.manual?'1':'');render()};
-  $('mSnd').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();render()};$('mVo').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');render()};if($('mHelpX'))$('mHelpX').onclick=function(){S.menu=false;render();helpOpen()};if($('mLang'))$('mLang').onclick=function(){langPop()};$('mMus').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();render()};$('mVib').onclick=function(){S.vibOff=!S.vibOff;lsSet('play_vib',S.vibOff?'0':'1');render()};
+  $('mSnd').onclick=function(){S.sndOff=!S.sndOff;lsSet('play_snd',S.sndOff?'0':'1');sndSet();render()};$('mVo').onclick=function(){S.voOff=!S.voOff;lsSet('play_vo',S.voOff?'0':'1');render()};if($('mHelpX'))$('mHelpX').onclick=function(){S.menu=false;render();helpOpen(null,'battle_settings')};if($('mLang'))$('mLang').onclick=function(){langPop()};$('mMus').onclick=function(){S.musOff=!S.musOff;lsSet('play_mus',S.musOff?'0':'1');sndInit();sndSet();render()};$('mVib').onclick=function(){S.vibOff=!S.vibOff;lsSet('play_vib',S.vibOff?'0':'1');render()};
   $('mRmo').onclick=function(){S.rmo=!S.rmo;lsSet('play_rmo',S.rmo?'1':'0');render()};if($('mFlr'))$('mFlr').onclick=function(){S.flr=!S.flr;lsSet('play_flr',S.flr?'1':'0');render()};$('mSkm').onclick=function(){S.skm=S.skm==='over'?'full':'over';lsSet('play_skm',S.skm);render();skPreview(me.char)}}
  if(S.guideOn&&S.guideShow)S.guideShow();
  if(b.turn===1&&!sub&&S.guideTurn!==m.code+':1'&&(S.forceGuide||Number(lsGet('play_games_'+(lsGet('play_dev')||''))||0)<3)){S.guideTurn=m.code+':1';setTimeout(function(){guide(false)},300)}}
