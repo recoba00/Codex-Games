@@ -1168,6 +1168,9 @@ html.dsk .frm .top .tl>.mu,html.dsk .frm .top .chip{font-size:calc(12px / var(--
 .hcd{margin:0;width:100%;font-size:11px;line-height:15px;color:#c8cfee;text-align:center;word-break:keep-all}.hcd small{display:block;font-size:10px;color:#f5b93a}.hkinds{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
 html.dsk .ppw.hwin{width:calc(1040*var(--u));max-height:calc(720*var(--u))}  /* 데스크톱 도움말 넓게: 카드 도감 8열(사용자 요청 2026-11-09) */
 .ppw.hwin.htab{width:calc(.92*(100vw - (var(--sl,0px) + var(--sr,0px))*var(--zs,1)))}
+/* 도움말 왼쪽 목록이 화면보다 길면 목록도 세로 스크롤(폴드 가로 등 낮은 화면에서 아래 항목이 잘려 못 누르던 문제) */
+#help nav{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}#help nav button{flex:none}
+@media (max-height:420px){.ppw.hwin{height:calc(.96*(100vh - (var(--st,0px) + var(--sb,0px))*var(--zs,1)));max-height:none}#help nav button{min-height:30px;padding:5px 10px}}
 </style></head><body><div id="app"></div><div id="rot"><i>📱</i><b>가로로 돌려 주세요</b><span class="mu small">전투 화면은 가로 전용이에요</span></div>
 <script>
 var S={tok:null,data:null,A:null,ws:null,st:null,prev:null,sel:{cards:[],spell:null,active:false},selTurn:0,diff:localStorage.getItem('play_diff')||'normal',anim:null,pending:null,load:null,off:0,showLog:false,hist:[],spd:localStorage.getItem('play_spd')==='2',lastOpp:null,lastTurn:0,rspd:(function(){try{return localStorage.getItem('play_rspd')||'normal'}catch(e){return 'normal'}})(),manual:(function(){try{return localStorage.getItem('play_manual')==='1'}catch(e){return false}})(),hlog:{},lefty:(function(){try{return localStorage.getItem('play_lefty')==='1'}catch(e){return false}})()};
@@ -1269,6 +1272,7 @@ function helpBody(k){var D=S.data||{},R=(S.st&&S.st.battle&&S.st.battle.rules)||
 function helpOpen(k,from){k=k||S.helpK||'view';S.helpK=k;if(from)S.helpFrom=from;evt('help_open',{item:k,inBattle:!!(S.st&&S.st.phase==='battle'),from:S.helpFrom||(S.st?(S.st.phase==='battle'?'battle_settings':'prep_settings'):'lobby_settings')});  /* from: lobby_settings·prep_settings·battle_settings */
  var rk=S.st&&S.st.phase==='battle'&&S.st.mode==='ranked',d=ppOpen({id:'help',big:true,cls:'hwin',xid:'hClose',title:esc(T('help.title')),hx:rk?'<span class="hrk">'+esc(T('help.rankedTimer'))+'</span>':'',
   body:'<div class="hbd"><nav>'+HELP.map(function(h){return '<button data-hk="'+h+'"'+(h===k?' class="on"':'')+'>'+esc(T('help.k.'+h))+'</button>'}).join('')+'</nav><section id="hSec">'+helpBody(k)+'</section></div>'});
+ var hon=d.querySelector('nav .on');if(hon&&hon.scrollIntoView)hon.scrollIntoView({block:'nearest'});  /* 목록을 다시 그려도 고른 항목이 보이게 */
  var pw=d.querySelector('.ppw');if(pw&&!S.dsk&&Math.min(innerWidth,innerHeight)>=600)pw.classList.add('htab');  /* 태블릿: 도움말 넓게(카드 도감 6열) */
  var hs=$('hSec');if(k==='cards'&&hs){var cs=getComputedStyle(hs);S.hSecW=hs.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)-12;hs.innerHTML=helpBody(k)}  /* 카드 폭 = 실제 칸 폭 ÷ 열 수 */
  d.onclick=function(e){if(e.target===d||(e.target.closest&&e.target.closest('.ppx'))){ppClose(d);return}var b=e.target.closest('[data-hk]');if(b){helpOpen(b.dataset.hk);return}var t=e.target.closest('[data-hct]');if(t){S.hcTab=t.dataset.hct;$('hSec').innerHTML=helpBody('cards');$('hSec').scrollTop=0;return}
