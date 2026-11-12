@@ -58,7 +58,7 @@ class Client {
     const t = await ok(this.post(`/v1/rooms/${code}/ticket`));
     this.state = null;
     this.ws = new WebSocket(`ws://127.0.0.1:${API_PORT}/v1/rooms/${code}/ws?ticket=${encodeURIComponent(t.ticket)}`);
-    this.ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === "room") { this.state = m; if (m.reveal && !m.reveal.done && m.battle) this.ws.send(JSON.stringify({ type: "revealed", turn: m.battle.turn })); } };
+    this.ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === "room") { this.state = m; if (m.phase === "skin" && !m.prep?.skins?.myDone && !this.noSkin) this.ws.send(JSON.stringify({ type: "skin" })); if (m.reveal && !m.reveal.done && m.battle) this.ws.send(JSON.stringify({ type: "revealed", turn: m.battle.turn })); } };
     await new Promise((res, rej) => { this.ws.onopen = res; this.ws.onerror = rej; });
     await this.until((s) => s);
   }
@@ -90,12 +90,22 @@ async function playMatch(players, picks, loserIdx, lockCheck = false) {
     const av = lead.state.prep.avail, locked = ["IG", "TE", "SL"].find((c) => !av.includes(c));
     assert.equal(av.length, 8, JSON.stringify(lead.state.prep));
     assert.equal(lead.state.prep.free.length, 2);
+    lead.noSkin = true;
     lead.send({ type: "pick", characterId: locked });
     await sleep(400);
     assert.equal(lead.state.prep.myPick, null, "잠긴 캐릭터 픽 거부");
   }
   players.forEach((p, i) => p.send({ type: "pick", characterId: picks[i] }));
+  if (lockCheck) {  // 스킨 단계(기획지시 모바일시안반영): 픽 뒤 skin 단계, 상대 캐릭터는 아직 비공개, 없는 스킨 거부, 확정하면 스펠·덱에서 공개
+    await lead.until((s) => s.phase === "skin" && s.prep.skins.oppDone);
+    assert.equal(lead.state.prep.oppPick, null, "스킨 단계에서는 상대 캐릭터 비공개");
+    assert.deepEqual(lead.state.prep.skins.list, []);
+    lead.send({ type: "skin", skinId: "NO_SUCH_SKIN" }); await sleep(300);
+    assert.equal(lead.state.phase, "skin", "없는 스킨 거부");
+    lead.send({ type: "skin" });
+  }
   await lead.until((s) => s.phase === "loadout");
+  if (lockCheck) { assert.equal(lead.state.prep.oppPick, picks[1]); assert.equal(lead.state.prep.skins.opp, null); lead.noSkin = false; }
   players.forEach((p) => p.send({ type: "loadout", spells: ["SP01", "SP04"], preset: 2 }));
   await lead.until((s) => s.phase === "battle");
   while (lead.state.phase === "battle" && lead.state.battle.turn < 4) {
@@ -140,6 +150,11 @@ try {
   const defaults = { preferred: ["AU"], spells: ["SP01", "SP04"], preset: 2 };
   alice.send({ type: "ready", defaults }); bob.send({ type: "ready", defaults });
   await alice.until((s) => s.phase === "ban" || s.phase === "pick");
+  const reg = await (await fetch(`${API}/v1/region`)).json();
+  assert.equal(reg.lang, !reg.country || reg.country === "KR" ? "ko" : "en", `지역 판정: 한국·판정 실패 = ko, 그 외 en (${reg.country})`);
+  assert.equal((await ok(alice.get("/v1/lang"))).lang, null);
+  assert.equal((await ok(alice.post("/v1/lang", { lang: "en" }))).lang, "en");
+  assert.equal((await ok(alice.get("/v1/lang"))).lang, "en");
   const chs = await ok(alice.get("/v1/characters"));
   assert.deepEqual(chs.owned, ["AU", "MO", "PY", "SE", "SI", "UM"], "고정 6명 지급(첫 조회)");
   assert.equal(chs.free.length, 2); assert.ok(chs.free.every((c) => ["IG", "TE", "SL"].includes(c)));

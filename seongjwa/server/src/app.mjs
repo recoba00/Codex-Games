@@ -56,7 +56,7 @@ const STATUS = {
   friend_not_found: 404, already_friends: 409, friend_blocked: 403, friend_limit: 409, friend_in_game: 409, invite_expired: 410, not_friend: 403, invite_limit: 429, block_limit: 409,
   asset_not_webp: 400, asset_too_large: 413, asset_spec: 422, asset_region: 422, asset_slot_invalid: 400, asset_kind_invalid: 400, asset_skin_invalid: 400,
   asset_char_invalid: 400, asset_full_missing: 409, asset_combined_missing: 409, asset_no_previous: 409, storage_failed: 502, state_invalid: 409,
-  rate_limited: 429, cup_closed: 409, cup_not_eligible: 403, cup_entry_active: 409, cup_left_this_week: 409, cup_no_ticket: 409, cup_no_entry: 409, cup_roster_invalid: 400, character_not_owned: 403,
+  rate_limited: 429, cup_closed: 409, cup_not_eligible: 403, cup_entry_active: 409, cup_left_this_week: 409, cup_no_ticket: 409, cup_no_entry: 409, cup_roster_invalid: 400, lang_invalid: 400, character_not_owned: 403,
   name_banned: 422, provider_taken: 409, provider_invalid: 400, choice_invalid: 400, account_not_active: 409, link_unavailable: 503, events_invalid: 400, confirm_required: 400,
   forbidden: 403, login_failed: 401, login_locked: 423, self_review: 403, validation_errors: 422, report_limited: 429, rank_restricted: 403,
   db_not_configured: 503, steam_not_configured: 503, token_secret_invalid: 503
@@ -148,6 +148,21 @@ export async function handle(request, env) {
     case "GET /v1/online":  // 로비 실시간 접속자 수(최근 2분 접속 신호, 사용자 요청 2026-11-07). 30초 캐시
       return json({ ok: true, count: Number(await rpc(env, "online_count", {})) || 0 }, 200, { "cache-control": "public, max-age=30" });
 
+    case "GET /v1/region": {  // 접속 지역 판정(기획지시 2026-11-12 모바일시안반영 결정 7): 한국이면 ko, 그 외 en, 판정 실패면 ko. 로그인 불필요
+      const country = String(request.cf?.country ?? request.headers.get("cf-ipcountry") ?? "").toUpperCase();
+      const known = /^[A-Z]{2}$/.test(country) && country !== "XX" && country !== "T1";
+      return json({ ok: true, country: known ? country : null, lang: !known || country === "KR" ? "ko" : "en" }, 200, { "cache-control": "private, no-store" });
+    }
+    case "GET /v1/lang": {  // 계정에 저장된 언어(없으면 null → 클라이언트가 /v1/region으로 정해 저장)
+      const claims = await authenticate(request, env);
+      return json({ ok: true, lang: await rpc(env, "account_lang", { p_account: claims.sub, p_lang: null }) });
+    }
+    case "POST /v1/lang": {  // { lang: "ko" | "en" } 설정에서 변경·첫 실행 저장
+      const claims = await authenticate(request, env);
+      const input = await readJson(request);
+      if (!["ko", "en"].includes(input.lang)) throw new Error("lang_invalid");
+      return json({ ok: true, lang: await rpc(env, "account_lang", { p_account: claims.sub, p_lang: input.lang }) });
+    }
     case "GET /v1/lobby":  // 로비 배너(최대 5)·공지 팝업(상세 05)
       return json({ ok: true, ...(await rpc(env, "lobby_content", {})) }, 200, { "cache-control": "public, max-age=60" });
 

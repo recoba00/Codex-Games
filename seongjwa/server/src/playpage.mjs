@@ -1636,6 +1636,7 @@ function onRoom(m){if(m.now)S.off=m.now-Date.now();
  if(old&&old.phase==='pick'&&m.phase==='loadout'&&!S.pickedSelf)toast('시간이 지나 자동으로 골랐어요: '+ch(m.prep.myPick).name+' (직전 사용 → 목록 첫 번째 순)');
  if(old&&old.phase==='loadout'&&m.phase==='battle'&&!S.loadSelf)toast('시간이 지나 직전 스펠·덱으로 시작해요');
  if(m.phase==='result'&&S.counted!==m.code+':'+(m.last&&m.last.id)){S.counted=m.code+':'+(m.last&&m.last.id);var k='play_games_'+(lsGet('play_dev')||'');lsSet(k,String(Number(lsGet(k)||0)+1))}
+ if(m.phase==='skin'&&m.prep&&m.prep.skins&&!m.prep.skins.myDone)send({type:'skin',skinId:m.prep.skins.equipped||null});  /* /play 동결: 스킨 단계는 화면 없이 장착 스킨(없으면 기본)으로 바로 확정 — 판 흐름 호환용 */
  if(m.phase==='pick'){S.pickedSelf=S.pickedSelf&&m.prep.myPick?S.pickedSelf:null;S.loadSelf=false}
  if(S.anim){S.pending=m;return}
  var ob=old&&old.battle,nb=m.battle;

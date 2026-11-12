@@ -18,7 +18,7 @@ import { masteryDbCfg, masteryTiers } from "./mastery.mjs";
 import { frameOf, masterTierNo } from "./badges.mjs";
 import { availOf, charsOf } from "./characters.mjs";
 
-export const PREP = Object.freeze({ ban_sec: 30, pick_sec: 30, loadout_sec: 30, grace_ms: 500 });  // 대체값 = 시트 설정값 v38(기획답변 82차)
+export const PREP = Object.freeze({ ban_sec: 30, pick_sec: 20, skin_sec: 10, loadout_sec: 30, grace_ms: 500 });  // 대체값 = 시트 설정값 v38(기획답변 82차)
 const JOIN_GRACE_MS = 15000;  // 매칭 뒤 접속까지 기다려 주는 최대 시간(한 명이 끝내 안 들어오면 이 뒤로 시간이 흐름)
 const LOBBY_TTL_MS = 30 * 60 * 1000;
 const TICKET_TTL_MS = 45 * 1000;
@@ -177,7 +177,7 @@ export class FriendRoom extends DurableObject {
     if (!this.room || att?.seat === undefined || this.connected(att.seat, ws)) return;
     const g = this.room.game;
     const now = Date.now();
-    if (g && ["ban", "pick", "loadout"].includes(this.room.phase)) {
+    if (g && ["ban", "pick", "skin", "loadout"].includes(this.room.phase)) {
       g.log.push({ t: "prep_disconnect", seat: att.seat, at: now });  // 준비 단계: 스펠·덱 마감 때까지 안 돌아오면 닷지(랭킹전)·판 취소(친구방)
     } else if (g && this.room.phase === "battle") {
       g.away[att.seat] = now;  // 60초 유예 시작
@@ -257,6 +257,12 @@ export class FriendRoom extends DurableObject {
         return;
       }
       case "hint": {  // 밴·픽 화면에서 눌러 둔(아직 확정 안 한) 캐릭터. 시간이 끝나면 이것으로 확정(기획답변 37차)
+        if (room.phase === "skin") {  // 눌러 둔 스킨(시간 초과 시 이것으로 확정)
+          const sk = msg.skinId ? String(msg.skinId) : null;
+          if (sk && !this.skinsFor(g, seat).includes(sk)) throw new Error("skin_unavailable");
+          ((g.hints ??= {}).skin ??= [null, null])[seat] = sk;
+          return;
+        }
         if (!["ban", "pick"].includes(room.phase)) throw new Error("phase_invalid");
         const id = msg.characterId ? String(msg.characterId) : null;
         if (id && !g.data.characters[id]) throw new Error("character_unavailable");
@@ -269,7 +275,16 @@ export class FriendRoom extends DurableObject {
         if (!this.pickableFor(g, seat).includes(id)) throw new Error("character_unavailable");
         g.picks[seat] = id;
         markPrep(g, "pick", seat, now);
-        if (g.picks.every(Boolean)) this.toLoadout(now);
+        if (g.picks.every(Boolean)) this.toSkin(now);
+        return;
+      }
+      case "skin": {  // 스킨 단계(기획지시 2026-11-12 모바일시안반영): skinId 없으면 기본 스킨. 가진 스킨만
+        if (room.phase !== "skin") throw new Error("phase_invalid");
+        const sk = msg.skinId ? String(msg.skinId) : null;
+        if (sk && !this.skinsFor(g, seat).includes(sk)) throw new Error("skin_unavailable");
+        g.skins[seat] = { id: sk, done: true };
+        markPrep(g, "skin", seat, now);
+        if (g.skins.every((x) => x?.done)) this.toLoadout(now);
         return;
       }
       case "loadout": {
@@ -319,7 +334,7 @@ export class FriendRoom extends DurableObject {
       case "leave": {
         if (room.phase === "battle") throw new Error("leave_in_battle");  // 전투 중엔 항복으로
         if ((room.mode ?? "friend") !== "friend") {
-          if (["ban", "pick", "loadout"].includes(room.phase)) await this.dodge([seat], now);
+          if (["ban", "pick", "skin", "loadout"].includes(room.phase)) await this.dodge([seat], now);
           for (const ws of this.sockets(seat)) try { ws.close(1000, "left"); } catch { /* */ }
           return;
         }
@@ -360,6 +375,15 @@ export class FriendRoom extends DurableObject {
     const DIFF_KO = { easy: "쉬움", normal: "보통", hard: "어려움" };
     // 보유 + 이번 주 무료(기획지시 캐릭터입수, 88-89차). 컵은 등록 3명으로 이미 정해져 있어 제외. 조회 실패면 제한 없음
     const chars = room.mode === "cup" ? null : await charsOf(this.env, accs, pinned.snapshot, now, room.mode);
+    // 스킨 단계용: 계정별 보유 스킨(캐릭터별)과 장착 스킨. 조회 실패면 기본 스킨만
+    const skinInv = await Promise.all(room.members.map(async (m) => {
+      if (m.ai || !m.acc || !this.env.SUPABASE_URL) return { owned: {}, equipped: {} };
+      try {
+        const inv = await rpc(this.env, "inventory_list", { p_account: m.acc }), owned = {};
+        for (const it of inv?.items ?? []) if (String(it.kind).startsWith("skin") && it.character) (owned[it.character] ??= []).push(it.id);
+        return { owned, equipped: inv?.equipped?.skins ?? {} };
+      } catch { return { owned: {}, equipped: {} }; }
+    }));
     room.game = {
       id: crypto.randomUUID(), startedAt: now, dataVersion: pinned.version, data: pinned.snapshot,
       mastery: room.members.map((m) => (m.ai ? {} : masteryTiers(mast?.[m.acc] ?? {}, pinned.snapshot))),  // 숙련도 단계(능력치 영향 없음)
@@ -368,6 +392,7 @@ export class FriendRoom extends DurableObject {
       names: room.members.map((m) => (m.ai ? (room.mode === "practice" ? `AI · ${DIFF_KO[m.ai.difficulty] ?? "보통"}` : "AI") : (nameOf[m.acc] || "플레이어"))),
       free: chars?.free ?? [],
       avail: room.members.map((m) => (m.ai || !m.acc || !chars?.owned ? null : availOf(pinned.snapshot, chars.owned[m.acc] ?? [], chars.free))),
+      skinInv, skins: [null, null],
       bans: [null, null], picks: [null, null], loadouts: [null, null],
       battle: null, deadline: [0, 0], timebank: [0, 0], away: [null, null], warned: [0, 0], log: []
     };
@@ -397,7 +422,11 @@ export class FriendRoom extends DurableObject {
     }
     if (room.phase === "pick" && !g.picks[seat]) {
       g.picks[seat] = choosePick(g.data, this.pickableFor(g, seat), { playerFaction: fav ? g.data.characters[fav]?.faction : null });
-      if (g.picks.every(Boolean)) this.toLoadout(now);
+      if (g.picks.every(Boolean)) this.toSkin(now);
+    }
+    if (room.phase === "skin" && !g.skins?.[seat]?.done) {  // AI = 기본 스킨 즉시 확정
+      g.skins[seat] = { id: null, done: true };
+      if (g.skins.every((x) => x?.done)) this.toLoadout(now);
     }
     if (room.phase === "loadout" && !g.loadouts[seat]) {
       g.loadouts[seat] = this.validLoadout(g, g.picks[seat], chooseLoadout(g.data, g.picks[seat], g.picks[1 - seat]));
@@ -437,7 +466,11 @@ export class FriendRoom extends DurableObject {
     this.aiPrep(now);
   }
 
-  toLoadout(now) {
+  // 내가 고른 캐릭터에 쓸 수 있는 스킨(보유). 기본 스킨은 목록에 없고 skinId 없음으로 고른다
+  skinsFor(g, seat) { return g.skinInv?.[seat]?.owned?.[g.picks[seat]] ?? []; }
+
+  // 픽 → 스킨 단계(skin_sec, 기본 10초). 픽 시간 초과 자동 선택은 여기서 확정. 상대 캐릭터는 스펠·덱 단계에서 스킨과 함께 공개
+  toSkin(now) {
     const g = this.room.game;
     g.picks = g.picks.map((p, seat) => {
       const pool = this.pickableFor(g, seat);  // 픽 시간 초과: 선호 1·2·3순위 → 직전 사용 캐릭터 → 목록 첫 번째 (총괄 7장, 기획답변 2차 8)
@@ -451,6 +484,20 @@ export class FriendRoom extends DurableObject {
       const free = (g.free ?? []).filter((id) => this.pickable(g).includes(id));  // 픽 가능 목록이 비면 무료 중 무작위(88-89차 #2)
       const any = free.length ? free : this.pickable(g);
       return any[Math.floor(Math.random() * any.length)];
+    });
+    g.skins = [null, null];
+    this.room.phase = "skin";
+    this.room.phaseDeadline = now + this.prepSec("skin_sec") * 1000 + PREP.grace_ms;
+    this.aiPrep(now);
+  }
+
+  toLoadout(now) {
+    const g = this.room.game;
+    // 스킨 시간 초과: 눌러 둔 스킨 → 그 캐릭터에 장착된 스킨 → 기본
+    g.skins = (g.skins ?? [null, null]).map((x, seat) => {
+      if (x?.done) return x;
+      const own = this.skinsFor(g, seat), hint = g.hints?.skin?.[seat], eq = g.skinInv?.[seat]?.equipped?.[g.picks[seat]];
+      return { id: hint && own.includes(hint) ? hint : eq && own.includes(eq) ? eq : null, done: true };
     });
     this.room.phase = "loadout";
     this.room.phaseDeadline = now + this.prepSec("loadout_sec") * 1000 + PREP.grace_ms;
@@ -607,7 +654,7 @@ export class FriendRoom extends DurableObject {
         outcome, finish_reason: reason, turns: b.turn,
         started_at: new Date(g.startedAt).toISOString(), ended_at: new Date(now).toISOString(),
         summary: {
-          bans: g.bans.map((x) => x?.id ?? null), picks: g.picks,
+          bans: g.bans.map((x) => x?.id ?? null), picks: g.picks, skins: (g.skins ?? []).map((x) => x?.id ?? null),
           spells: g.loadouts.map((l) => l.spells), presets: g.loadouts.map((l) => l.preset),
           hp: b.players.map((p) => p.hp), dealt: b.players.map((p) => p.dealt), blocked: b.players.map((p) => p.absorbed ?? 0),
           battle_sec: Math.round((now - (g.battleStartedAt ?? now)) / 1000), options: room.options,
@@ -761,7 +808,8 @@ export class FriendRoom extends DurableObject {
     const g = r.game;
     if (r.phaseDeadline && now >= r.phaseDeadline) {
       if (r.phase === "ban") this.toPick(now);
-      else if (r.phase === "pick") this.toLoadout(now);
+      else if (r.phase === "pick") this.toSkin(now);
+      else if (r.phase === "skin") this.toLoadout(now);
       else if (r.phase === "loadout") this.startBattle(now);
     } else if (g && r.phase === "battle") {
       const grace = g.battle.rules.reconnect_grace_sec * 1000;
@@ -790,7 +838,7 @@ export class FriendRoom extends DurableObject {
     }
     if (r.game?.pendingDodge) await this.dodge(r.game.pendingDodge, now);
     if (r.saves.length || (r.ranks ?? []).length || (r.econs ?? []).length || (r.cups ?? []).length || (r.mastery ?? []).length) await this.flushSaves(now);  // 실패한 반영도 다시
-    if (now >= r.expiresAt && !["ban", "pick", "loadout", "battle"].includes(r.phase) && !r.saves.length && !(r.ranks ?? []).length && !(r.cups ?? []).length && !(r.mastery ?? []).length) {
+    if (now >= r.expiresAt && !["ban", "pick", "skin", "loadout", "battle"].includes(r.phase) && !r.saves.length && !(r.ranks ?? []).length && !(r.cups ?? []).length && !(r.mastery ?? []).length) {
       for (const ws of this.ctx.getWebSockets()) try { ws.close(1000, "room_expired"); } catch { /* */ }
       this.room = null;
       await this.ctx.storage.deleteAll();
@@ -826,6 +874,9 @@ export class FriendRoom extends DurableObject {
       // 티어 프레임·홀로 연출: 내 것은 언제나, 상대 것은 픽 공개 뒤(밴·픽 단계 null)
       frame: { mine: g.frames?.[seat] ?? null, opp: ["loadout", "battle"].includes(r.phase) && g.picks[1 - seat] ? g.frames?.[1 - seat] ?? null : null },
       names: { mine: g.names?.[seat] ?? null, opp: g.names?.[1 - seat] ?? null },
+      // 스킨 단계: 내 목록·장착·선택은 언제나, 상대 스킨은 캐릭터와 함께 스펠·덱 단계에서 공개
+      skins: { list: g.picks[seat] ? this.skinsFor(g, seat) : [], equipped: g.skinInv?.[seat]?.equipped?.[g.picks[seat]] ?? null, mine: g.skins?.[seat]?.id ?? null, myDone: Boolean(g.skins?.[seat]?.done),
+        oppDone: Boolean(g.skins?.[1 - seat]?.done), opp: ["loadout", "battle"].includes(r.phase) ? g.skins?.[1 - seat]?.id ?? null : null },
       myLoadout: g.loadouts[seat] ? { spells: g.loadouts[seat].spells, preset: g.loadouts[seat].preset } : null,
       oppLoadoutDone: Boolean(g.loadouts[1 - seat])
     };
@@ -893,6 +944,7 @@ export function matchEvents(room, g, { outcome, reason, now }) {
     const timeout = (phase) => !(g.prepAt?.[phase]?.[seat]);
     if (room.options?.bans) rows.push({ ...base, name: "banpick_ban", props: { ...common, character_id: g.bans[seat]?.id ?? null, timeout: timeout("ban") } });
     rows.push({ ...base, name: "banpick_pick", props: { ...common, character_id: g.picks[seat], timeout: timeout("pick") } });
+    rows.push({ ...base, name: "banpick_skin", props: { ...common, skin_id: g.skins?.[seat]?.id ?? null, timeout: timeout("skin") } });
     rows.push({ ...base, name: "banpick_spell", props: { ...common, spell_ids: g.loadouts[seat]?.spells ?? [], deck_preset: g.loadouts[seat]?.preset ?? null, timeout: timeout("loadout") } });
     if (g.turns?.[seat]?.length) rows.push({ ...base, name: "turn_end", props: { ...common, turns: g.turns[seat] } });
     const mine = seat === 0 ? "a" : "b";
